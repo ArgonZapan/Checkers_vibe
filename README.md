@@ -21,6 +21,7 @@ Sieć neuronowa (ten sam model dla obu stron). Różne parametry = różne style
 
 - Modele wczytywane przy starcie serwera
 - Auto-zapis co 5 minut
+- Self-play: AI vs AI → szkolenie w trakcie gry → po zakończeniu aktualizacja wag → kolejna gra automatycznie
 - [ ] UI — czyste, responsywne
 - [ ] Animacje ruchów
 
