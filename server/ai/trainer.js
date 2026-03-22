@@ -503,11 +503,10 @@ export class SelfPlay {
       if (Math.random() < epsilon) {
         // Random legal move
         const randomIdx = Math.floor(Math.random() * legalMoves.length);
-        chosenMove = typeof legalMoves[randomIdx] === 'number'
-          ? legalMoves[randomIdx]
-          : legalMoves[randomIdx].index ?? randomIdx;
+        chosenMove = legalMoves[randomIdx];
       } else {
-        const pred = await predict(model, boardArray, legalMoves, turn);
+        const pred = await predict(model, boardArray, movesWithIndex, turn);
+        // pred.move is the selected move object from movesWithIndex
         chosenMove = pred.move;
       }
 
