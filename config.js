@@ -34,9 +34,9 @@ export const CONFIG = {
 
   // === AI/TRAINER ===
   ai: {
-    defaultEpsilon: 0.3,
+    defaultEpsilon: 1.0,
     minEpsilon: 0.01,
-    epsilonDecay: 0.001,
+    epsilonDecay: 0.01,
     gamma: 0.95,
     bufferSize: 10000,
     trainEpochs: 5,
