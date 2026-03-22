@@ -89,31 +89,34 @@ export function boardToTensor(boardArray, turn) {
     boardArray = wrapped;
   }
   // Validate 2D 8x8
-  if (boardArray.length !== 8) {
-    throw new Error(`boardToTensor: expected 8 rows, got ${boardArray.length}`);
-  }
   const flat = boardArray.flat();
   if (flat.length !== 64) {
     throw new Error(`boardToTensor: expected 64 cells, got ${flat.length}`);
+  }
+  if (boardArray.length !== 8) {
+    throw new Error(`boardToTensor: expected 8 rows, got ${boardArray.length}`);
   }
 
   const input = new Float32Array(257);
   for (let i = 0; i < 64; i++) {
     const val = flat[i];
     // 4 channels: empty, white piece, black piece, king
+    // Piece encoding: 0=empty, 1=white pawn, 2=white king, 3=black pawn, 4=black king
+    // Also supports sign encoding: positive=white, negative=black, |val|=2 for king
     const base = i * 4;
     if (val === 0) {
       input[base] = 1;           // empty
-    } else if (val === 1) {
-      input[base + 1] = 1;       // white pawn
-    } else if (val === 2) {
-      input[base + 1] = 1;       // white king
-      input[base + 3] = 1;       // king flag
-    } else if (val === 3) {
-      input[base + 2] = 1;       // black pawn
-    } else if (val === 4) {
-      input[base + 2] = 1;       // black king
-      input[base + 3] = 1;       // king flag
+    } else {
+      const isBlack = val === 3 || val === 4 || val < 0;
+      const isKing = val === 2 || val === 4 || Math.abs(val) === 2;
+      if (isBlack) {
+        input[base + 2] = 1;     // black channel
+      } else {
+        input[base + 1] = 1;     // white channel
+      }
+      if (isKing) {
+        input[base + 3] = 1;     // king flag
+      }
     }
   }
   input[256] = turn; // turn indicator

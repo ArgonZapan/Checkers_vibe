@@ -28,8 +28,9 @@ export async function runBufferTests() {
     buf.add({ id: 99 });
     assert.equal(buf.size(), 5);
     // First element should now be id:1, not id:0
-    assert.equal(buf.buffer[0].id, 1);
-    assert.equal(buf.buffer[4].id, 99);
+    const arr = buf._toArray();
+    assert.equal(arr[0].id, 1);
+    assert.equal(arr[4].id, 99);
   });
 
   // sample
