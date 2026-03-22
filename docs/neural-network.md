@@ -2,76 +2,64 @@
 
 ## Silnik
 
-TensorFlow.js — sieć działa w C++ (backend) z bindingiem do JS lub natywnie przez tfjs-node.
+TensorFlow.js (tfjs-node) — działa w Node.js na backendzie.
 
 ## Wejście (input)
 
 Stan planszy z bitboardów jako tensor wejściowy:
 
 - **8×8×4** — 8 rzędów, 8 kolumn, 4 kanały:
-  - Kanał 1: pionki białe (z `white_pieces`)
-  - Kanał 2: damki białe (z `white_kings`)
-  - Kanał 3: pionki czarne (z `black_pieces`)
-  - Kanał 4: damki czarne (z `black_kings`)
-- Każdy kanał: 1 jeśli pionek/damka jest na polu, 0 jeśli nie
+  - Kanał 1: pionki białe
+  - Kanał 2: damki białe
+  - Kanał 3: pionki czarne
+  - Kanał 4: damki czarne
 - Dodatkowo: 1 bit — czyja tura (0 = białe, 1 = czarne)
 
-Razem: 8×8×4 + 1 = 257 wartości wejściowych.
+Razem: 257 wartości wejściowych.
 
-## Architektura
+## Warianty rozmiaru sieci
 
+### Small (szybki, mniej dokładny)
 ```
-Input (257)
-  ↓
-Dense(512) + ReLU
-  ↓
-Dense(256) + ReLU
-  ↓
-Dense(128) + ReLU
-  ↓
-  ┌──────────┐
-  │ Policy   │  (głowa polityki — prawdopodobieństwa ruchów)
-  │ Dense(N) │  N = max liczba legalnych ruchów (~48)
-  │ Softmax  │
-  └──────────┘
-  ↓
-  ┌──────────┐
-  │ Value    │  (głowa wartości — ocena pozycji)
-  │ Dense(1) │
-  │ Tanh     │  (-1 do +1: -1 = przegrana, +1 = wygrana)
-  └──────────┘
+Input (257) → Dense(128) + ReLU → Dense(64) + ReLU → Policy + Value
 ```
 
-Dual-headed: jedna sieć, dwa wyjścia. Policy mówi CO zagrać, Value mówi JAK DOBRZE stoimy.
+### Medium (domyślny)
+```
+Input (257) → Dense(256) + ReLU → Dense(128) + ReLU → Dense(64) + ReLU → Policy + Value
+```
 
-## Output policy
+### Large (dokładny, wolniejszy)
+```
+Input (257) → Dense(512) + ReLU → Dense(256) + ReLU → Dense(128) + ReLU → Dense(64) + ReLU → Policy + Value
+```
 
-Sieć zwraca prawdopodobieństwo dla każdego możliwego ruchu. Ruchy nielegalne → maska (0).
+## Output — dual head
 
-Przykład:
-- Ruch A: 0.45
-- Ruch B: 0.30
-- Ruch C: 0.15
-- Ruch D: 0.10
-- (maska) Ruch E: 0.0 — nielegalny
+### Policy head
+- Dense(N) + Softmax — N = max legalnych ruchów (~48)
+- Prawdopodobieństwo każdego ruchu
+- Ruchy nielegalne → maska (0)
 
-## Output value
+### Value head
+- Dense(1) + Tanh
+- -1.0 (przegrana) do +1.0 (wygrana)
 
-Jedna wartość: -1.0 (przegrana) do +1.0 (wygrana). 0.0 = remis/niepewność.
+## Parametry (konfigurowalne z UI)
 
-## Uczenie
+- **epsilon** (0.0 - 1.0): prawdopodobieństwo losowego ruchu (eksploracja)
+  - 1.0 = pełna losowość
+  - 0.0 = zawsze najlepszy ruch
+  - Domyślnie: 0.5
+  - Decay: -0.001 na grę (min 0.01)
+- **networkSize**: "small" | "medium" | "large"
+- Oba parametry osobno dla białych i czarnych
 
-- **Loss policy:** Cross-entropy między predicted policy a winner moves
-- **Loss value:** MSE między predicted value a rzeczywistym wynikiem gry
-- **Optimizer:** Adam (lr=0.001)
-- **Batch size:** 256
-- **Epoki na update:** 5
+## Format zapisu (na dysk)
 
-## Format zapisu
+Katalog `models/`:
+- `white.json` — wagi modelu białych
+- `black.json` — wagi modelu czarnych
+- `meta.json` — metadata (wersja, epsilon, rozmiar, liczba gier)
 
-Model zapisywany jako plik binarny:
-- Wagi każdej warstwy (float32)
-- Architektura (metadane: rozmiary warstw)
-- Numer wersji formatu
-
-Ładowanie: odczyt wag + odtworzenie architektury.
+Auto-zapis co 5 minut.
