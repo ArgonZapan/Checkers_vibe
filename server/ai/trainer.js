@@ -401,7 +401,7 @@ export class SelfPlay {
       try {
         await this._playGame();
         // Delay between rounds = 3x move delay
-        await this._sleep(Math.max(30, CONFIG.server.aiMoveDelayMs * 3));
+        if (CONFIG.server.aiMoveDelayMs > 0) await this._sleep(CONFIG.server.aiMoveDelayMs * 3);
       } catch (err) {
         console.error('[SelfPlay] Game error:', err.message);
         // Brief pause before retry
@@ -487,7 +487,7 @@ export class SelfPlay {
       }
 
       // Delay between AI moves (so humans can see the game)
-      await this._sleep(Math.max(10, CONFIG.server.aiMoveDelayMs));
+      if (CONFIG.server.aiMoveDelayMs > 0) await this._sleep(CONFIG.server.aiMoveDelayMs);
 
       // Get legal moves
       const lmRes = await fetch(`${CPP_BASE}/api/legal-moves`);
@@ -596,7 +596,7 @@ export class SelfPlay {
       }
 
       // Small delay so clients can observe the move
-      await this._sleep(Math.max(10, CONFIG.server.aiMoveDelayMs));
+      if (CONFIG.server.aiMoveDelayMs > 0) await this._sleep(CONFIG.server.aiMoveDelayMs);
     }
 
     // 3. Decay epsilon after each game
