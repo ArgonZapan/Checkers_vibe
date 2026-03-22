@@ -8,6 +8,8 @@ export default function GameControls({
   onStartPvai,
   onStartAivai,
   onReset,
+  speed,
+  onSpeed,
 }) {
   const turnColor = turn === 'white' ? '#f0f0f0' : '#2a2a2a';
   const turnLabel = turn === 'white' ? 'Białe' : 'Czarne';
@@ -43,6 +45,11 @@ export default function GameControls({
         <button className="btn-danger btn-small" onClick={onReset}>
           🔄 Reset
         </button>
+      </div>
+      <div className="controls-buttons" style={{ marginTop: '0.3rem' }}>
+        <button onClick={() => onSpeed(0)} className={speed === 0 ? 'btn-primary btn-small' : 'btn-secondary btn-small'}>⚡ Błyskawica</button>
+        <button onClick={() => onSpeed(100)} className={speed === 100 ? 'btn-primary btn-small' : 'btn-secondary btn-small'}>🏃 Szybko</button>
+        <button onClick={() => onSpeed(350)} className={speed === 350 ? 'btn-primary btn-small' : 'btn-secondary btn-small'}>🐢 Wolno</button>
       </div>
     </div>
   );

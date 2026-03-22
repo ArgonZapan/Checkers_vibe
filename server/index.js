@@ -370,6 +370,12 @@ io.on('connection', async (socket) => {
     }
   });
 
+  // ── Speed control ──────────────────────────────────────────────────────
+  socket.on('setSpeed', (ms) => {
+    CONFIG.server.aiMoveDelayMs = ms;
+    console.log(`[WS] Speed set to ${ms}ms`);
+  });
+
   // ── Full reset (model + stats + buffer + game) ─────────────────────────
   socket.on('reset', async () => {
     try {

@@ -28,7 +28,7 @@ export const CONFIG = {
     port: 3000,
     cppBase: 'http://localhost:8080',
     fetchTimeoutMs: 5000,
-    aiMoveDelayMs: 125,
+    aiMoveDelayMs: 0,
     autoSaveMs: 30000,
   },
 
@@ -58,3 +58,4 @@ export const CONFIG = {
     centerControl: 0.1,
   },
 };
+;

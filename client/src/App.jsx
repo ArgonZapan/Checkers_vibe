@@ -33,6 +33,14 @@ export default function App() {
   const [selected, setSelected] = useState(null);
   const [gameNumber, setGameNumber] = useState(0);
   const [movePath, setMovePath] = useState(null);
+  const [speed, setSpeed] = useState(0); // AI move delay in ms
+
+  const handleSpeed = (ms) => {
+    setSpeed(ms);
+    if (socketRef.current) {
+      socketRef.current.emit('setSpeed', ms);
+    }
+  };
 
   const [params, setParams] = useState({
     whiteEpsilon: 0.1,
@@ -290,6 +298,11 @@ export default function App() {
               🤖 AI vs AI
             </button>
           </div>
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '1rem' }}>
+            <button onClick={() => handleSpeed(0)} className={speed === 0 ? 'btn-primary' : 'btn-secondary'}>⚡ Błyskawica</button>
+            <button onClick={() => handleSpeed(100)} className={speed === 100 ? 'btn-primary' : 'btn-secondary'}>🏃 Szybko</button>
+            <button onClick={() => handleSpeed(350)} className={speed === 350 ? 'btn-primary' : 'btn-secondary'}>🐢 Wolno</button>
+          </div>
           <p style={{ color: 'var(--text-dim)', marginTop: '1rem' }}>
             {connected ? '🟢 Połączono z serwerem' : '🔴 Brak połączenia'}
           </p>
@@ -325,6 +338,8 @@ export default function App() {
             onStartPvai={handleStartPvai}
             onStartAivai={handleStartAivai}
             onReset={handleReset}
+            speed={speed}
+            onSpeed={handleSpeed}
           />
         </div>
         <div className="game-side">
