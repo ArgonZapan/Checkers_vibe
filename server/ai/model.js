@@ -113,6 +113,10 @@ export async function predict(model, boardArray, legalMoves, turn = 1) {
       return m.index ?? m;
     });
 
+    if (legalIndices.length === 0) {
+      return { move: 0, probabilities: {}, value: 0 };
+    }
+
     let maskedPolicy = Array.from(policy);
     const totalProb = legalIndices.reduce((sum, idx) => sum + (maskedPolicy[idx] || 0), 0) || 1;
 

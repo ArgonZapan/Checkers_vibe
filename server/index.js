@@ -121,7 +121,9 @@ const CPP_BASE = 'http://localhost:8080';
 const colorToTurn = (color) => color === 'white' ? 1 : -1;
 const turnToColor = (turn) => {
   if (typeof turn === 'string') return turn; // already a color string (C++ engine format)
-  return turn === 1 ? 'white' : 'black';
+  if (turn === 1) return 'white';
+  if (turn === -1) return 'black';
+  return 'white'; // default fallback (e.g., turn === 0 for draw)
 };
 
 // Helper: fetch JSON from C++ backend with timeout
