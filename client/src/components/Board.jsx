@@ -161,11 +161,32 @@ export default function Board({
     if (Object.keys(animOffsets).length > 0) {
       animFromRef.current = { ...animOffsets };
       animFlagRef.current = true;
-      requestAnimationFrame(() => {
-        animFromRef.current = {};
-        animFlagRef.current = false;
+      // Smooth SVG animation via requestAnimationFrame (250ms)
+      const startTime = performance.now();
+      const duration = 250;
+      const startOffsets = { ...animOffsets };
+      function animate(now) {
+        const elapsed = now - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        // Ease out
+        const ease = 1 - (1 - t) * (1 - t);
+        const current = {};
+        for (const key in startOffsets) {
+          current[key] = {
+            x: startOffsets[key].x * (1 - ease),
+            y: startOffsets[key].y * (1 - ease),
+          };
+        }
+        animFromRef.current = current;
         forceUpdate((n) => n + 1);
-      });
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          animFromRef.current = {};
+          animFlagRef.current = false;
+        }
+      }
+      requestAnimationFrame(animate);
     }
   }
   // Save old board for animation BEFORE overwriting (deep copy)
@@ -262,21 +283,13 @@ export default function Board({
         const isWhite = piece.color === 'white';
         const pieceKey = `piece-${row}-${col}`;
         const animOffset = animFromRef.current[pieceKey];
-        const pieceStyle = {
-          cursor: 'pointer',
-          ...(animOffset
-            ? {
-                transform: `translate(${animOffset.x}px, ${animOffset.y}px)`,
-                transition: 'none',
-              }
-            : {
-                transform: 'translate(0, 0)',
-                transition: 'transform 250ms ease-in-out',
-              }),
-        };
+        // SVG attribute transform (consistent across viewport sizes)
+        const pieceTransform = animOffset
+          ? `translate(${animOffset.x}, ${animOffset.y})`
+          : undefined;
 
         pieces.push(
-          <g key={pieceKey} onClick={() => onCellClick(row, col)} style={pieceStyle}>
+          <g key={pieceKey} onClick={() => onCellClick(row, col)} transform={pieceTransform} style={{ cursor: 'pointer' }}>
             <circle
               cx={px}
               cy={py}
