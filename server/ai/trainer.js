@@ -322,6 +322,8 @@ export class SelfPlay {
     while (this.running) {
       try {
         await this._playGame();
+        // Delay between rounds = 3x move delay
+        await this._sleep(CONFIG.server.aiMoveDelayMs * 3);
       } catch (err) {
         console.error('[SelfPlay] Game error:', err.message);
         // Brief pause before retry
