@@ -2,6 +2,7 @@
   "name": "checkers_vibe",
   "version": "1.0.0",
   "description": "> Warcaby — vibe coded.",
+  "type": "module",
   "main": "index.js",
   "directories": {
     "doc": "docs"
@@ -16,7 +17,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/ArgonZapan/Checkers_vibe/issues"
   },

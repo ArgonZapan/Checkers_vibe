@@ -1,15 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { CONFIG } from '../../../config.js';
 
-const CELL_SIZE = 60;
+const CELL_SIZE = CONFIG.board.cellSize;
 const BOARD_SIZE = CELL_SIZE * 8;
-const STEP_DURATION_MS = 200;
+const STEP_DURATION_MS = CONFIG.board.animation.stepDurationMs;
 
-const LIGHT_COLOR = '#deb887';
-const DARK_COLOR = '#8b4513';
-const HIGHLIGHT_COLOR = 'rgba(255, 255, 0, 0.3)';
-const SELECTED_COLOR = 'rgba(0, 255, 0, 0.35)';
-const VALID_MOVE_COLOR = 'rgba(0, 200, 0, 0.45)';
-const VALID_MOVE_DOT_COLOR = 'rgba(0, 160, 0, 0.7)';
+const LIGHT_COLOR = CONFIG.board.colors.light;
+const DARK_COLOR = CONFIG.board.colors.dark;
+const HIGHLIGHT_COLOR = CONFIG.board.colors.highlight;
+const SELECTED_COLOR = CONFIG.board.colors.selected;
+const VALID_MOVE_COLOR = CONFIG.board.colors.validMove;
+const VALID_MOVE_DOT_COLOR = CONFIG.board.colors.validDot;
 
 export default function Board({
   board,
@@ -294,8 +295,8 @@ export default function Board({
               cx={px}
               cy={py}
               r={radius}
-              fill={isWhite ? '#f0f0f0' : '#2a2a2a'}
-              stroke={isWhite ? '#999' : '#555'}
+              fill={isWhite ? CONFIG.board.colors.white : CONFIG.board.colors.black}
+              stroke={isWhite ? CONFIG.board.colors.whiteStroke : CONFIG.board.colors.blackStroke}
               strokeWidth="2"
               pointerEvents="visible"
             />
@@ -306,7 +307,7 @@ export default function Board({
                 textAnchor="middle"
                 dominantBaseline="central"
                 fontSize="20"
-                fill={isWhite ? '#333' : '#ddd'}
+                fill={isWhite ? CONFIG.board.colors.kingWhite : CONFIG.board.colors.kingBlack}
                 pointerEvents="none"
               >
                 👑
@@ -352,8 +353,8 @@ export default function Board({
                 cx={px}
                 cy={py}
                 r={radius}
-                fill={isWhite ? '#f0f0f0' : '#2a2a2a'}
-                stroke={isWhite ? '#999' : '#555'}
+                fill={isWhite ? CONFIG.board.colors.white : CONFIG.board.colors.black}
+                stroke={isWhite ? CONFIG.board.colors.whiteStroke : CONFIG.board.colors.blackStroke}
                 strokeWidth="2"
               />
               {piece.king && (
@@ -363,7 +364,7 @@ export default function Board({
                   textAnchor="middle"
                   dominantBaseline="central"
                   fontSize="20"
-                  fill={isWhite ? '#333' : '#ddd'}
+                  fill={isWhite ? CONFIG.board.colors.kingWhite : CONFIG.board.colors.kingBlack}
                 >
                   👑
                 </text>

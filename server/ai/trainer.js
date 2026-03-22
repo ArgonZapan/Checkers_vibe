@@ -3,6 +3,7 @@ import { ReplayBuffer } from './buffer.js';
 import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { CONFIG } from '../../config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -52,14 +53,14 @@ function calculateReward(prevBoardFlat, nextBoardFlat, turn) {
     if (isOwnPiece(nextBoardFlat[i], turn)) nextOwn++;
     else if (nextBoardFlat[i] !== 0) nextOpp++;
   }
-  reward += (prevOpp - nextOpp) * 0.5; // captured opponent pieces
-  reward -= (prevOwn - nextOwn) * 0.5; // lost own pieces
+  reward += (prevOpp - nextOpp) * CONFIG.rewards.capture; // captured opponent pieces
+  reward -= (prevOwn - nextOwn) * Math.abs(CONFIG.rewards.loss); // lost own pieces
 
   // 2. King promotion (±0.3)
   const promoRank = turn === 1 ? PROMOTION_RANK_WHITE : PROMOTION_RANK_BLACK;
   for (const idx of promoRank) {
     if (isKing(nextBoardFlat[idx], turn) && isPawn(prevBoardFlat[idx], turn)) {
-      reward += 0.3;
+      reward += CONFIG.rewards.promotion;
     }
   }
 
@@ -69,14 +70,14 @@ function calculateReward(prevBoardFlat, nextBoardFlat, turn) {
     if (isOwnPiece(prevBoardFlat[sq], turn)) prevCenter++;
     if (isOwnPiece(nextBoardFlat[sq], turn)) nextCenter++;
   }
-  reward += (nextCenter - prevCenter) * 0.1;
+  reward += (nextCenter - prevCenter) * CONFIG.rewards.centerControl;
 
   return Math.round(reward * 1000) / 1000; // avoid float drift
 }
 const STATE_FILE = path.join(__dirname, '..', '..', 'data', 'state.json');
 
-const CPP_BASE = 'http://localhost:8080';
-const FETCH_TIMEOUT_MS = 5000;
+const CPP_BASE = CONFIG.server.cppBase;
+const FETCH_TIMEOUT_MS = CONFIG.server.fetchTimeoutMs;
 
 async function cppFetch(url, opts = {}) {
   const controller = new AbortController();
@@ -95,19 +96,19 @@ export class SelfPlay {
     this.running = false;
 
     // Parameters per side
-    this.epsilonWhite = 0.3;
-    this.epsilonBlack = 0.3;
+    this.epsilonWhite = CONFIG.ai.defaultEpsilon;
+    this.epsilonBlack = CONFIG.ai.defaultEpsilon;
     this.networkSizeWhite = 'small';
     this.networkSizeBlack = 'small';
 
     // Custom model architecture params
     this.modelParams = {
-      layers: 3,
-      neurons: 128,
-      activation: 'relu',
-      lr: 0.001,
-      batchSize: 64,
-      dropout: 0,
+      layers: CONFIG.ai.modelParams.layers,
+      neurons: CONFIG.ai.modelParams.neurons,
+      activation: CONFIG.ai.modelParams.activation,
+      lr: CONFIG.ai.modelParams.lr,
+      batchSize: CONFIG.ai.modelParams.batchSize,
+      dropout: CONFIG.ai.modelParams.dropout,
     };
 
     // Models
@@ -115,7 +116,7 @@ export class SelfPlay {
     this.modelBlack = null;
 
     // Replay buffer
-    this.buffer = new ReplayBuffer(10000);
+    this.buffer = new ReplayBuffer(CONFIG.ai.bufferSize);
 
     // Stats
     this.stats = {
@@ -186,10 +187,10 @@ export class SelfPlay {
     this.stats.lastLoss = null;
 
     // 4. Reset epsilon
-    this.epsilonWhite = 0.3;
-    this.epsilonBlack = 0.3;
-    this.stats.epsilonWhite = 0.3;
-    this.stats.epsilonBlack = 0.3;
+    this.epsilonWhite = CONFIG.ai.defaultEpsilon;
+    this.epsilonBlack = CONFIG.ai.defaultEpsilon;
+    this.stats.epsilonWhite = CONFIG.ai.defaultEpsilon;
+    this.stats.epsilonBlack = CONFIG.ai.defaultEpsilon;
 
     // 5. Create fresh models
     this.modelWhite = createModel({ ...this.modelParams });
@@ -236,8 +237,8 @@ export class SelfPlay {
       this.stats.gamesPlayed = 0;
       this.stats.draws = 0;
       this.stats.lastLoss = null;
-      this.epsilonWhite = 0.3;
-      this.epsilonBlack = 0.3;
+      this.epsilonWhite = CONFIG.ai.defaultEpsilon;
+      this.epsilonBlack = CONFIG.ai.defaultEpsilon;
     }
     this.io?.emit('modelRestart', { side });
     console.log(`[SelfPlay] Model restarted (${side})`);
@@ -305,8 +306,8 @@ export class SelfPlay {
         this.stats.draws = state.stats.draws ?? 0;
         this.stats.lastLoss = state.stats.lastLoss ?? null;
       }
-      this.epsilonWhite = state.epsilonWhite ?? 0.3;
-      this.epsilonBlack = state.epsilonBlack ?? 0.3;
+      this.epsilonWhite = state.epsilonWhite ?? CONFIG.ai.defaultEpsilon;
+      this.epsilonBlack = state.epsilonBlack ?? CONFIG.ai.defaultEpsilon;
       this.stats.epsilonWhite = this.epsilonWhite;
       this.stats.epsilonBlack = this.epsilonBlack;
       console.log(`[SelfPlay] Loaded state: ${this.stats.gamesPlayed} games played, εW=${this.epsilonWhite}, εB=${this.epsilonBlack}`);
@@ -406,7 +407,7 @@ export class SelfPlay {
       }
 
       // Delay between AI moves (so humans can see the game)
-      await this._sleep(400);
+      await this._sleep(CONFIG.server.aiMoveDelayMs);
 
       // Get legal moves
       const lmRes = await fetch(`${CPP_BASE}/api/legal-moves`);
@@ -512,8 +513,8 @@ export class SelfPlay {
       }
 
       // Train both models
-      const lossWhite = await train(this.modelWhite, batchWhite, 5);
-      const lossBlack = await train(this.modelBlack, batchBlack, 5);
+      const lossWhite = await train(this.modelWhite, batchWhite, CONFIG.ai.trainEpochs);
+      const lossBlack = await train(this.modelBlack, batchBlack, CONFIG.ai.trainEpochs);
 
       const avgLoss = ((lossWhite.loss || 0) + (lossBlack.loss || 0)) / 2;
       this.stats.lastLoss = avgLoss;
@@ -521,8 +522,8 @@ export class SelfPlay {
     }
 
     // 4. Decay epsilon
-    this.epsilonWhite = Math.max(0.01, this.epsilonWhite - 0.001);
-    this.epsilonBlack = Math.max(0.01, this.epsilonBlack - 0.001);
+    this.epsilonWhite = Math.max(CONFIG.ai.minEpsilon, this.epsilonWhite - CONFIG.ai.epsilonDecay);
+    this.epsilonBlack = Math.max(CONFIG.ai.minEpsilon, this.epsilonBlack - CONFIG.ai.epsilonDecay);
     this.stats.epsilonWhite = this.epsilonWhite;
     this.stats.epsilonBlack = this.epsilonBlack;
 

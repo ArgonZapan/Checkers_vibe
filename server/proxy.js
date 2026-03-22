@@ -1,6 +1,7 @@
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import { CONFIG } from '../config.js';
 
-const CPP_TARGET = 'http://localhost:8080';
+const CPP_TARGET = CONFIG.server.cppBase;
 
 export function setupProxy(app) {
   // Proxy all /api/* requests to C++ EXCEPT /api/ai/* and /api/selfplay/*

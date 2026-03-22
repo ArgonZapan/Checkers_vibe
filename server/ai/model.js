@@ -202,7 +202,8 @@ export async function predict(model, boardArray, legalMoves, turn = 1) {
 }
 
 // ── Train ───────────────────────────────────────────────────────────────────
-const GAMMA = 0.95; // discount factor for Bellman equation
+import { CONFIG } from '../../config.js';
+const GAMMA = CONFIG.ai.gamma; // discount factor for Bellman equation
 
 export async function train(model, batch, epochs = 5) {
   if (batch.length === 0) return { loss: 0 };
@@ -308,7 +309,7 @@ export async function saveModel(model, dirPath) {
 export async function loadModel(dirPath) {
   const model = await tf.loadLayersModel(`file://${dirPath}/model.json`);
   model.compile({
-    optimizer: tf.train.adam(0.001),
+    optimizer: tf.train.adam(CONFIG.ai.modelParams.lr),
     loss: ['categoricalCrossentropy', 'meanSquaredError']
   });
   console.log(`[Model] Loaded from ${dirPath}`);

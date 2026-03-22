@@ -1,8 +1,9 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { CONFIG } from '../../config.js';
 
 export class ReplayBuffer {
-  constructor(maxSize = 10000) {
+  constructor(maxSize = CONFIG.ai.bufferSize) {
     this.maxSize = maxSize;
     this.buffer = new Array(maxSize);
     this.head = 0;

@@ -7,9 +7,10 @@ import { predict, createModel } from './ai/model.js';
 import { saveModel, loadModel } from './ai/model.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { CONFIG } from '../config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || CONFIG.server.port;
 const MODEL_DIR = path.join(__dirname, '..', 'data', 'model');
 const BUFFER_FILE = path.join(__dirname, '..', 'data', 'buffer.json');
 
@@ -68,8 +69,8 @@ app.post('/api/ai/train', async (req, res) => {
     if (batch.length === 0) {
       return res.status(400).json({ error: 'Empty batch' });
     }
-    const lossWhite = await train(trainer.modelWhite, batch, 5);
-    const lossBlack = await train(trainer.modelBlack, batch, 5);
+    const lossWhite = await train(trainer.modelWhite, batch, CONFIG.ai.trainEpochs);
+    const lossBlack = await train(trainer.modelBlack, batch, CONFIG.ai.trainEpochs);
     const avgLoss = ((lossWhite.loss || 0) + (lossBlack.loss || 0)) / 2;
     io.emit('train', { loss: avgLoss });
     res.json({ loss: avgLoss });
@@ -128,7 +129,7 @@ app.get('/api/selfplay/status', (_req, res) => {
 setupProxy(app);
 
 // ── WebSocket ───────────────────────────────────────────────────────────────
-const CPP_BASE = 'http://localhost:8080';
+const CPP_BASE = CONFIG.server.cppBase;
 
 // Helper: convert between client color strings and C++ int turns
 const colorToTurn = (color) => color === 'white' ? 1 : -1;
@@ -140,7 +141,7 @@ const turnToColor = (turn) => {
 };
 
 // Helper: fetch JSON from C++ backend with timeout
-const CPP_FETCH_TIMEOUT_MS = 5000;
+const CPP_FETCH_TIMEOUT_MS = CONFIG.server.fetchTimeoutMs;
 async function cppFetch(path, opts = {}) {
   const url = `${CPP_BASE}${path}`;
   const controller = new AbortController();
@@ -265,7 +266,7 @@ io.on('connection', async (socket) => {
 
       // 3. If PvAI and game not over → AI makes its move (with delay so player can see)
       if (isPvAI && !state.gameOver) {
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, CONFIG.server.aiMoveDelayMs));
         await aiMove(state);
         state = await getGameState();
       }
@@ -486,7 +487,7 @@ setInterval(async () => {
   } finally {
     _saving = false;
   }
-}, 30 * 1000);
+}, CONFIG.server.autoSaveMs);
 
 // ── Start ───────────────────────────────────────────────────────────────────
 async function main() {
