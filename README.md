@@ -23,6 +23,7 @@ Sieć neuronowa (ten sam model dla obu stron). Różne parametry = różne style
 - Auto-zapis co 5 minut
 - Self-play: AI vs AI → zbieranie danych z gry → po zakończeniu szkolenie na danych + aktualizacja wag → kolejna gra automatycznie
 - Replay buffer: ostatnie 10k ruchów (FIFO)
+- Auto-zapis bufora na dysk co 10 minut (binarny)
 - [ ] UI — czyste, responsywne
 - [ ] Animacje ruchów
 
