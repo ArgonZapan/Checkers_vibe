@@ -127,7 +127,7 @@ export default function App() {
 
     s.on('loss', (data) => {
       setLossHistory((prev) => {
-        if (prev.length >= 100) {
+        if (prev.length >= 1000) {
           return [...prev.slice(1), data.loss];
         }
         return [...prev, data.loss];
