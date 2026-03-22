@@ -109,9 +109,13 @@ void registerRoutes(httplib::Server& svr) {
         res.set_content(j.dump(), "application/json");
     });
 
-    // POST /api/game/start
-    svr.Post("/api/game/start", [](const httplib::Request&, httplib::Response& res) {
+    // POST /api/game/start?first=white|black
+    svr.Post("/api/game/start", [](const httplib::Request& req, httplib::Response& res) {
         engine.reset();
+        // Alternate who starts (odd games = black first)
+        if (gamesPlayed % 2 == 1) {
+            engine.getBoard().currentTurn = BLACK;
+        }
         gamesPlayed++;
         res.set_content(gameStateJson(engine).dump(), "application/json");
     });
