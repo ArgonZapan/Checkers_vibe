@@ -405,6 +405,9 @@ export class SelfPlay {
         break;
       }
 
+      // Delay between AI moves (so humans can see the game)
+      await this._sleep(400);
+
       // Get legal moves
       const lmRes = await fetch(`${CPP_BASE}/api/legal-moves`);
       if (!lmRes.ok) throw new Error(`Legal moves failed: ${lmRes.status}`);

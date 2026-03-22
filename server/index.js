@@ -263,10 +263,10 @@ io.on('connection', async (socket) => {
       const isPvAI = socket.gameMode === 'pvai';
       const moveCaptures = moveResult.captures || captures || [];
 
-      // 3. If PvAI and game not over → AI makes its move
+      // 3. If PvAI and game not over → AI makes its move (with delay so player can see)
       if (isPvAI && !state.gameOver) {
+        await new Promise(r => setTimeout(r, 400));
         await aiMove(state);
-        // Re-fetch state after AI moved
         state = await getGameState();
       }
 
