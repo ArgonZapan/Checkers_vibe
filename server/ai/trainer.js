@@ -576,27 +576,24 @@ export class SelfPlay {
 
       turn = -turn;
 
-      // Train after each move (continuous learning) — 3 epochs, fresh batch each time
-      if (this.buffer.size() >= this.modelParams.batchSize) {
-        let lastLoss = 0;
-        for (let epoch = 0; epoch < 3; epoch++) {
-          const batch = this.buffer.sample(this.modelParams.batchSize);
-          const batchWhite = [];
-          const batchBlack = [];
-          for (const s of batch) {
-            if (s.turn === 1) batchWhite.push(s);
-            else batchBlack.push(s);
-          }
-          const lw = batchWhite.length > 0 ? await train(this.modelWhite, batchWhite, 1) : { loss: 0 };
-          const lb = batchBlack.length > 0 ? await train(this.modelBlack, batchBlack, 1) : { loss: 0 };
-          lastLoss = ((lw.loss || 0) + (lb.loss || 0)) / 2;
-        }
-        this.stats.lastLoss = lastLoss;
-        this.io?.emit('loss', { loss: lastLoss });
-      }
-
       // Small delay so clients can observe the move
       if (CONFIG.server.aiMoveDelayMs > 0) await this._sleep(CONFIG.server.aiMoveDelayMs);
+    }
+
+    // Train once per round — 2048 samples, 1 epoch
+    if (this.buffer.size() >= 2048) {
+      const batch = this.buffer.sample(2048);
+      const batchWhite = [];
+      const batchBlack = [];
+      for (const s of batch) {
+        if (s.turn === 1) batchWhite.push(s);
+        else batchBlack.push(s);
+      }
+      const lw = batchWhite.length > 0 ? await train(this.modelWhite, batchWhite, 1) : { loss: 0 };
+      const lb = batchBlack.length > 0 ? await train(this.modelBlack, batchBlack, 1) : { loss: 0 };
+      const avgLoss = ((lw.loss || 0) + (lb.loss || 0)) / 2;
+      this.stats.lastLoss = avgLoss;
+      this.io?.emit('loss', { loss: avgLoss });
     }
 
     // 3. Decay epsilon after each game
