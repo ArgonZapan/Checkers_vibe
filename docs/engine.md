@@ -6,6 +6,7 @@ Plansza 8×8, pionki na ciemnych polach. Każdy gracz zaczyna z 12 pionkami.
 
 ### Ruch
 - Pionek: do przodu po skosie (1 pole)
+- Pionek bije do przodu i do tyłu
 - Damka: po skosie w dowolną stronę, dowolną ilość pól
 
 ### Bicie
