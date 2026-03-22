@@ -137,7 +137,8 @@ export async function train(model, batch, epochs = 5) {
   for (const sample of batch) {
     const { board, legalMoves, chosenMove, result, turn = 1 } = sample;
     const tensor = boardToTensor(board, turn);
-    boards.push(tensor.arraySync()[0]);
+    const data = await tensor.data();
+    boards.push(Array.from(data));
 
     // Policy target: one-hot on chosen move
     const policyTarget = new Float32Array(48).fill(0);
@@ -159,7 +160,7 @@ export async function train(model, batch, epochs = 5) {
 
   const history = await model.fit(xTensor, [yPolicyTensor, yValueTensor], {
     epochs,
-    batchSize: Math.min(batch.length, 64),
+    batchSize: Math.min(batch.length, 256),
     verbose: 0
   });
 

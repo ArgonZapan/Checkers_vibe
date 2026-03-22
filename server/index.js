@@ -208,17 +208,20 @@ io.on('connection', (socket) => {
   });
 
   // ── Player move (PvAI / PvP) ──────────────────────────────────────────
-  socket.on('move', async ({ from, to }) => {
+  socket.on('move', async ({ from, to, captures }) => {
     try {
-      // 1. Execute player's move via C++
-      await cppFetch('/api/move', {
+      // 1. Execute player's move via C++ (include captures for disambiguation)
+      const moveBody = { from, to };
+      if (captures && captures.length > 0) moveBody.captures = captures;
+      const moveResult = await cppFetch('/api/move', {
         method: 'POST',
-        body: JSON.stringify({ from, to }),
+        body: JSON.stringify(moveBody),
       });
 
       // 2. Get updated state after player move
       let state = await getGameState();
       const isPvAI = socket.gameMode === 'pvai';
+      const moveCaptures = moveResult.captures || captures || [];
 
       // 3. If PvAI and game not over → AI makes its move
       if (isPvAI && !state.gameOver) {
@@ -227,10 +230,10 @@ io.on('connection', (socket) => {
         state = await getGameState();
       }
 
-      // 4. Emit new state to client (use state.lastMove which reflects the AI's move if any)
+      // 4. Emit new state to client with captures in lastMove
       socket.emit('state', {
         ...state,
-        lastMove: state.lastMove || { from, to },
+        lastMove: state.lastMove || { from, to, captures: moveCaptures },
       });
 
       // 5. If game over, emit gameOver event

@@ -40,14 +40,17 @@ std::vector<Move> MoveGenerator::generateCaptures(const Board& board, Color colo
     Bitboard pawns = (color == WHITE) ? board.whitePieces : board.blackPieces;
     Bitboard kings = (color == WHITE) ? board.whiteKings : board.blackKings;
 
+    // Single copy for all pieces — multiCapture mutates board in place
+    Board temp = board;
+
     for (int row = 0; row < 8; row++) {
         for (int col = 0; col < 8; col++) {
             if (!(myPieces & squareToMask(row, col))) continue;
             if (pawns & squareToMask(row, col)) {
-                auto caps = generatePawnCaptures(board, row, col, color);
+                auto caps = generatePawnCaptures(temp, row, col, color);
                 allCaptures.insert(allCaptures.end(), caps.begin(), caps.end());
             } else {
-                auto caps = generateKingCaptures(board, row, col, color);
+                auto caps = generateKingCaptures(temp, row, col, color);
                 allCaptures.insert(allCaptures.end(), caps.begin(), caps.end());
             }
         }
@@ -130,30 +133,44 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
                         if (c == cap) { already = true; break; }
                     }
                     if (!already) {
-                        // Wykonaj bicie tymczasowo
-                        Board temp = board;
+                        // Mutate board in place, save state for rollback
                         Bitboard capMask = squareToMask(oppR, oppC);
-                        if (color == WHITE) {
-                            temp.blackPieces &= ~capMask;
-                            temp.blackKings &= ~capMask;
-                        } else {
-                            temp.whitePieces &= ~capMask;
-                            temp.whiteKings &= ~capMask;
-                        }
                         Bitboard fromMask = squareToMask(curR, curC);
                         Bitboard toMask = squareToMask(nr, nc);
+                        Bitboard savedOpp, savedOppKings, savedMyKings;
                         if (color == WHITE) {
-                            temp.whiteKings &= ~fromMask;
-                            temp.whiteKings |= toMask;
+                            savedOpp = board.blackPieces;
+                            savedOppKings = board.blackKings;
+                            savedMyKings = board.whiteKings;
+                            board.blackPieces &= ~capMask;
+                            board.blackKings &= ~capMask;
+                            board.whiteKings &= ~fromMask;
+                            board.whiteKings |= toMask;
                         } else {
-                            temp.blackKings &= ~fromMask;
-                            temp.blackKings |= toMask;
+                            savedOpp = board.whitePieces;
+                            savedOppKings = board.whiteKings;
+                            savedMyKings = board.blackKings;
+                            board.whitePieces &= ~capMask;
+                            board.whiteKings &= ~capMask;
+                            board.blackKings &= ~fromMask;
+                            board.blackKings |= toMask;
                         }
 
                         captures.push_back(cap);
                         foundAny = true;
-                        multiCapture(temp, origR, origC, nr, nc, color, true, captures, result);
+                        multiCapture(board, origR, origC, nr, nc, color, true, captures, result);
                         captures.pop_back();
+
+                        // Rollback board state
+                        if (color == WHITE) {
+                            board.blackPieces = savedOpp;
+                            board.blackKings = savedOppKings;
+                            board.whiteKings = savedMyKings;
+                        } else {
+                            board.whitePieces = savedOpp;
+                            board.whiteKings = savedOppKings;
+                            board.blackKings = savedMyKings;
+                        }
                     }
                 }
                 nr += d[0];
@@ -180,39 +197,63 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
             }
             if (already) continue;
 
-            Board temp = board;
+            // Save state for rollback
+            Bitboard savedOpp, savedOppKings, savedMyPieces, savedMyKings;
             if (color == WHITE) {
-                temp.blackPieces &= ~midMask;
-                temp.blackKings &= ~midMask;
+                savedOpp = board.blackPieces;
+                savedOppKings = board.blackKings;
+                savedMyPieces = board.whitePieces;
+                savedMyKings = board.whiteKings;
             } else {
-                temp.whitePieces &= ~midMask;
-                temp.whiteKings &= ~midMask;
+                savedOpp = board.whitePieces;
+                savedOppKings = board.whiteKings;
+                savedMyPieces = board.blackPieces;
+                savedMyKings = board.blackKings;
             }
+
+            // Mutate board in place
             Bitboard fromMask = squareToMask(curR, curC);
             if (color == WHITE) {
-                temp.whitePieces &= ~fromMask;
-                temp.whitePieces |= endMask;
+                board.blackPieces &= ~midMask;
+                board.blackKings &= ~midMask;
+                board.whitePieces &= ~fromMask;
+                board.whitePieces |= endMask;
             } else {
-                temp.blackPieces &= ~fromMask;
-                temp.blackPieces |= endMask;
+                board.whitePieces &= ~midMask;
+                board.whiteKings &= ~midMask;
+                board.blackPieces &= ~fromMask;
+                board.blackPieces |= endMask;
             }
 
             // Sprawdź promocję
             bool becameKing = false;
             if (color == WHITE && nr == 7) {
-                temp.whitePieces &= ~endMask;
-                temp.whiteKings |= endMask;
+                board.whitePieces &= ~endMask;
+                board.whiteKings |= endMask;
                 becameKing = true;
             } else if (color == BLACK && nr == 0) {
-                temp.blackPieces &= ~endMask;
-                temp.blackKings |= endMask;
+                board.blackPieces &= ~endMask;
+                board.blackKings |= endMask;
                 becameKing = true;
             }
 
             captures.push_back(cap);
             foundAny = true;
-            multiCapture(temp, origR, origC, nr, nc, color, becameKing, captures, result);
+            multiCapture(board, origR, origC, nr, nc, color, becameKing, captures, result);
             captures.pop_back();
+
+            // Rollback board state
+            if (color == WHITE) {
+                board.blackPieces = savedOpp;
+                board.blackKings = savedOppKings;
+                board.whitePieces = savedMyPieces;
+                board.whiteKings = savedMyKings;
+            } else {
+                board.whitePieces = savedOpp;
+                board.whiteKings = savedOppKings;
+                board.blackPieces = savedMyPieces;
+                board.blackKings = savedMyKings;
+            }
         }
     }
 
@@ -225,20 +266,18 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
     }
 }
 
-std::vector<Move> MoveGenerator::generatePawnCaptures(const Board& board, int row, int col, Color color) {
+std::vector<Move> MoveGenerator::generatePawnCaptures(Board& board, int row, int col, Color color) {
     std::vector<Move> result;
     std::vector<Square> caps;
-    Board temp = board;
     bool isKing = ((color == WHITE) ? board.whiteKings : board.blackKings) & squareToMask(row, col);
-    multiCapture(temp, row, col, row, col, color, isKing, caps, result);
+    multiCapture(board, row, col, row, col, color, isKing, caps, result);
     return result;
 }
 
-std::vector<Move> MoveGenerator::generateKingCaptures(const Board& board, int row, int col, Color color) {
+std::vector<Move> MoveGenerator::generateKingCaptures(Board& board, int row, int col, Color color) {
     std::vector<Move> result;
     std::vector<Square> caps;
-    Board temp = board;
-    multiCapture(temp, row, col, row, col, color, true, caps, result);
+    multiCapture(board, row, col, row, col, color, true, caps, result);
     return result;
 }
 

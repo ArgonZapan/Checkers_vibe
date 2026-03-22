@@ -5,6 +5,7 @@
 #include <atomic>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 using json = nlohmann::json;
 using namespace checkers;
@@ -126,7 +127,7 @@ void registerRoutes(httplib::Server& svr) {
         res.set_content(j.dump(), "application/json");
     });
 
-    // POST /api/move   body: {"from":[r,c],"to":[r,c]}
+    // POST /api/move   body: {"from":[r,c],"to":[r,c],"captures":[[r,c],...]}
     svr.Post("/api/move", [](const httplib::Request& req, httplib::Response& res) {
         try {
             auto body = json::parse(req.body);
@@ -136,14 +137,50 @@ void registerRoutes(httplib::Server& svr) {
             int tc = body["to"][1].get<int>();
 
             auto legal = engine.getLegalMoves();
+
+            // Build hash map for O(1) lookup by from/to coordinates
+            struct MoveKey { int r1, c1, r2, c2; };
+            struct KeyHash {
+                size_t operator()(const MoveKey& k) const {
+                    return ((k.r1 * 8 + k.c1) * 64 + (k.r2 * 8 + k.c2));
+                }
+            };
+            struct KeyEq {
+                bool operator()(const MoveKey& a, const MoveKey& b) const {
+                    return a.r1 == b.r1 && a.c1 == b.c1 && a.r2 == b.r2 && a.c2 == b.c2;
+                }
+            };
+            std::unordered_map<MoveKey, std::vector<size_t>, KeyHash, KeyEq> moveMap;
+            for (size_t i = 0; i < legal.size(); i++) {
+                MoveKey key{legal[i].from.row, legal[i].from.col,
+                            legal[i].to.row, legal[i].to.col};
+                moveMap[key].push_back(i);
+            }
+
             Move chosen;
             bool found = false;
-            for (auto& m : legal) {
-                if (m.from.row == fr && m.from.col == fc &&
-                    m.to.row   == tr && m.to.col   == tc) {
+            MoveKey query{fr, fc, tr, tc};
+            auto it = moveMap.find(query);
+            if (it != moveMap.end()) {
+                for (size_t idx : it->second) {
+                    auto& m = legal[idx];
+                    // If captures provided, match them exactly
+                    if (body.contains("captures") && body["captures"].is_array()) {
+                        auto caps = body["captures"];
+                        if (m.captures.size() != caps.size()) continue;
+                        bool match = true;
+                        for (size_t i = 0; i < m.captures.size(); i++) {
+                            if (m.captures[i].row != caps[i][0].get<int>() ||
+                                m.captures[i].col != caps[i][1].get<int>()) {
+                                match = false;
+                                break;
+                            }
+                        }
+                        if (!match) continue;
+                    }
                     chosen = m;
                     found = true;
-                    break;           // first match — captures are unique per (from,to)
+                    break;
                 }
             }
             if (!found) {
@@ -154,7 +191,12 @@ void registerRoutes(httplib::Server& svr) {
                 return;
             }
             engine.makeMove(chosen);
-            res.set_content(gameStateJson(engine).dump(), "application/json");
+            // Return game state with captures from the executed move
+            json response = gameStateJson(engine);
+            json caps = json::array();
+            for (auto& c : chosen.captures) caps.push_back(json::array({c.row, c.col}));
+            response["captures"] = caps;
+            res.set_content(response.dump(), "application/json");
         } catch (...) {
             json err;
             err["error"] = "invalid json";
