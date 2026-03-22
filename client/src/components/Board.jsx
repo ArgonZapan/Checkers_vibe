@@ -33,13 +33,13 @@ export default function Board({
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
         const cur = board[r][c];
-        const old = prev[r][c];
-        if (cur && old && cur.color === old.color && cur.king === old.king) {
-          // Same piece type — check if it moved from somewhere else
+        if (cur) {
+          // Check if this piece was in a different position before
           let foundOld = false;
           for (let pr = 0; pr < 8; pr++) {
             for (let pc = 0; pc < 8; pc++) {
-              if ((pr !== r || pc !== c) && prev[pr][pc] === cur) {
+              const old = prev[pr][pc];
+              if (old && cur.color === old.color && cur.king === old.king && (pr !== r || pc !== c)) {
                 // Piece moved from (pr,pc) to (r,c)
                 anim.offsets[`piece-${r}-${c}`] = {
                   x: (pc - c) * CELL_SIZE,
