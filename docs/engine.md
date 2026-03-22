@@ -27,14 +27,16 @@ Plansza 8×8, pionki na ciemnych polach. Każdy gracz zaczyna z 12 pionkami.
 
 ## Reprezentacja planszy
 
-Plansza jako 8×8 tablica. Wartości:
-- 0: puste pole
-- 1: pionek gracza 1
-- 2: pionek gracza 2
-- 3: damka gracza 1
-- 4: damka gracza 2
+Bitboard (64-bit unsigned integer). Każdy bit = jedno pole planszy.
 
-Alternatywnie: bitboard (64-bit) dla każdego typu pionka — szybsze operacje.
+### Bitboardy:
+- `white_pieces` — pionki białe
+- `white_kings` — damki białe
+- `black_pieces` — pionki czarne
+- `black_kings` — damki czarne
+- `empty` — puste pola (obliczane: `~(white | black)`)
+
+Operacje: AND, OR, XOR, shift — przetwarzanie 64 pól jednocześnie. Generowanie ruchów: kilka operacji bitowych zamiast pętli for.
 
 ## Generowanie ruchów
 

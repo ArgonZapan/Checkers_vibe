@@ -6,15 +6,15 @@ TensorFlow.js — sieć działa w C++ (backend) z bindingiem do JS lub natywnie 
 
 ## Wejście (input)
 
-Stan planszy jako tensor wejściowy:
+Stan planszy z bitboardów jako tensor wejściowy:
 
 - **8×8×4** — 8 rzędów, 8 kolumn, 4 kanały:
-  - Kanał 1: pionki gracza 1
-  - Kanał 2: damki gracza 1
-  - Kanał 3: pionki gracza 2
-  - Kanał 4: damki gracza 2
+  - Kanał 1: pionki białe (z `white_pieces`)
+  - Kanał 2: damki białe (z `white_kings`)
+  - Kanał 3: pionki czarne (z `black_pieces`)
+  - Kanał 4: damki czarne (z `black_kings`)
 - Każdy kanał: 1 jeśli pionek/damka jest na polu, 0 jeśli nie
-- Dodatkowo: 1 bit — czyja tura (0 = gracz 1, 1 = gracz 2)
+- Dodatkowo: 1 bit — czyja tura (0 = białe, 1 = czarne)
 
 Razem: 8×8×4 + 1 = 257 wartości wejściowych.
 
