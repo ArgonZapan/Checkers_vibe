@@ -171,22 +171,31 @@ export async function predict(model, boardArray, legalMoves, turn = 1) {
     }
 
     let maskedPolicy = Array.from(policy);
-    const totalProb = legalIndices.reduce((sum, idx) => sum + (maskedPolicy[idx] || 0), 0) || 1;
 
-    // Pick move (argmax among legal)
-    let bestIdx = legalIndices[0];
-    let bestProb = -1;
+    // Compute softmax probabilities for legal moves (temperature=1.0)
+    const expProbs = {};
+    let maxLogit = -Infinity;
     for (const idx of legalIndices) {
-      if (maskedPolicy[idx] > bestProb) {
-        bestProb = maskedPolicy[idx];
-        bestIdx = idx;
-      }
+      const val = maskedPolicy[idx] || 0;
+      if (val > maxLogit) maxLogit = val;
     }
-
-    // Normalize probabilities for legal moves only
+    let totalExp = 0;
+    for (const idx of legalIndices) {
+      expProbs[idx] = Math.exp((maskedPolicy[idx] || 0) - maxLogit);
+      totalExp += expProbs[idx];
+    }
     const normalizedProbs = {};
     for (const idx of legalIndices) {
-      normalizedProbs[idx] = (maskedPolicy[idx] || 0) / totalProb;
+      normalizedProbs[idx] = expProbs[idx] / totalExp;
+    }
+
+    // Sample from distribution instead of argmax (prevents determinism with fresh models)
+    let r = Math.random();
+    let bestIdx = legalIndices[0];
+    let cumulative = 0;
+    for (const idx of legalIndices) {
+      cumulative += normalizedProbs[idx];
+      if (r <= cumulative) { bestIdx = idx; break; }
     }
 
     return {
