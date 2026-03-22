@@ -99,46 +99,49 @@ export function boardToTensor(boardArray, turn) {
 // ── Predict ─────────────────────────────────────────────────────────────────
 export async function predict(model, boardArray, legalMoves, turn = 1) {
   const tensor = boardToTensor(boardArray, turn);
-  const [policyTensor, valueTensor] = model.predict(tensor);
+  let policyTensor, valueTensor;
+  try {
+    [policyTensor, valueTensor] = model.predict(tensor);
 
-  const policy = await policyTensor.data();
-  const value = (await valueTensor.data())[0];
+    const policy = await policyTensor.data();
+    const value = (await valueTensor.data())[0];
 
-  // Mask illegal moves
-  const legalIndices = legalMoves.map(m => {
-    if (typeof m === 'number') return m;
-    // Convert from move object to index if needed
-    return m.index ?? m;
-  });
+    // Mask illegal moves
+    const legalIndices = legalMoves.map(m => {
+      if (typeof m === 'number') return m;
+      // Convert from move object to index if needed
+      return m.index ?? m;
+    });
 
-  let maskedPolicy = Array.from(policy);
-  const totalProb = legalIndices.reduce((sum, idx) => sum + (maskedPolicy[idx] || 0), 0) || 1;
+    let maskedPolicy = Array.from(policy);
+    const totalProb = legalIndices.reduce((sum, idx) => sum + (maskedPolicy[idx] || 0), 0) || 1;
 
-  // Pick move (argmax among legal)
-  let bestIdx = legalIndices[0];
-  let bestProb = -1;
-  for (const idx of legalIndices) {
-    if (maskedPolicy[idx] > bestProb) {
-      bestProb = maskedPolicy[idx];
-      bestIdx = idx;
+    // Pick move (argmax among legal)
+    let bestIdx = legalIndices[0];
+    let bestProb = -1;
+    for (const idx of legalIndices) {
+      if (maskedPolicy[idx] > bestProb) {
+        bestProb = maskedPolicy[idx];
+        bestIdx = idx;
+      }
     }
+
+    // Normalize probabilities for legal moves only
+    const normalizedProbs = {};
+    for (const idx of legalIndices) {
+      normalizedProbs[idx] = (maskedPolicy[idx] || 0) / totalProb;
+    }
+
+    return {
+      move: bestIdx,
+      probabilities: normalizedProbs,
+      value
+    };
+  } finally {
+    tensor.dispose();
+    if (policyTensor) policyTensor.dispose();
+    if (valueTensor) valueTensor.dispose();
   }
-
-  // Normalize probabilities for legal moves only
-  const normalizedProbs = {};
-  for (const idx of legalIndices) {
-    normalizedProbs[idx] = (maskedPolicy[idx] || 0) / totalProb;
-  }
-
-  tensor.dispose();
-  policyTensor.dispose();
-  valueTensor.dispose();
-
-  return {
-    move: bestIdx,
-    probabilities: normalizedProbs,
-    value
-  };
 }
 
 // ── Train ───────────────────────────────────────────────────────────────────
