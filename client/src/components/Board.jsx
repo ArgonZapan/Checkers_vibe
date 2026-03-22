@@ -163,7 +163,7 @@ export default function Board({
       animFlagRef.current = true;
       // Smooth SVG animation via requestAnimationFrame (250ms)
       const startTime = performance.now();
-      const duration = 250;
+      const duration = STEP_DURATION_MS;
       const startOffsets = { ...animOffsets };
       function animate(now) {
         const elapsed = now - startTime;
