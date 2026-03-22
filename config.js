@@ -28,7 +28,7 @@ export const CONFIG = {
     port: 3000,
     cppBase: 'http://localhost:8080',
     fetchTimeoutMs: 5000,
-    aiMoveDelayMs: 0,
+    aiMoveDelayMs: 0, // 0 = minimal (10ms enforced)
     autoSaveMs: 30000,
   },
 

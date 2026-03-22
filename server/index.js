@@ -372,8 +372,8 @@ io.on('connection', async (socket) => {
 
   // ── Speed control ──────────────────────────────────────────────────────
   socket.on('setSpeed', (ms) => {
-    CONFIG.server.aiMoveDelayMs = ms;
-    console.log(`[WS] Speed set to ${ms}ms`);
+    CONFIG.server.aiMoveDelayMs = Math.max(10, ms);
+    console.log(`[WS] Speed set to ${CONFIG.server.aiMoveDelayMs}ms`);
   });
 
   // ── Full reset (model + stats + buffer + game) ─────────────────────────
