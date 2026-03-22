@@ -331,7 +331,7 @@ export default function Board({
   }
 
   return (
-    <div className="board-container" style={{ opacity: gameOver ? 0.7 : 1 }}>
+    <div className="board-container" style={{ position: 'relative' }}>
       <svg
         className="board-svg"
         width={BOARD_SIZE}
@@ -372,23 +372,17 @@ export default function Board({
             </g>
           );
         })()}
-        {gameOver && (
-          <text
-            x={BOARD_SIZE / 2}
-            y={BOARD_SIZE / 2}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize="28"
-            fontWeight="bold"
-            fill={winner === 'draw' ? '#f39c12' : '#e94560'}
-            stroke="#000"
-            strokeWidth="1"
-            paintOrder="stroke"
-          >
-            {winner === 'draw' ? 'REMIS' : `${winner === 'white' ? 'BIAŁE' : 'CZARNE'} WYGRYWA!`}
-          </text>
-        )}
       </svg>
+      {gameOver && (
+        <div className="game-over-overlay">
+          <div className="game-over-text">
+            <h2 className={winner === 'draw' ? 'winner-draw-text' : winner === 'white' ? 'winner-white-text' : 'winner-black-text'}>
+              {winner === 'draw' ? '🤝 Remis' : winner === 'white' ? '⚪ Białe wygrywają!' : '⚫ Czarne wygrywają!'}
+            </h2>
+            <p>Kliknij Reset aby zagrać ponownie</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

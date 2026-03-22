@@ -34,7 +34,7 @@ export const CONFIG = {
 
   // === AI/TRAINER ===
   ai: {
-    defaultEpsilon: 1.0,
+    defaultEpsilon: 0.3,
     minEpsilon: 0.01,
     epsilonDecay: 0.01,
     gamma: 0.95,
