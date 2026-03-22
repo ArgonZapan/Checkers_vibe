@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { Server as SocketIO } from 'socket.io';
 import { setupProxy } from './proxy.js';
 import { SelfPlay } from './ai/trainer.js';
-import { predict } from './ai/model.js';
+import { predict, createModel } from './ai/model.js';
 import { saveModel, loadModel } from './ai/model.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -322,10 +322,37 @@ io.on('connection', async (socket) => {
   });
 
   // ── Model params ──────────────────────────────────────────────────────
-  socket.on('setParams', (newParams) => {
-    console.log(`[WS] setParams from ${socket.id}:`, newParams);
-    trainer.setModelParams(newParams);
-    io.emit('paramsUpdate', { modelParams: { ...trainer.modelParams } });
+  socket.on('setParams', async (newParams) => {
+    try {
+      console.log(`[WS] setParams from ${socket.id}:`, newParams);
+      const wasRunning = trainer.running;
+      // 1. Stop self-play
+      trainer.stop();
+      // 2. Update params
+      trainer.setModelParams(newParams);
+      // 3. Create fresh models with new architecture
+      trainer.modelWhite = createModel({ ...trainer.modelParams });
+      trainer.modelBlack = createModel({ ...trainer.modelParams });
+      // 4. Clear buffer
+      trainer.buffer.clear();
+      // 5. Reset stats
+      trainer.stats.gamesPlayed = 0;
+      trainer.stats.whiteWins = 0;
+      trainer.stats.blackWins = 0;
+      trainer.stats.draws = 0;
+      trainer.stats.lastLoss = null;
+      // 6. Broadcast updated params
+      io.emit('paramsUpdate', { modelParams: { ...trainer.modelParams } });
+      io.emit('selfPlayStatus', { active: false, gameNumber: 0, stats: trainer.stats });
+      // 7. Restart if was running
+      if (wasRunning) {
+        await trainer.start();
+      }
+      console.log('[WS] setParams complete — model reset');
+    } catch (err) {
+      console.error('[WS] setParams error:', err.message);
+      socket.emit('error', { message: err.message });
+    }
   });
 
   // ── Full reset (model + stats + buffer + game) ─────────────────────────

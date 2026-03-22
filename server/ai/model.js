@@ -21,7 +21,32 @@ export function createModel(sizeOrOpts = 'small') {
   let layerSizes, activation, dropout, lr, modelName;
 
   if (typeof sizeOrOpts === 'object') {
-    const { layers: numLayers = 3, neurons = 128, activation: act = 'relu', dropout: drop = 0, lr: learningRate = 0.001 } = sizeOrOpts;
+    let { layers: numLayers = 3, neurons = 128, activation: act = 'relu', dropout: drop = 0, lr: learningRate = 0.001 } = sizeOrOpts;
+
+    // ── Validation ───────────────────────────────────────────────────────
+    if (numLayers < 1 || numLayers > 5) {
+      console.warn(`[Model] Invalid layers=${numLayers}, clamping to 1-5`);
+      numLayers = Math.max(1, Math.min(5, numLayers));
+    }
+    if (neurons < 32 || neurons > 512) {
+      console.warn(`[Model] Invalid neurons=${neurons}, clamping to 32-512`);
+      neurons = Math.max(32, Math.min(512, neurons));
+    }
+    if (learningRate < 0.0001 || learningRate > 0.1) {
+      console.warn(`[Model] Invalid lr=${learningRate}, clamping to 0.0001-0.1`);
+      learningRate = Math.max(0.0001, Math.min(0.1, learningRate));
+    }
+    if (drop < 0 || drop > 0.5) {
+      console.warn(`[Model] Invalid dropout=${drop}, clamping to 0-0.5`);
+      drop = Math.max(0, Math.min(0.5, drop));
+    }
+    const validActivations = ['relu', 'tanh', 'sigmoid', 'leaky_relu'];
+    if (!validActivations.includes(act)) {
+      console.warn(`[Model] Invalid activation='${act}', using 'relu'`);
+      act = 'relu';
+    }
+    // ── End validation ───────────────────────────────────────────────────
+
     // Build uniform layer sizes: each hidden layer has `neurons` units
     layerSizes = Array.from({ length: numLayers }, () => neurons);
     activation = act;

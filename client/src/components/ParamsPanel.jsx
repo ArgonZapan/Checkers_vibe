@@ -8,10 +8,11 @@ export default function ParamsPanel({
   onToggleSelfplay,
   modelParams,
   onModelParamsChange,
+  onApplyModelParams,
+  onResetModelParams,
 }) {
   // Log-scale slider helper for learning rate
   const lrToSlider = (lr) => {
-    // Map lr [0.0001, 0.1] to slider [0, 100] on log scale
     const minLog = Math.log10(0.0001); // -4
     const maxLog = Math.log10(0.1);    // -1
     return ((Math.log10(lr) - minLog) / (maxLog - minLog)) * 100;
@@ -87,31 +88,29 @@ export default function ParamsPanel({
       <div className="param-group">
         <h4>🏗️ Architektura</h4>
         <div className="param-row">
-          <label>Warstwy:</label>
+          <label>Warstwy: <strong>{mp.layers ?? 5}</strong></label>
           <input
             type="range"
             min="1"
             max="5"
             step="1"
-            value={mp.layers ?? 3}
+            value={mp.layers ?? 5}
             onChange={(e) => onModelParamsChange({ layers: parseInt(e.target.value) })}
           />
-          <span className="epsilon-val">{mp.layers ?? 3}</span>
         </div>
         <div className="param-row">
-          <label>Neurony:</label>
+          <label>Neurony: <strong>{mp.neurons ?? 512}</strong></label>
           <input
             type="range"
             min="32"
             max="512"
             step="32"
-            value={mp.neurons ?? 128}
+            value={mp.neurons ?? 512}
             onChange={(e) => onModelParamsChange({ neurons: parseInt(e.target.value) })}
           />
-          <span className="epsilon-val">{mp.neurons ?? 128}</span>
         </div>
         <div className="param-row">
-          <label>Aktywacja:</label>
+          <label>Aktywacja: <strong>{mp.activation ?? 'relu'}</strong></label>
           <select
             value={mp.activation ?? 'relu'}
             onChange={(e) => onModelParamsChange({ activation: e.target.value })}
@@ -128,7 +127,7 @@ export default function ParamsPanel({
       <div className="param-group">
         <h4>🎓 Szkolenie</h4>
         <div className="param-row">
-          <label>LR:</label>
+          <label>LR: <strong>{(mp.lr ?? 0.001).toExponential(1)}</strong></label>
           <input
             type="range"
             min="0"
@@ -137,34 +136,44 @@ export default function ParamsPanel({
             value={lrToSlider(mp.lr ?? 0.001)}
             onChange={(e) => onModelParamsChange({ lr: sliderToLr(parseFloat(e.target.value)) })}
           />
-          <span className="epsilon-val">{(mp.lr ?? 0.001).toExponential(1)}</span>
         </div>
         <div className="param-row">
-          <label>Batch:</label>
+          <label>Batch: <strong>{mp.batchSize ?? 256}</strong></label>
           <input
             type="range"
             min="0"
             max="5"
             step="1"
-            value={[8, 16, 32, 64, 128, 256].indexOf(mp.batchSize ?? 64)}
+            value={[8, 16, 32, 64, 128, 256].indexOf(mp.batchSize ?? 256)}
             onChange={(e) => {
               const sizes = [8, 16, 32, 64, 128, 256];
               onModelParamsChange({ batchSize: sizes[parseInt(e.target.value)] });
             }}
           />
-          <span className="epsilon-val">{mp.batchSize ?? 64}</span>
         </div>
         <div className="param-row">
-          <label>Dropout:</label>
+          <label>Dropout: <strong>{(mp.dropout ?? 0.1).toFixed(2)}</strong></label>
           <input
             type="range"
             min="0"
             max="0.5"
             step="0.05"
-            value={mp.dropout ?? 0}
+            value={mp.dropout ?? 0.1}
             onChange={(e) => onModelParamsChange({ dropout: parseFloat(e.target.value) })}
           />
-          <span className="epsilon-val">{(mp.dropout ?? 0).toFixed(2)}</span>
+        </div>
+      </div>
+
+      {/* ── Apply / Reset buttons ──────────────────────────────────────── */}
+      <div className="param-group">
+        <h4>📝 Zatwierdź zmiany</h4>
+        <div className="apply-buttons">
+          <button className="btn-small btn-apply" onClick={onApplyModelParams}>
+            ✅ Zastosuj zmiany
+          </button>
+          <button className="btn-small btn-reset-defaults" onClick={onResetModelParams}>
+            🔄 Resetuj domyślne
+          </button>
         </div>
       </div>
 

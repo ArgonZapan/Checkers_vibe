@@ -72,6 +72,14 @@ export class SelfPlay {
   }
 
   setModelParams(newParams) {
+    // Validate batchSize
+    if (newParams.batchSize !== undefined) {
+      const bs = newParams.batchSize;
+      if (bs < 8 || bs > 256) {
+        console.warn(`[SelfPlay] Invalid batchSize=${bs}, clamping to 8-256`);
+        newParams.batchSize = Math.max(8, Math.min(256, bs));
+      }
+    }
     Object.assign(this.modelParams, newParams);
     console.log('[SelfPlay] Model params updated:', this.modelParams);
   }

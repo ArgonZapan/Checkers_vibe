@@ -346,7 +346,12 @@ export default function App() {
             onToggleSelfplay={handleToggleSelfplay}
             modelParams={modelParams}
             onModelParamsChange={handleModelParamsChange}
+            onApplyModelParams={handleApplyModelParams}
+            onResetModelParams={handleResetModelParams}
           />
+          {toast && (
+            <div className="toast-notification">{toast}</div>
+          )}
         </div>
       </div>
     </div>
