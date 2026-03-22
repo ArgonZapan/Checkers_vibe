@@ -12,5 +12,8 @@
     "express": "^4.18",
     "http-proxy-middleware": "^3.0",
     "socket.io": "^4.7"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.3"
   }
 }
