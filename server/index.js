@@ -171,13 +171,29 @@ async function getGameState() {
   };
 }
 
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
   console.log(`[WS] Client connected: ${socket.id}`);
   socket.gameMode = 'pvai'; // default mode
+
+  // Send current state to new client
+  try {
+    const state = await getGameState();
+    socket.emit('state', state);
+  } catch (err) {
+    console.log('[WS] Could not get game state for new client:', err.message);
+  }
+  socket.emit('selfPlayStatus', { active: trainer.running, currentGame: trainer.stats.gamesPlayed });
+  if (trainer.stats.lastLoss != null) {
+    socket.emit('loss', { loss: trainer.stats.lastLoss });
+  }
 
   // ── Start game ─────────────────────────────────────────────────────────
   socket.on('startGame', async ({ mode }) => {
     socket.gameMode = mode || 'pvai';
+    // Stop self-play when starting a player game (C++ handles one game at a time)
+    if (trainer.running && socket.gameMode !== 'aivai') {
+      trainer.stop();
+    }
     try {
       await cppFetch('/api/game/start', { method: 'POST', body: '{}' });
       const state = await getGameState();
@@ -236,12 +252,14 @@ io.on('connection', (socket) => {
         lastMove: state.lastMove || { from, to, captures: moveCaptures },
       });
 
-      // 5. If game over, emit gameOver event
+      // 5. If game over, emit gameOver event and resume self-play
       if (state.gameOver) {
         io.emit('gameOver', {
           winner: state.winner,
           moves: 0,
         });
+        // Restart self-play after a delay
+        setTimeout(() => trainer.start(), 3000);
       }
     } catch (err) {
       console.error('[WS] move error:', err.message);
@@ -376,9 +394,32 @@ async function main() {
     console.log('[Server] No existing buffer to load');
   }
 
+  // Load persistent state (stats, epsilon, etc.)
+  await trainer.loadState();
+
+  // Auto-save state every 30 seconds
+  setInterval(async () => {
+    try {
+      await trainer.saveState();
+      await trainer.buffer.save(BUFFER_FILE);
+      if (trainer.modelWhite) await saveModel(trainer.modelWhite, path.join(MODEL_DIR, 'white'));
+      if (trainer.modelBlack) await saveModel(trainer.modelBlack, path.join(MODEL_DIR, 'black'));
+    } catch (err) {
+      console.error('[AutoSave] 30s save error:', err.message);
+    }
+  }, 30 * 1000);
+
   httpServer.listen(PORT, () => {
     console.log(`[Server] Checkers server running on http://localhost:${PORT}`);
   });
+
+  // Auto-start self-play
+  try {
+    await trainer.start();
+    console.log('[Server] Self-play auto-started');
+  } catch (err) {
+    console.error('[Server] Self-play auto-start failed:', err.message);
+  }
 }
 
 main().catch(err => {

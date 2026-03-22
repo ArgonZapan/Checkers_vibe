@@ -1,5 +1,11 @@
 import { createModel, predict, train, saveModel, loadModel } from './model.js';
 import { ReplayBuffer } from './buffer.js';
+import { writeFile, readFile, mkdir } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const STATE_FILE = path.join(__dirname, '..', '..', 'data', 'state.json');
 
 const CPP_BASE = 'http://localhost:8080';
 const FETCH_TIMEOUT_MS = 5000;
@@ -112,6 +118,48 @@ export class SelfPlay {
       networkSizeWhite: this.networkSizeWhite,
       networkSizeBlack: this.networkSizeBlack
     };
+  }
+
+  async saveState() {
+    try {
+      await mkdir(path.dirname(STATE_FILE), { recursive: true });
+      const state = {
+        stats: {
+          gamesPlayed: this.stats.gamesPlayed,
+          whiteWins: this.stats.whiteWins,
+          blackWins: this.stats.blackWins,
+          draws: this.stats.draws,
+          lastLoss: this.stats.lastLoss,
+        },
+        epsilonWhite: this.epsilonWhite,
+        epsilonBlack: this.epsilonBlack,
+        running: this.running,
+      };
+      await writeFile(STATE_FILE, JSON.stringify(state, null, 2));
+    } catch (err) {
+      console.error('[SelfPlay] saveState error:', err.message);
+    }
+  }
+
+  async loadState() {
+    try {
+      const raw = await readFile(STATE_FILE, 'utf-8');
+      const state = JSON.parse(raw);
+      if (state.stats) {
+        this.stats.gamesPlayed = state.stats.gamesPlayed ?? 0;
+        this.stats.whiteWins = state.stats.whiteWins ?? 0;
+        this.stats.blackWins = state.stats.blackWins ?? 0;
+        this.stats.draws = state.stats.draws ?? 0;
+        this.stats.lastLoss = state.stats.lastLoss ?? null;
+      }
+      this.epsilonWhite = state.epsilonWhite ?? 0.3;
+      this.epsilonBlack = state.epsilonBlack ?? 0.3;
+      this.stats.epsilonWhite = this.epsilonWhite;
+      this.stats.epsilonBlack = this.epsilonBlack;
+      console.log(`[SelfPlay] Loaded state: ${this.stats.gamesPlayed} games played, εW=${this.epsilonWhite}, εB=${this.epsilonBlack}`);
+    } catch (err) {
+      console.log('[SelfPlay] No previous state found, starting fresh');
+    }
   }
 
   // ── Internal game loop ───────────────────────────────────────────────────
@@ -285,6 +333,9 @@ export class SelfPlay {
     this.epsilonBlack = Math.max(0.01, this.epsilonBlack - 0.001);
     this.stats.epsilonWhite = this.epsilonWhite;
     this.stats.epsilonBlack = this.epsilonBlack;
+
+    // 5. Save state after each game
+    await this.saveState();
   }
 
   _sleep(ms) {
