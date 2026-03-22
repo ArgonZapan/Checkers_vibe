@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 
 const CELL_SIZE = 60;
 const BOARD_SIZE = CELL_SIZE * 8;
-const STEP_DURATION_MS = 400;
+const STEP_DURATION_MS = 200;
 
 const LIGHT_COLOR = '#deb887';
 const DARK_COLOR = '#8b4513';
