@@ -428,12 +428,8 @@ async function main() {
   // Init models
   await trainer.init();
 
-  // Load existing buffer if available
-  try {
-    await trainer.buffer.load(BUFFER_FILE);
-  } catch (err) {
-    console.log('[Server] No existing buffer to load');
-  }
+  // Load existing buffer if available (buffer.load() handles ENOENT internally)
+  await trainer.buffer.load(BUFFER_FILE);
 
   // Load persistent state (stats, epsilon, etc.)
   await trainer.loadState();
