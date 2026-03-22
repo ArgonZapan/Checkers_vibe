@@ -182,7 +182,7 @@ io.on('connection', async (socket) => {
   } catch (err) {
     console.log('[WS] Could not get game state for new client:', err.message);
   }
-  socket.emit('selfPlayStatus', { active: trainer.running, currentGame: trainer.stats.gamesPlayed });
+  socket.emit('selfPlayStatus', { active: trainer.running, currentGame: trainer.stats.gamesPlayed, stats: trainer.stats });
   if (trainer.stats.lastLoss != null) {
     socket.emit('loss', { loss: trainer.stats.lastLoss });
   }

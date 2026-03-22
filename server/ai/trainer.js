@@ -164,7 +164,7 @@ export class SelfPlay {
 
   // ── Internal game loop ───────────────────────────────────────────────────
   async _loop() {
-    this.io?.emit('selfPlayStatus', { active: true, gameNumber: this.stats.gamesPlayed });
+    this.io?.emit('selfPlayStatus', { active: true, gameNumber: this.stats.gamesPlayed, stats: this.stats });
     while (this.running) {
       try {
         await this._playGame();
@@ -185,6 +185,7 @@ export class SelfPlay {
     this.io?.emit('selfPlayStatus', {
       active: true,
       gameNumber: this.stats.gamesPlayed + 1,
+      stats: this.stats,
     });
     const samples = [];
     let turn = 1; // 1 = white, -1 = black
@@ -224,7 +225,7 @@ export class SelfPlay {
         for (const s of samples) this.buffer.add(s);
 
         this.io?.emit('gameOver', { winner: winner || 'draw', moves: samples.length });
-        this.io?.emit('selfPlayStatus', { active: this.running, gameNumber: this.stats.gamesPlayed });
+        this.io?.emit('selfPlayStatus', { active: this.running, gameNumber: this.stats.gamesPlayed, stats: this.stats });
         break;
       }
 

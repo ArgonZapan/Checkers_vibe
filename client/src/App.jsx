@@ -73,12 +73,7 @@ export default function App() {
     s.on('gameOver', (data) => {
       setGameOver(true);
       setWinner(data.winner);
-      setStats((prev) => ({
-        games: prev.games + 1,
-        whiteWins: prev.whiteWins + (data.winner === 'white' ? 1 : 0),
-        blackWins: prev.blackWins + (data.winner === 'black' ? 1 : 0),
-        draws: prev.draws + (data.winner === 'draw' ? 1 : 0),
-      }));
+      // Stats are updated via selfPlayStatus event (server is source of truth)
       setGameHistory((prev) => [
         { winner: data.winner, moves: data.moves || 0 },
         ...prev,
@@ -92,6 +87,14 @@ export default function App() {
     s.on('selfPlayStatus', (data) => {
       setSelfPlayActive(data.active);
       if (data.gameNumber !== undefined) setGameNumber(data.gameNumber);
+      if (data.stats) {
+        setStats({
+          games: data.stats.gamesPlayed ?? 0,
+          whiteWins: data.stats.whiteWins ?? 0,
+          blackWins: data.stats.blackWins ?? 0,
+          draws: data.stats.draws ?? 0,
+        });
+      }
     });
 
     return () => {
