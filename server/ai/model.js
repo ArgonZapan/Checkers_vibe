@@ -1,3 +1,9 @@
+// Polyfill util.isNullOrUndefined removed in Node.js 24+
+import { createRequire } from 'node:module';
+const _util = createRequire(import.meta.url)('util');
+if (!_util.isNullOrUndefined) {
+  _util.isNullOrUndefined = (val) => val === null || val === undefined;
+}
 import * as tf from '@tensorflow/tfjs-node';
 import path from 'node:path';
 

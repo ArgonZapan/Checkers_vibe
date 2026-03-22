@@ -1,7 +1,7 @@
 import { createModel, predict, train, saveModel, loadModel } from './model.js';
 import { ReplayBuffer } from './buffer.js';
 
-const C++_BASE = 'http://localhost:8080';
+const CPP_BASE = 'http://localhost:8080';
 
 export class SelfPlay {
   constructor(io) {
@@ -116,7 +116,7 @@ export class SelfPlay {
 
   async _playGame() {
     // 1. Start new game
-    const startRes = await fetch(`${C++_BASE}/api/game/start`, { method: 'POST' });
+    const startRes = await fetch(`${CPP_BASE}/api/game/start`, { method: 'POST' });
     if (!startRes.ok) throw new Error(`Game start failed: ${startRes.status}`);
     const gameState = await startRes.json();
 
@@ -127,7 +127,7 @@ export class SelfPlay {
     // 2. Play game
     while (true) {
       // Get legal moves
-      const lmRes = await fetch(`${C++_BASE}/api/legal-moves`);
+      const lmRes = await fetch(`${CPP_BASE}/api/legal-moves`);
       if (!lmRes.ok) throw new Error(`Legal moves failed: ${lmRes.status}`);
       const { legalMoves, gameOver, winner } = await lmRes.json();
 
@@ -159,7 +159,7 @@ export class SelfPlay {
       }
 
       // Get board state
-      const boardRes = await fetch(`${C++_BASE}/api/board`);
+      const boardRes = await fetch(`${CPP_BASE}/api/board`);
       if (!boardRes.ok) throw new Error(`Board fetch failed: ${boardRes.status}`);
       const boardData = await boardRes.json();
       const boardArray = boardData.board || boardData;
@@ -192,7 +192,7 @@ export class SelfPlay {
 
       // Make move
       const moveIdx = typeof chosenMove === 'number' ? chosenMove : chosenMove.index ?? chosenMove;
-      const moveRes = await fetch(`${C++_BASE}/api/move`, {
+      const moveRes = await fetch(`${CPP_BASE}/api/move`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ moveIndex: moveIdx })
