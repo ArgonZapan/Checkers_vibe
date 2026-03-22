@@ -263,10 +263,25 @@ io.on('connection', async (socket) => {
       let state = await getGameState();
       const isPvAI = socket.gameMode === 'pvai';
       const moveCaptures = moveResult.captures || captures || [];
+      // Player's move path for animation
+      const playerPath = moveResult.path || null;
+      const playerBoard = state.board;
 
-      // 3. If PvAI and game not over → AI makes its move (with delay so player can see)
+      // 3. If PvAI and game not over → first emit player's move, then AI makes its move
       if (isPvAI && !state.gameOver) {
-        await new Promise(r => setTimeout(r, CONFIG.server.aiMoveDelayMs));
+        // Emit player's state first (with animation path)
+        const playerPayload = {
+          ...state,
+          lastMove: { from, to, captures: moveCaptures },
+          path: playerPath,
+        };
+        socket.emit('state', playerPayload);
+
+        // Wait for animation, then AI makes its move
+        const animDelay = (playerPath && playerPath.length > 2)
+          ? playerPath.length * 200 + 300 // path steps * animation duration + buffer
+          : CONFIG.server.aiMoveDelayMs;
+        await new Promise(r => setTimeout(r, animDelay));
         await aiMove(state);
         state = await getGameState();
       }
@@ -275,7 +290,6 @@ io.on('connection', async (socket) => {
       const statePayload = {
         ...state,
         lastMove: state.lastMove || { from, to, captures: moveCaptures },
-        path: moveResult.path || null,
       };
       if (socket.gameMode === 'pvp') {
         io.emit('state', statePayload);
