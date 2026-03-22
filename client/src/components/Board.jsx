@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 
 const CELL_SIZE = 60;
 const BOARD_SIZE = CELL_SIZE * 8;
-const STEP_DURATION_MS = 100;
+const STEP_DURATION_MS = 400;
 
 const LIGHT_COLOR = '#deb887';
 const DARK_COLOR = '#8b4513';
@@ -266,7 +266,7 @@ export default function Board({
               }
             : {
                 transform: 'translate(0, 0)',
-                transition: 'transform 100ms ease-in-out',
+                transition: 'transform 250ms ease-in-out',
               }),
         };
 
