@@ -126,10 +126,13 @@ export class SelfPlay {
 
     // 2. Play game
     while (true) {
-      // Get legal moves
-      const lmRes = await fetch(`${CPP_BASE}/api/legal-moves`);
-      if (!lmRes.ok) throw new Error(`Legal moves failed: ${lmRes.status}`);
-      const { legalMoves, gameOver, winner } = await lmRes.json();
+      // Get game state (board, legal moves, gameOver, winner)
+      const stateRes = await fetch(`${CPP_BASE}/api/game/state`);
+      if (!stateRes.ok) throw new Error(`Game state failed: ${stateRes.status}`);
+      const stateData = await stateRes.json();
+      const boardArray = stateData.board;
+      const gameOver = stateData.gameOver;
+      const winner = stateData.winner;
 
       if (gameOver) {
         // Record result
@@ -158,11 +161,10 @@ export class SelfPlay {
         break;
       }
 
-      // Get board state
-      const boardRes = await fetch(`${CPP_BASE}/api/board`);
-      if (!boardRes.ok) throw new Error(`Board fetch failed: ${boardRes.status}`);
-      const boardData = await boardRes.json();
-      const boardArray = boardData.board || boardData;
+      // Get legal moves
+      const lmRes = await fetch(`${CPP_BASE}/api/legal-moves`);
+      if (!lmRes.ok) throw new Error(`Legal moves failed: ${lmRes.status}`);
+      const { moves: legalMoves } = await lmRes.json();
 
       // Choose model based on turn
       const model = turn === 1 ? this.modelWhite : this.modelBlack;
@@ -190,12 +192,17 @@ export class SelfPlay {
         result: 0 // placeholder
       });
 
-      // Make move
+      // Make move — send from/to coordinates (C++ engine format)
       const moveIdx = typeof chosenMove === 'number' ? chosenMove : chosenMove.index ?? chosenMove;
+      const selectedMove = legalMoves[moveIdx] || legalMoves[0];
+      const moveBody = { from: selectedMove.from, to: selectedMove.to };
+      if (selectedMove.captures && selectedMove.captures.length > 0) {
+        moveBody.captures = selectedMove.captures;
+      }
       const moveRes = await fetch(`${CPP_BASE}/api/move`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moveIndex: moveIdx })
+        body: JSON.stringify(moveBody)
       });
       if (!moveRes.ok) throw new Error(`Move failed: ${moveRes.status}`);
 
