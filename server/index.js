@@ -279,7 +279,7 @@ io.on('connection', async (socket) => {
 
         // Wait for animation, then AI makes its move
         const animDelay = (playerPath && playerPath.length > 2)
-          ? playerPath.length * 200 + 300 // path steps * animation duration + buffer
+          ? playerPath.length * CONFIG.board.animation.stepDurationMs + CONFIG.server.aiMoveDelayMs
           : CONFIG.server.aiMoveDelayMs;
         await new Promise(r => setTimeout(r, animDelay));
         await aiMove(state);

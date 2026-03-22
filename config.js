@@ -18,7 +18,7 @@ export const CONFIG = {
       kingBlack: '#ddd',
     },
     animation: {
-      stepDurationMs: 200,
+      stepDurationMs: 50,
       easeOut: true,
     },
   },
@@ -28,7 +28,7 @@ export const CONFIG = {
     port: 3000,
     cppBase: 'http://localhost:8080',
     fetchTimeoutMs: 5000,
-    aiMoveDelayMs: 400,
+    aiMoveDelayMs: 125,
     autoSaveMs: 30000,
   },
 
