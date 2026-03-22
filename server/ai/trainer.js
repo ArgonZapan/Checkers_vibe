@@ -175,7 +175,8 @@ export class SelfPlay {
         // Add to buffer
         for (const s of samples) this.buffer.add(s);
 
-        this.io?.emit('gameOver', { winner: winner === 1 ? 'white' : winner === -1 ? 'black' : 'draw', moves: samples.length });
+        this.io?.emit('gameOver', { winner: winner || 'draw', moves: samples.length });
+        this.io?.emit('selfPlayStatus', { active: this.running, gameNumber: this.stats.gamesPlayed });
         break;
       }
 
@@ -249,7 +250,7 @@ export class SelfPlay {
         turn: turnColor,
         legalMoves: [],
         gameOver: newState.gameOver ?? false,
-        winner: newState.winner != null ? (newState.winner === 1 || newState.winner === 'white' ? 'white' : 'black') : null,
+        winner: newState.winner || null,
       });
 
       turn = -turn;

@@ -891,6 +891,97 @@ void test_undo_move() {
     std::cout << " OK" << std::endl;
 }
 
+void test_draw_vs_win() {
+    std::cout << "Test: draw vs win — białe wygrywają != remis..." << std::flush;
+
+    // Pozycja: biały pionek, czarny zablokowany i bez ruchów
+    // Białe wygrywają — getResult() musi zwrócić WHITE_WIN, nie DRAW
+    {
+        Board b;
+        b.whitePieces = squareToMask(3, 3);
+        b.blackPieces = squareToMask(1, 0); // czarny zablokowany — nie ma ruchów
+        b.whiteKings = 0;
+        b.blackKings = 0;
+        b.currentTurn = BLACK;
+
+        Engine e;
+        e.getBoard() = b;
+        // Czarny (1,0): do przodu (0,1) puste, więc ma ruch — trzeba zablokować
+        // Lepiej: czarny (1,2), białe (0,1) i (0,3) — zablokowany do przodu
+        // A bicie do tyłu: (1,2) bije nad (0,1)? — (0,1) to kierunek (-1,-1) — ląduje (-1,0) — poza planszą
+        // (1,2) bije nad (0,3)? — ląduje (-1,4) — poza planszą
+        b.blackPieces = squareToMask(1, 2);
+        b.whitePieces = squareToMask(0, 1) | squareToMask(0, 3);
+        b.currentTurn = BLACK;
+        e.getBoard() = b;
+
+        assert(e.getLegalMoves(BLACK).empty());
+        assert(e.isGameOver());
+        GameResult result = e.getResult();
+        assert(result == WHITE_WIN);
+        assert(result != DRAW);
+    }
+
+    // Pozycja: czarne nie mają pionków (zbite) → białe wygrywają
+    {
+        Board b;
+        b.whitePieces = squareToMask(2, 1) | squareToMask(3, 4);
+        b.blackPieces = 0; // brak czarnych
+        b.whiteKings = 0;
+        b.blackKings = 0;
+        b.currentTurn = BLACK;
+
+        Engine e;
+        e.getBoard() = b;
+
+        assert(e.getLegalMoves(BLACK).empty());
+        assert(e.isGameOver());
+        GameResult result = e.getResult();
+        assert(result == WHITE_WIN);
+        assert(result != DRAW);
+    }
+
+    // Pozycja: czarne wygrywają (białe zablokowane)
+    {
+        Board b;
+        b.whitePieces = squareToMask(6, 5);
+        b.blackPieces = squareToMask(7, 4) | squareToMask(7, 6);
+        b.whiteKings = 0;
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        Engine e;
+        e.getBoard() = b;
+        // Biały (6,5): do przodu (7,4) zajęte, (7,6) zajęte
+        // Bicie do przodu: nad (7,4)→(8,3) poza planszą, nad (7,6)→(8,7) poza planszą
+        // Brak ruchów → czarne wygrywają
+        assert(e.getLegalMoves(WHITE).empty());
+        assert(e.isGameOver());
+        GameResult result = e.getResult();
+        assert(result == BLACK_WIN);
+        assert(result != DRAW);
+    }
+
+    // Pozycja: gra trwa — nie ma wygranego ani remisu
+    {
+        Board b;
+        b.whitePieces = squareToMask(2, 1);
+        b.blackPieces = squareToMask(5, 6);
+        b.whiteKings = 0;
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        Engine e;
+        e.getBoard() = b;
+
+        assert(!e.getLegalMoves(WHITE).empty());
+        assert(!e.isGameOver());
+        assert(e.getResult() == ONGOING);
+    }
+
+    std::cout << " OK" << std::endl;
+}
+
 int main() {
     std::cout << "=== Testy silnika warcab ===" << std::endl;
 
@@ -904,6 +995,7 @@ int main() {
     test_promotion();
     test_no_moves();
     test_game_over();
+    test_draw_vs_win();
 
     std::cout << "\n--- Nowe testy ---\n" << std::endl;
 

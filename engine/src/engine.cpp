@@ -41,9 +41,6 @@ bool Engine::makeMove(const Move& move) {
     }
     if (!found) return false;
 
-    // Zapisz stan do undo
-    boardHistory_.push_back(board_);
-
     // Wykonaj
     board_.makeMove(move);
     history_.push_back(move);
@@ -91,8 +88,7 @@ const std::vector<Move>& Engine::getHistory() const {
 bool Engine::undoLastMove() {
     if (history_.empty()) return false;
 
-    board_ = boardHistory_.back();
-    boardHistory_.pop_back();
+    board_.undoMove(history_.back());
     history_.pop_back();
 
     return true;

@@ -106,6 +106,15 @@ void Board::makeMove(const Move& move) {
     Bitboard& myPieces = isWhite ? whitePieces : blackPieces;
     Bitboard& myKings = isWhite ? whiteKings : blackKings;
 
+    // Record pre-move state for undo (const_cast to allow makeMove to set metadata)
+    const_cast<Move&>(move).wasKing = isKing;
+    const_cast<Move&>(move).capturedKings.clear();
+    for (const auto& cap : move.captures) {
+        Bitboard capMask = squareToMask(cap.row, cap.col);
+        bool capWasKing = (whiteKings | blackKings) & capMask;
+        const_cast<Move&>(move).capturedKings.push_back(capWasKing);
+    }
+
     // Przesuń pionek
     myPieces &= ~fromMask;
     myKings &= ~fromMask;
@@ -148,42 +157,41 @@ void Board::undoMove(const Move& move) {
 
     // Określ kolor na polu docelowym (po ruchu)
     bool isWhite = (whitePieces | whiteKings) & toMask;
-    bool isKing = (whiteKings | blackKings) & toMask;
 
     Bitboard& myPieces = isWhite ? whitePieces : blackPieces;
     Bitboard& myKings = isWhite ? whiteKings : blackKings;
 
-    // Sprawdź czy to była promocja
-    bool wasPromotion = false;
-    if (isKing && !move.isCapture()) {
-        if (isWhite && move.to.row == 7 && move.from.row == 6) wasPromotion = true;
-        if (!isWhite && move.to.row == 0 && move.from.row == 1) wasPromotion = true;
-    }
+    // Sprawdź czy to była promocja:
+    // Używamy wasKing zamiast zgadywać z wierszy — działa dla zwykłych ruchów I bić
+    bool wasPromotion = !move.wasKing && (myKings & toMask);
 
     // Przesuń pionek z powrotem
     myKings &= ~toMask;
     myPieces &= ~toMask;
 
     if (wasPromotion) {
-        // Był pionkiem przed ruchem
+        // Był pionkiem przed ruchem — przywróć jako pionek
         myPieces |= squareToMask(move.from.row, move.from.col);
-    } else if (isKing) {
+    } else if (move.wasKing) {
         myKings |= squareToMask(move.from.row, move.from.col);
     } else {
         myPieces |= squareToMask(move.from.row, move.from.col);
     }
 
-    // Przywróć zbite pionki
-    for (const auto& cap : move.captures) {
+    // Przywróć zbite pionki z ich oryginalnym typem
+    for (size_t i = 0; i < move.captures.size(); i++) {
+        const auto& cap = move.captures[i];
         Bitboard capMask = squareToMask(cap.row, cap.col);
-        // Zbity pionek był przeciwnikiem
+        bool wasKing = (i < move.capturedKings.size()) ? move.capturedKings[i] : false;
+
         if (isWhite) {
-            // Biały bił czarnego
-            // Sprawdź czy to była damka (była na promotion row przed biciem?)
-            // Uproszczenie: przywróć jako pionek
-            blackPieces |= capMask;
+            // Biały bił — przywróć czarnego
+            if (wasKing) blackKings |= capMask;
+            else blackPieces |= capMask;
         } else {
-            whitePieces |= capMask;
+            // Czarny bił — przywróć białego
+            if (wasKing) whiteKings |= capMask;
+            else whitePieces |= capMask;
         }
     }
 }

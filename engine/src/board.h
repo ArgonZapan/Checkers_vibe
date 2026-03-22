@@ -25,6 +25,8 @@ struct Move {
     Square from;
     Square to;
     std::vector<Square> captures; // zbite pionki (puste = zwykły ruch)
+    bool wasKing = false;          // czy ruszający się pionek był damką PRZED ruchem
+    std::vector<bool> capturedKings; // czy zbite pionki były damkami
     bool isCapture() const { return !captures.empty(); }
 };
 

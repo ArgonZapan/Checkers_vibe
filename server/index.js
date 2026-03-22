@@ -258,14 +258,17 @@ io.on('connection', (socket) => {
     try {
       console.log(`[WS] startSelfPlay from ${socket.id}`);
       await trainer.start();
+      io.emit('selfPlayStatus', { active: true, gameNumber: trainer.getStatus().stats.gamesPlayed });
     } catch (err) {
       console.error('[WS] startSelfPlay error:', err.message);
+      socket.emit('error', { message: err.message });
     }
   });
 
   socket.on('stopSelfPlay', () => {
     console.log(`[WS] stopSelfPlay from ${socket.id}`);
     trainer.stop();
+    io.emit('selfPlayStatus', { active: false });
   });
 });
 
