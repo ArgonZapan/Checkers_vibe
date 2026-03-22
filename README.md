@@ -39,3 +39,10 @@ TBD
 ## Status
 
 🏗️ Planowanie
+
+## Dokumentacja
+
+- [Silnik gry](docs/engine.md) — zasady, reprezentacja, generowanie ruchów
+- [Sieć neuronowa](docs/neural-network.md) — architektura, uczenie, format zapisu
+- [Self-play](docs/self-play.md) — cykl uczenia, replay buffer, szkolenie
+- [API](docs/api.md) — endpointy REST, WebSocket
