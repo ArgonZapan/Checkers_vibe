@@ -19,7 +19,8 @@ Klasyczne warcaby (ang. checkers / draughts) jako web app. Dwóch graczy, 8×8, 
 
 ## Stack
 
-TBD — vibe first, stack later.
+- **Backend:** C++
+- **Frontend:** React (Node.js)
 
 ## Jak uruchomić
 
