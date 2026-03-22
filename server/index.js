@@ -123,15 +123,23 @@ const turnToColor = (turn) => {
   return turn === 1 ? 'white' : 'black';
 };
 
-// Helper: fetch JSON from C++ backend
+// Helper: fetch JSON from C++ backend with timeout
+const CPP_FETCH_TIMEOUT_MS = 5000;
 async function cppFetch(path, opts = {}) {
   const url = `${CPP_BASE}${path}`;
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
-  });
-  if (!res.ok) throw new Error(`C++ ${path} → ${res.status}`);
-  return res.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CPP_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      ...opts,
+    });
+    if (!res.ok) throw new Error(`C++ ${path} → ${res.status}`);
+    return res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // Helper: get full game state from C++ engine and return client-friendly format
@@ -246,20 +254,27 @@ io.on('connection', async (socket) => {
         state = await getGameState();
       }
 
-      // 4. Emit new state to client with captures in lastMove
-      socket.emit('state', {
+      // 4. Emit new state — in PvP broadcast to all, in PvAI emit to requesting client
+      const statePayload = {
         ...state,
         lastMove: state.lastMove || { from, to, captures: moveCaptures },
-      });
+      };
+      if (socket.gameMode === 'pvp') {
+        io.emit('state', statePayload);
+      } else {
+        socket.emit('state', statePayload);
+      }
 
-      // 5. If game over, emit gameOver event and resume self-play
+      // 5. If game over, emit gameOver event and resume self-play (only in aivai mode)
       if (state.gameOver) {
         io.emit('gameOver', {
           winner: state.winner,
           moves: 0,
         });
-        // Restart self-play after a delay
-        setTimeout(() => trainer.start(), 3000);
+        // Only restart self-play for aivai mode, not after player games
+        if (socket.gameMode === 'aivai') {
+          setTimeout(() => trainer.start(), 3000);
+        }
       }
     } catch (err) {
       console.error('[WS] move error:', err.message);
@@ -362,25 +377,38 @@ async function aiMove(currentState) {
 }
 
 // ── Auto-save timers ────────────────────────────────────────────────────────
-const MODEL_SAVE_INTERVAL = 5 * 60 * 1000;  // 5 min
-const BUFFER_SAVE_INTERVAL = 10 * 60 * 1000; // 10 min
+// Single coherent save schedule: state every 30s, buffer every 2min, model every 5min
+let _saving = false;
+let _lastBufferSave = 0;
+let _lastModelSave = 0;
 
 setInterval(async () => {
+  if (_saving) return;
+  _saving = true;
   try {
-    if (trainer.modelWhite) await saveModel(trainer.modelWhite, path.join(MODEL_DIR, 'white'));
-    if (trainer.modelBlack) await saveModel(trainer.modelBlack, path.join(MODEL_DIR, 'black'));
-  } catch (err) {
-    console.error('[AutoSave] Model save error:', err.message);
-  }
-}, MODEL_SAVE_INTERVAL);
+    const now = Date.now();
 
-setInterval(async () => {
-  try {
-    await trainer.buffer.save(BUFFER_FILE);
+    // State: every 30s
+    await trainer.saveState();
+
+    // Buffer: every 2 minutes
+    if (now - _lastBufferSave >= 2 * 60 * 1000) {
+      await trainer.buffer.save(BUFFER_FILE);
+      _lastBufferSave = now;
+    }
+
+    // Models: every 5 minutes
+    if (now - _lastModelSave >= 5 * 60 * 1000) {
+      if (trainer.modelWhite) await saveModel(trainer.modelWhite, path.join(MODEL_DIR, 'white'));
+      if (trainer.modelBlack) await saveModel(trainer.modelBlack, path.join(MODEL_DIR, 'black'));
+      _lastModelSave = now;
+    }
   } catch (err) {
-    console.error('[AutoSave] Buffer save error:', err.message);
+    console.error('[AutoSave] Save error:', err.message);
+  } finally {
+    _saving = false;
   }
-}, BUFFER_SAVE_INTERVAL);
+}, 30 * 1000);
 
 // ── Start ───────────────────────────────────────────────────────────────────
 async function main() {
@@ -396,18 +424,6 @@ async function main() {
 
   // Load persistent state (stats, epsilon, etc.)
   await trainer.loadState();
-
-  // Auto-save state every 30 seconds
-  setInterval(async () => {
-    try {
-      await trainer.saveState();
-      await trainer.buffer.save(BUFFER_FILE);
-      if (trainer.modelWhite) await saveModel(trainer.modelWhite, path.join(MODEL_DIR, 'white'));
-      if (trainer.modelBlack) await saveModel(trainer.modelBlack, path.join(MODEL_DIR, 'black'));
-    } catch (err) {
-      console.error('[AutoSave] 30s save error:', err.message);
-    }
-  }, 30 * 1000);
 
   httpServer.listen(PORT, () => {
     console.log(`[Server] Checkers server running on http://localhost:${PORT}`);

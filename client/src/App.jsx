@@ -47,6 +47,23 @@ export default function App() {
 
   const socketRef = useRef(null);
 
+  // Refs for stable callback access (avoid recreating handleCellClick on every state change)
+  const boardRef = useRef(board);
+  const turnRef = useRef(turn);
+  const selectedRef = useRef(selected);
+  const legalMovesRef = useRef(legalMoves);
+  const modeRef = useRef(mode);
+  const gameOverRef = useRef(gameOver);
+
+  useEffect(() => {
+    boardRef.current = board;
+    turnRef.current = turn;
+    selectedRef.current = selected;
+    legalMovesRef.current = legalMoves;
+    modeRef.current = mode;
+    gameOverRef.current = gameOver;
+  });
+
   useEffect(() => {
     const s = io('/', { transports: ['websocket', 'polling'] });
     socketRef.current = s;
@@ -81,7 +98,12 @@ export default function App() {
     });
 
     s.on('loss', (data) => {
-      setLossHistory((prev) => [...prev, data.loss].slice(-100));
+      setLossHistory((prev) => {
+        if (prev.length >= 100) {
+          return [...prev.slice(1), data.loss];
+        }
+        return [...prev, data.loss];
+      });
     });
 
     s.on('selfPlayStatus', (data) => {
@@ -139,34 +161,36 @@ export default function App() {
   }, []);
 
   const handleMove = useCallback((from, to) => {
-    if (gameOver) return;
+    if (gameOverRef.current) return;
     socketRef.current?.emit('move', { from, to });
     setSelected(null);
     setLegalMoves([]);
-  }, [gameOver]);
+  }, []);
 
   const handleCellClick = useCallback((row, col) => {
-    if (gameOver) return;
-    if (mode === 'aivai') return;
+    if (gameOverRef.current) return;
+    if (modeRef.current === 'aivai') return;
 
+    const board = boardRef.current;
     const piece = board[row][col];
 
     // If a piece is selected, check if clicking on a valid move target
-    if (selected) {
+    if (selectedRef.current) {
+      const legalMoves = legalMovesRef.current;
       const isLegal = legalMoves.some(
         (m) => m.to[0] === row && m.to[1] === col
       );
       if (isLegal) {
-        handleMove(selected, [row, col]);
+        handleMove(selectedRef.current, [row, col]);
         return;
       }
     }
 
     // In PvAI, human controls white pieces — allow selecting white pieces
     // regardless of current turn (to handle race conditions with AI)
-    const isHumanPiece = mode === 'pvai'
+    const isHumanPiece = modeRef.current === 'pvai'
       ? piece && piece.color === 'white'
-      : piece && piece.color === turn;
+      : piece && piece.color === turnRef.current;
 
     if (isHumanPiece) {
       setSelected([row, col]);
@@ -175,7 +199,7 @@ export default function App() {
       setSelected(null);
       setLegalMoves([]);
     }
-  }, [board, turn, selected, legalMoves, gameOver, mode, handleMove]);
+  }, [handleMove]);
 
   const handleParamsChange = useCallback((newParams) => {
     setParams((prev) => ({ ...prev, ...newParams }));
