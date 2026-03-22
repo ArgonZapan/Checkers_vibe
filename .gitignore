@@ -1,0 +1,25 @@
+# Build
+build/
+*.o
+*.a
+
+# Models (duże pliki binarne)
+models/
+
+# Data (replay buffer)
+data/
+
+# Node
+node_modules/
+dist/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
