@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const CELL_SIZE = 60;
 const BOARD_SIZE = CELL_SIZE * 8;
+const STEP_DURATION_MS = 100;
 
 const LIGHT_COLOR = '#deb887';
 const DARK_COLOR = '#8b4513';
@@ -19,6 +20,8 @@ export default function Board({
   lastMove,
   gameOver,
   winner,
+  path,
+  captures = [],
 }) {
   const prevBoardRef = useRef(null);
   const animOffsetsRef = useRef({});
@@ -26,8 +29,92 @@ export default function Board({
   const animFlagRef = useRef(false);
   const [, forceUpdate] = useState(0);
 
+  // Multi-capture step animation state
+  const [animStep, setAnimStep] = useState(-1);
+  const [animBoard, setAnimBoard] = useState(null);
+  const prevPathRef = useRef(null);
+  const timersRef = useRef([]);
+
+  // Detect multi-capture path and animate step by step
+  useEffect(() => {
+    // Clear any pending timers
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+
+    if (!path || path.length <= 2) {
+      setAnimStep(-1);
+      setAnimBoard(null);
+      prevPathRef.current = path;
+      return;
+    }
+
+    // Prevent re-triggering on same path
+    const pathKey = JSON.stringify(path);
+    if (JSON.stringify(prevPathRef.current) === pathKey) return;
+    prevPathRef.current = path;
+
+    const prevBoard = prevBoardRef.current;
+    if (!prevBoard) return;
+
+    const startR = path[0][0], startC = path[0][1];
+    const movingPiece = prevBoard[startR]?.[startC];
+    if (!movingPiece) return;
+
+    // Build base board: prev board minus the moving piece, minus captured pieces
+    const baseBoard = prevBoard.map(row => row.map(cell => cell ? { ...cell } : null));
+    baseBoard[startR][startC] = null;
+
+    // Determine captured positions: squares between consecutive path steps
+    // that contain opponent pieces in the prev board
+    const capturedPositions = [];
+    for (let i = 0; i < path.length - 1; i++) {
+      const [r1, c1] = path[i];
+      const [r2, c2] = path[i + 1];
+      // Check cells between r1,c1 and r2,c2 for captured pieces
+      const dr = Math.sign(r2 - r1);
+      const dc = Math.sign(c2 - c1);
+      let r = r1 + dr, c = c1 + dc;
+      while (r !== r2 || c !== c2) {
+        if (prevBoard[r]?.[c] && prevBoard[r][c].color !== movingPiece.color) {
+          capturedPositions.push([r, c]);
+          // Remove captured piece from base board
+          baseBoard[r][c] = null;
+        }
+        r += dr;
+        c += dc;
+      }
+    }
+
+    // Set step 0: piece at start position, base board without captures
+    setAnimStep(0);
+    setAnimBoard(baseBoard);
+
+    // Schedule each step
+    for (let i = 1; i < path.length; i++) {
+      const timer = setTimeout(() => {
+        setAnimStep(i);
+        // After last step, clear animation state so final board shows
+        if (i === path.length - 1) {
+          const clearTimer = setTimeout(() => {
+            setAnimStep(-1);
+            setAnimBoard(null);
+          }, STEP_DURATION_MS);
+          timersRef.current.push(clearTimer);
+        }
+      }, i * STEP_DURATION_MS);
+      timersRef.current.push(timer);
+    }
+
+    return () => {
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
+    };
+  }, [path]);
+
   // Detect moved pieces by tracking per-position changes
+  // Skip this animation during multi-capture (handled by step animation above)
   const prev = prevBoardRef.current;
+  const isMultiCapture = animStep >= 0;
   // Only animate if board actually changed
   const boardChanged = prev && board.some((row, r) => row.some((cell, c) => {
     const old = prev[r][c];
@@ -35,7 +122,7 @@ export default function Board({
     if (!old || !cell) return true;
     return old.color !== cell.color || old.king !== cell.king;
   }));
-  if (prev && !animFlagRef.current && boardChanged) {
+  if (prev && !animFlagRef.current && !isMultiCapture && boardChanged) {
     // Find empty cells (pieces left or were captured)
     const empties = []; // positions that lost a piece
     const newPieces = []; // positions that gained a piece
@@ -85,6 +172,18 @@ export default function Board({
   const cells = [];
   const pieces = [];
 
+  // Determine board to display: animBoard during multi-capture, normal board otherwise
+  const displayBoard = (animStep >= 0 && animBoard) ? animBoard : board;
+
+  // Moving piece info for multi-capture animation overlay
+  const movingPieceInfo = (animStep >= 0 && animBoard && path) ? (() => {
+    const prevBoard = prevBoardRef.current;
+    if (!prevBoard) return null;
+    const mp = prevBoard[path[0][0]]?.[path[0][1]];
+    if (!mp) return null;
+    return { piece: mp, row: path[animStep][0], col: path[animStep][1] };
+  })() : null;
+
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
       const x = col * CELL_SIZE;
@@ -104,7 +203,7 @@ export default function Board({
       if (isSelected) {
         overlay = SELECTED_COLOR;
       }
-      if (isValidMove && !board[row][col]) {
+      if (isValidMove && !displayBoard[row][col]) {
         overlay = VALID_MOVE_COLOR;
       }
 
@@ -137,7 +236,7 @@ export default function Board({
       }
 
       // Green dot for valid empty target cells
-      if (isValidMove && !board[row][col]) {
+      if (isValidMove && !displayBoard[row][col]) {
         cells.push(
           <circle
             key={`valid-dot-${row}-${col}`}
@@ -150,7 +249,7 @@ export default function Board({
         );
       }
 
-      const piece = board[row][col];
+      const piece = displayBoard[row][col];
       if (piece) {
         const px = x + CELL_SIZE / 2;
         const py = y + CELL_SIZE / 2;
@@ -222,6 +321,38 @@ export default function Board({
       >
         {cells}
         {pieces}
+        {/* Animated moving piece during multi-capture */}
+        {movingPieceInfo && (() => {
+          const { piece, row, col } = movingPieceInfo;
+          const px = col * CELL_SIZE + CELL_SIZE / 2;
+          const py = row * CELL_SIZE + CELL_SIZE / 2;
+          const radius = CELL_SIZE * 0.38;
+          const isWhite = piece.color === 'white';
+          return (
+            <g key="multi-cap-piece" pointerEvents="none">
+              <circle
+                cx={px}
+                cy={py}
+                r={radius}
+                fill={isWhite ? '#f0f0f0' : '#2a2a2a'}
+                stroke={isWhite ? '#999' : '#555'}
+                strokeWidth="2"
+              />
+              {piece.king && (
+                <text
+                  x={px}
+                  y={py}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize="20"
+                  fill={isWhite ? '#333' : '#ddd'}
+                >
+                  👑
+                </text>
+              )}
+            </g>
+          );
+        })()}
         {gameOver && (
           <text
             x={BOARD_SIZE / 2}

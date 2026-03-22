@@ -274,6 +274,7 @@ io.on('connection', async (socket) => {
       const statePayload = {
         ...state,
         lastMove: state.lastMove || { from, to, captures: moveCaptures },
+        path: moveResult.path || null,
       };
       if (socket.gameMode === 'pvp') {
         io.emit('state', statePayload);

@@ -85,6 +85,9 @@ static json moveToJson(const Move& m) {
     json caps = json::array();
     for (auto& c : m.captures) caps.push_back(json::array({c.row, c.col}));
     j["captures"] = caps;
+    json pathArr = json::array();
+    for (auto& s : m.path) pathArr.push_back(json::array({s.row, s.col}));
+    j["path"] = pathArr;
     return j;
 }
 
@@ -192,11 +195,14 @@ void registerRoutes(httplib::Server& svr) {
                 return;
             }
             engine.makeMove(chosen);
-            // Return game state with captures from the executed move
+            // Return game state with captures and path from the executed move
             json response = gameStateJson(engine);
             json caps = json::array();
             for (auto& c : chosen.captures) caps.push_back(json::array({c.row, c.col}));
             response["captures"] = caps;
+            json pathArr = json::array();
+            for (auto& s : chosen.path) pathArr.push_back(json::array({s.row, s.col}));
+            response["path"] = pathArr;
             res.set_content(response.dump(), "application/json");
         } catch (...) {
             json err;

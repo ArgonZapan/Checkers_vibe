@@ -74,6 +74,7 @@ std::vector<Move> MoveGenerator::generatePawnMoves(const Board& board, int row, 
             Move m;
             m.from = Square(row, col);
             m.to = Square(nr, nc);
+            m.path = {Square(row, col), Square(nr, nc)};
             moves.push_back(m);
         }
     }
@@ -103,7 +104,7 @@ std::vector<Move> MoveGenerator::generateKingMoves(const Board& board, int row, 
 // Helper: rekurencyjne bicie wielokrotne z oryginalną pozycją startową
 static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
                           Color color, bool isKing, std::vector<Square>& captures,
-                          std::vector<Move>& result) {
+                          std::vector<Move>& result, std::vector<Square>& path) {
     Bitboard myPieces = board.pieces(color);
     Bitboard oppPieces = board.pieces((color == WHITE) ? BLACK : WHITE);
     bool foundAny = false;
@@ -157,8 +158,10 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
                         }
 
                         captures.push_back(cap);
+                        path.push_back(Square{nr, nc});
                         foundAny = true;
-                        multiCapture(board, origR, origC, nr, nc, color, true, captures, result);
+                        multiCapture(board, origR, origC, nr, nc, color, true, captures, result, path);
+                        path.pop_back();
                         captures.pop_back();
 
                         // Rollback board state
@@ -238,8 +241,10 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
             }
 
             captures.push_back(cap);
+            path.push_back(Square{nr, nc});
             foundAny = true;
-            multiCapture(board, origR, origC, nr, nc, color, becameKing, captures, result);
+            multiCapture(board, origR, origC, nr, nc, color, becameKing, captures, result, path);
+            path.pop_back();
             captures.pop_back();
 
             // Rollback board state
@@ -262,6 +267,7 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
         m.from = Square(origR, origC);
         m.to = Square(curR, curC);
         m.captures = captures;
+        m.path = path;
         result.push_back(m);
     }
 }
@@ -269,15 +275,19 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
 std::vector<Move> MoveGenerator::generatePawnCaptures(Board& board, int row, int col, Color color) {
     std::vector<Move> result;
     std::vector<Square> caps;
+    std::vector<Square> path;
+    path.push_back(Square{row, col}); // start position
     bool isKing = ((color == WHITE) ? board.whiteKings : board.blackKings) & squareToMask(row, col);
-    multiCapture(board, row, col, row, col, color, isKing, caps, result);
+    multiCapture(board, row, col, row, col, color, isKing, caps, result, path);
     return result;
 }
 
 std::vector<Move> MoveGenerator::generateKingCaptures(Board& board, int row, int col, Color color) {
     std::vector<Move> result;
     std::vector<Square> caps;
-    multiCapture(board, row, col, row, col, color, true, caps, result);
+    std::vector<Square> path;
+    path.push_back(Square{row, col}); // start position
+    multiCapture(board, row, col, row, col, color, true, caps, result, path);
     return result;
 }
 

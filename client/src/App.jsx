@@ -32,6 +32,7 @@ export default function App() {
   const [lastMove, setLastMove] = useState(null);
   const [selected, setSelected] = useState(null);
   const [gameNumber, setGameNumber] = useState(0);
+  const [movePath, setMovePath] = useState(null);
 
   const [params, setParams] = useState({
     whiteEpsilon: 0.1,
@@ -40,14 +41,17 @@ export default function App() {
     blackNetworkSize: 'medium',
   });
 
-  const [modelParams, setModelParams] = useState({
-    layers: 3,
-    neurons: 128,
+  const DEFAULT_MODEL_PARAMS = {
+    layers: 5,
+    neurons: 512,
     activation: 'relu',
     lr: 0.001,
-    batchSize: 64,
-    dropout: 0,
-  });
+    batchSize: 256,
+    dropout: 0.1,
+  };
+
+  const [modelParams, setModelParams] = useState({ ...DEFAULT_MODEL_PARAMS });
+  const [toast, setToast] = useState(null);
 
   const [stats, setStats] = useState({ games: 0, whiteWins: 0, blackWins: 0, draws: 0 });
   const [lossHistory, setLossHistory] = useState([]);
@@ -90,6 +94,8 @@ export default function App() {
       if (data.gameOver !== undefined) setGameOver(data.gameOver);
       if (data.winner !== undefined) setWinner(data.winner);
       if (data.lastMove) setLastMove(data.lastMove);
+      if (data.path) setMovePath(data.path);
+      else setMovePath(null);
       // Note: do NOT set legalMoves from state — only from getLegalMoves event
       // State includes ALL legal moves for current turn, not per-piece filtered moves
     });
@@ -156,6 +162,7 @@ export default function App() {
     setLastMove(null);
     setSelected(null);
     setLegalMoves([]);
+    setMovePath(null);
     socketRef.current?.emit('startGame', { mode: 'pvai' });
   }, []);
 
@@ -168,6 +175,7 @@ export default function App() {
     setLastMove(null);
     setSelected(null);
     setLegalMoves([]);
+    setMovePath(null);
     socketRef.current?.emit('startGame', { mode: 'aivai' });
   }, []);
 
@@ -180,6 +188,7 @@ export default function App() {
     setLastMove(null);
     setSelected(null);
     setLegalMoves([]);
+    setMovePath(null);
     socketRef.current?.emit('reset');
   }, []);
 
@@ -229,12 +238,26 @@ export default function App() {
     socketRef.current?.emit('params', newParams);
   }, []);
 
+  // Toast helper
+  const showToast = useCallback((msg, duration = 3000) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), duration);
+  }, []);
+
+  // Sliders only update local state — no socket emit
   const handleModelParamsChange = useCallback((newModelParams) => {
-    setModelParams((prev) => {
-      const updated = { ...prev, ...newModelParams };
-      socketRef.current?.emit('setParams', updated);
-      return updated;
-    });
+    setModelParams((prev) => ({ ...prev, ...newModelParams }));
+  }, []);
+
+  // "Zastosuj zmiany" — emit to server, reset model
+  const handleApplyModelParams = useCallback(() => {
+    socketRef.current?.emit('setParams', { ...modelParams });
+    showToast('✅ Model zresetowany, szkolenie od nowa');
+  }, [modelParams, showToast]);
+
+  // "Resetuj domyślne" — restore max defaults
+  const handleResetModelParams = useCallback(() => {
+    setModelParams({ ...DEFAULT_MODEL_PARAMS });
   }, []);
 
   const handleRestart = useCallback((which) => {
@@ -289,6 +312,8 @@ export default function App() {
             lastMove={lastMove}
             gameOver={gameOver}
             winner={winner}
+            path={movePath}
+            captures={lastMove?.captures}
           />
           <GameControls
             mode={mode}

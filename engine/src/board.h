@@ -27,6 +27,7 @@ struct Move {
     std::vector<Square> captures; // zbite pionki (puste = zwykły ruch)
     bool wasKing = false;          // czy ruszający się pionek był damką PRZED ruchem
     std::vector<bool> capturedKings; // czy zbite pionki były damkami
+    std::vector<Square> path;      // pozycje pośrednie przy wielobiciu (łącznie z from i to)
     bool isCapture() const { return !captures.empty(); }
 };
 
