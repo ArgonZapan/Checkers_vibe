@@ -130,8 +130,15 @@ export default function App() {
         });
       }
       if (data.avgTime !== undefined) setAvgTime(data.avgTime);
+      if (data.totalTimeMs !== undefined) setTotalTimeMs(data.totalTimeMs);
       if (data.roundTimes !== undefined && data.roundTimes.length > 0) {
         setLastRoundTime(data.roundTimes[data.roundTimes.length - 1]);
+      }
+    });
+
+    s.on('paramsUpdate', (data) => {
+      if (data.modelParams) {
+        setModelParams(data.modelParams);
       }
     });
 
@@ -222,6 +229,14 @@ export default function App() {
     socketRef.current?.emit('params', newParams);
   }, []);
 
+  const handleModelParamsChange = useCallback((newModelParams) => {
+    setModelParams((prev) => {
+      const updated = { ...prev, ...newModelParams };
+      socketRef.current?.emit('setParams', updated);
+      return updated;
+    });
+  }, []);
+
   const handleRestart = useCallback((which) => {
     socketRef.current?.emit('restart', { which });
   }, []);
@@ -293,6 +308,9 @@ export default function App() {
               gameHistory={gameHistory}
               currentGame={gameNumber}
               active={selfPlayActive}
+              avgTime={avgTime}
+              totalTimeMs={totalTimeMs}
+              lastRoundTime={lastRoundTime}
             />
           )}
           <ParamsPanel
@@ -301,6 +319,8 @@ export default function App() {
             onRestart={handleRestart}
             active={selfPlayActive}
             onToggleSelfplay={handleToggleSelfplay}
+            modelParams={modelParams}
+            onModelParamsChange={handleModelParamsChange}
           />
         </div>
       </div>
