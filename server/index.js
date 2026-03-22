@@ -183,6 +183,10 @@ io.on('connection', (socket) => {
       const state = await getGameState();
       socket.emit('state', state);
       console.log(`[WS] Game started (${socket.gameMode}) for ${socket.id}`);
+      // Auto-start trainer for aivai mode
+      if (socket.gameMode === 'aivai') {
+        await trainer.start();
+      }
     } catch (err) {
       console.error('[WS] startGame error:', err.message);
       socket.emit('error', { message: err.message });
@@ -223,10 +227,10 @@ io.on('connection', (socket) => {
         state = await getGameState();
       }
 
-      // 4. Emit new state to client
+      // 4. Emit new state to client (use state.lastMove which reflects the AI's move if any)
       socket.emit('state', {
         ...state,
-        lastMove: { from, to },
+        lastMove: state.lastMove || { from, to },
       });
 
       // 5. If game over, emit gameOver event
@@ -244,6 +248,21 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log(`[WS] Client disconnected: ${socket.id}`);
+  });
+
+  // ── SelfPlay controls ─────────────────────────────────────────────────
+  socket.on('startSelfPlay', async () => {
+    try {
+      console.log(`[WS] startSelfPlay from ${socket.id}`);
+      await trainer.start();
+    } catch (err) {
+      console.error('[WS] startSelfPlay error:', err.message);
+    }
+  });
+
+  socket.on('stopSelfPlay', () => {
+    console.log(`[WS] stopSelfPlay from ${socket.id}`);
+    trainer.stop();
   });
 });
 

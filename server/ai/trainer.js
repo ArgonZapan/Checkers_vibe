@@ -2,6 +2,18 @@ import { createModel, predict, train, saveModel, loadModel } from './model.js';
 import { ReplayBuffer } from './buffer.js';
 
 const CPP_BASE = 'http://localhost:8080';
+const FETCH_TIMEOUT_MS = 5000;
+
+async function cppFetch(url, opts = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { ...opts, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export class SelfPlay {
   constructor(io) {
@@ -88,6 +100,7 @@ export class SelfPlay {
 
   stop() {
     this.running = false;
+    this.io?.emit('selfPlayStatus', { active: false });
     console.log('[SelfPlay] Stopped');
   }
 
@@ -103,6 +116,7 @@ export class SelfPlay {
 
   // ── Internal game loop ───────────────────────────────────────────────────
   async _loop() {
+    this.io?.emit('selfPlayStatus', { active: true, gameNumber: this.stats.gamesPlayed });
     while (this.running) {
       try {
         await this._playGame();
@@ -116,11 +130,14 @@ export class SelfPlay {
 
   async _playGame() {
     // 1. Start new game
-    const startRes = await fetch(`${CPP_BASE}/api/game/start`, { method: 'POST' });
+    const startRes = await cppFetch(`${CPP_BASE}/api/game/start`, { method: 'POST' });
     if (!startRes.ok) throw new Error(`Game start failed: ${startRes.status}`);
     const gameState = await startRes.json();
 
-    this.io?.emit('gameStart', { gameId: Date.now() });
+    this.io?.emit('selfPlayStatus', {
+      active: true,
+      gameNumber: this.stats.gamesPlayed + 1,
+    });
     const samples = [];
     let turn = 1; // 1 = white, -1 = black
 
@@ -149,15 +166,16 @@ export class SelfPlay {
         this.stats.gamesPlayed++;
 
         // Assign results to samples
+        // result is already 1 (white wins), -1 (black wins), or 0 (draw)
+        const winnerTurn = result; // 1, -1, or 0
         for (const s of samples) {
-          // Result from perspective of the player who made the move
-          s.result = s.turn === (result > 0 ? 1 : result < 0 ? -1 : 0) ? Math.abs(result) : -Math.abs(result);
+          s.result = s.turn === winnerTurn ? 1 : winnerTurn === 0 ? 0 : -1;
         }
 
         // Add to buffer
         for (const s of samples) this.buffer.add(s);
 
-        this.io?.emit('gameEnd', { result, stats: this.stats });
+        this.io?.emit('gameOver', { winner: winner === 1 ? 'white' : winner === -1 ? 'black' : 'draw', moves: samples.length });
         break;
       }
 
@@ -206,8 +224,38 @@ export class SelfPlay {
       });
       if (!moveRes.ok) throw new Error(`Move failed: ${moveRes.status}`);
 
-      this.io?.emit('move', { moveIndex: moveIdx, turn });
+      // Emit state after move so React can update the board
+      const newStateRes = await fetch(`${CPP_BASE}/api/game/state`);
+      const newState = await newStateRes.json();
+      const lmRes2 = await fetch(`${CPP_BASE}/api/legal-moves`);
+      const { moves: newLegalMoves } = await lmRes2.json();
+
+      // Convert board from C++ ints to React objects
+      let board2D = newState.board;
+      if (Array.isArray(newState.board) && !Array.isArray(newState.board[0])) {
+        board2D = [];
+        for (let r = 0; r < 8; r++) {
+          board2D.push(newState.board.slice(r * 8, r * 8 + 8));
+        }
+      }
+      const boardReact = board2D.map(row => row.map(val => {
+        if (val === 0) return null;
+        return { color: (val === 1 || val === 2) ? 'white' : 'black', king: (val === 2 || val === 4) };
+      }));
+
+      const turnColor = newState.turn === 1 || newState.turn === 'white' ? 'white' : 'black';
+      this.io?.emit('state', {
+        board: boardReact,
+        turn: turnColor,
+        legalMoves: [],
+        gameOver: newState.gameOver ?? false,
+        winner: newState.winner != null ? (newState.winner === 1 || newState.winner === 'white' ? 'white' : 'black') : null,
+      });
+
       turn = -turn;
+
+      // Small delay so clients can observe the move
+      await this._sleep(500);
     }
 
     // 3. Train on mini-batch after each game
@@ -220,7 +268,7 @@ export class SelfPlay {
 
       const avgLoss = ((lossWhite.loss || 0) + (lossBlack.loss || 0)) / 2;
       this.stats.lastLoss = avgLoss;
-      this.io?.emit('train', { loss: avgLoss, gamesPlayed: this.stats.gamesPlayed });
+      this.io?.emit('loss', { loss: avgLoss });
     }
 
     // 4. Decay epsilon
