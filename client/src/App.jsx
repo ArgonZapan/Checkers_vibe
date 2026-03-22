@@ -64,6 +64,11 @@ export default function App() {
       if (data.legalMoves) setLegalMoves(data.legalMoves);
     });
 
+    // Legal moves for a specific piece (from getLegalMoves request)
+    s.on('legalMoves', (data) => {
+      if (data.moves) setLegalMoves(data.moves);
+    });
+
     s.on('gameOver', (data) => {
       setGameOver(true);
       setWinner(data.winner);

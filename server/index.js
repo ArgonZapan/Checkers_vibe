@@ -114,13 +114,209 @@ app.get('/api/selfplay/status', (_req, res) => {
 setupProxy(app);
 
 // ── WebSocket ───────────────────────────────────────────────────────────────
+const CPP_BASE = 'http://localhost:8080';
+
+// Helper: convert between client color strings and C++ int turns
+const colorToTurn = (color) => color === 'white' ? 1 : -1;
+const turnToColor = (turn) => {
+  if (typeof turn === 'string') return turn; // already a color string (C++ engine format)
+  return turn === 1 ? 'white' : 'black';
+};
+
+// Helper: fetch JSON from C++ backend
+async function cppFetch(path, opts = {}) {
+  const url = `${CPP_BASE}${path}`;
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  if (!res.ok) throw new Error(`C++ ${path} → ${res.status}`);
+  return res.json();
+}
+
+// Helper: get full game state from C++ engine and return client-friendly format
+async function getGameState() {
+  const state = await cppFetch('/api/game/state');
+  const { moves: legalMoves } = await cppFetch('/api/legal-moves');
+  // Normalize board to 2D array
+  let board2D = state.board;
+  if (Array.isArray(state.board) && !Array.isArray(state.board[0])) {
+    board2D = [];
+    for (let r = 0; r < 8; r++) {
+      board2D.push(state.board.slice(r * 8, r * 8 + 8));
+    }
+  }
+  // Convert board ints to piece objects
+  // C++ encoding: 0=empty, 1=white pawn, 2=white king, 3=black pawn, 4=black king
+  const board = board2D.map(row => row.map(val => {
+    if (val === 0) return null;
+    const isWhite = val === 1 || val === 2;
+    const isKing = val === 2 || val === 4;
+    return { color: isWhite ? 'white' : 'black', king: isKing };
+  }));
+  // Convert legal moves to client format
+  const moves = (legalMoves || []).map(m => ({
+    from: m.from,
+    to: m.to,
+    captures: m.captures || [],
+    index: m.index,
+  }));
+  return {
+    board,
+    turn: turnToColor(state.turn ?? state.currentTurn ?? 1),
+    legalMoves: moves,
+    gameOver: state.gameOver ?? false,
+    winner: state.winner != null ? turnToColor(state.winner) : null,
+    lastMove: state.lastMove || null,
+  };
+}
+
 io.on('connection', (socket) => {
   console.log(`[WS] Client connected: ${socket.id}`);
+  socket.gameMode = 'pvai'; // default mode
+
+  // ── Start game ─────────────────────────────────────────────────────────
+  socket.on('startGame', async ({ mode }) => {
+    socket.gameMode = mode || 'pvai';
+    try {
+      await cppFetch('/api/game/start', { method: 'POST', body: '{}' });
+      const state = await getGameState();
+      socket.emit('state', state);
+      console.log(`[WS] Game started (${socket.gameMode}) for ${socket.id}`);
+    } catch (err) {
+      console.error('[WS] startGame error:', err.message);
+      socket.emit('error', { message: err.message });
+    }
+  });
+
+  // ── Get legal moves for a piece ────────────────────────────────────────
+  socket.on('getLegalMoves', async ({ from }) => {
+    try {
+      const state = await getGameState();
+      const filtered = state.legalMoves.filter(
+        m => m.from[0] === from[0] && m.from[1] === from[1]
+      );
+      socket.emit('legalMoves', { from, moves: filtered });
+    } catch (err) {
+      console.error('[WS] getLegalMoves error:', err.message);
+      socket.emit('error', { message: err.message });
+    }
+  });
+
+  // ── Player move (PvAI / PvP) ──────────────────────────────────────────
+  socket.on('move', async ({ from, to }) => {
+    try {
+      // 1. Execute player's move via C++
+      await cppFetch('/api/move', {
+        method: 'POST',
+        body: JSON.stringify({ from, to }),
+      });
+
+      // 2. Get updated state after player move
+      let state = await getGameState();
+      const isPvAI = socket.gameMode === 'pvai';
+
+      // 3. If PvAI and game not over → AI makes its move
+      if (isPvAI && !state.gameOver) {
+        await aiMove(state);
+        // Re-fetch state after AI moved
+        state = await getGameState();
+      }
+
+      // 4. Emit new state to client
+      socket.emit('state', {
+        ...state,
+        lastMove: { from, to },
+      });
+
+      // 5. If game over, emit gameOver event
+      if (state.gameOver) {
+        io.emit('gameOver', {
+          winner: state.winner,
+          moves: 0,
+        });
+      }
+    } catch (err) {
+      console.error('[WS] move error:', err.message);
+      socket.emit('error', { message: err.message });
+    }
+  });
 
   socket.on('disconnect', () => {
     console.log(`[WS] Client disconnected: ${socket.id}`);
   });
 });
+
+// ── AI move helper ──────────────────────────────────────────────────────────
+async function aiMove(currentState) {
+  try {
+    // Get legal moves for AI
+    const { moves: legalMoves } = await cppFetch('/api/legal-moves');
+    if (!legalMoves || legalMoves.length === 0) {
+      console.log('[AI] No legal moves for AI');
+      return;
+    }
+
+    // Assign index to each legal move (C++ engine doesn't provide it)
+    // Use array position as index — model policy maps to these indices
+    const movesWithIndex = legalMoves.map((m, i) => ({ ...m, index: i }));
+
+    // Predict best move
+    const turn = colorToTurn(currentState.turn);
+    // Convert board back to flat int array for model
+    // C++ encoding: 0=empty, 1=white pawn, 2=white king, 3=black pawn, 4=black king
+    const boardFlat = currentState.board.flat().map(p => {
+      if (!p) return 0;
+      if (p.color === 'white') return p.king ? 2 : 1;
+      return p.king ? 4 : 3;
+    });
+
+    const predRes = await fetch('http://localhost:3000/api/ai/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ board: boardFlat, legalMoves: movesWithIndex, turn }),
+    });
+
+    if (!predRes.ok) {
+      console.error('[AI] Predict failed:', predRes.status);
+      // Fallback: random move
+      const randomIdx = Math.floor(Math.random() * legalMoves.length);
+      const randomMove = legalMoves[randomIdx];
+      await cppFetch('/api/move', {
+        method: 'POST',
+        body: JSON.stringify({ from: randomMove.from, to: randomMove.to }),
+      });
+      return;
+    }
+
+    const prediction = await predRes.json();
+    const moveIndex = prediction.move;
+
+    // Find the actual move from legalMoves by index
+    let selectedMove = legalMoves[moveIndex] || legalMoves[0];
+
+    // Execute AI move via C++
+    await cppFetch('/api/move', {
+      method: 'POST',
+      body: JSON.stringify({ from: selectedMove.from, to: selectedMove.to }),
+    });
+
+    console.log(`[AI] Played move: ${JSON.stringify(selectedMove.from)} → ${JSON.stringify(selectedMove.to)}`);
+  } catch (err) {
+    console.error('[AI] Move error:', err.message);
+    // Fallback: try random move
+    try {
+      const { moves: legalMoves } = await cppFetch('/api/legal-moves');
+      if (legalMoves && legalMoves.length > 0) {
+        const randomMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+        await cppFetch('/api/move', {
+          method: 'POST',
+          body: JSON.stringify({ from: randomMove.from, to: randomMove.to }),
+        });
+      }
+    } catch (_) { /* give up */ }
+  }
+}
 
 // ── Auto-save timers ────────────────────────────────────────────────────────
 const MODEL_SAVE_INTERVAL = 5 * 60 * 1000;  // 5 min

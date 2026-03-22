@@ -51,7 +51,7 @@ export function createModel(size = 'small') {
 // ── Board to tensor ─────────────────────────────────────────────────────────
 export function boardToTensor(boardArray, turn) {
   // boardArray: 8x8 int array (flat 64 or 2D 8x8)
-  // Encode as 256 one-hot + 1 turn bit = 257
+  // C++ engine encoding: 0=empty, 1=white pawn, 2=white king, 3=black pawn, 4=black king
   const flat = boardArray.flat();
   if (flat.length !== 64) {
     throw new Error(`boardToTensor: expected 64 cells, got ${flat.length}`);
@@ -60,13 +60,21 @@ export function boardToTensor(boardArray, turn) {
   const input = new Float32Array(257);
   for (let i = 0; i < 64; i++) {
     const val = flat[i];
-    // 4 channels: empty, white pawn, black pawn, king (absolute)
+    // 4 channels: empty, white piece, black piece, king
     const base = i * 4;
-    if (val === 0) input[base] = 1;        // empty
-    else if (val === 1) input[base + 1] = 1; // white
-    else if (val === -1) input[base + 2] = 1; // black
-    else if (val === 2) input[base + 1] = 1, input[base + 3] = 1;  // white king
-    else if (val === -2) input[base + 2] = 1, input[base + 3] = 1; // black king
+    if (val === 0) {
+      input[base] = 1;           // empty
+    } else if (val === 1) {
+      input[base + 1] = 1;       // white pawn
+    } else if (val === 2) {
+      input[base + 1] = 1;       // white king
+      input[base + 3] = 1;       // king flag
+    } else if (val === 3) {
+      input[base + 2] = 1;       // black pawn
+    } else if (val === 4) {
+      input[base + 2] = 1;       // black king
+      input[base + 3] = 1;       // king flag
+    }
   }
   input[256] = turn; // turn indicator
 
