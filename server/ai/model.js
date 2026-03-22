@@ -114,37 +114,56 @@ export function boardToTensor(boardArray, turn) {
     boardArray = wrapped;
   }
   // Validate 2D 8x8
-  const flat = boardArray.flat();
-  if (flat.length !== 64) {
-    throw new Error(`boardToTensor: expected 64 cells, got ${flat.length}`);
-  }
   if (boardArray.length !== 8) {
     throw new Error(`boardToTensor: expected 8 rows, got ${boardArray.length}`);
+  }
+
+  // Flip board for black — always show current player at the bottom
+  // Also swap piece values so "my pieces" are always in the white channel
+  let flat;
+  if (turn === -1 || turn === 'black' || turn === 'BLACK') {
+    flat = [];
+    for (let r = 7; r >= 0; r--) {
+      for (let c = 0; c < 8; c++) {
+        let val = boardArray[r][c];
+        // Swap white↔black: 1↔3, 2↔4
+        if (val === 1) val = 3;
+        else if (val === 3) val = 1;
+        else if (val === 2) val = 4;
+        else if (val === 4) val = 2;
+        flat.push(val);
+      }
+    }
+  } else {
+    flat = boardArray.flat();
+  }
+
+  if (flat.length !== 64) {
+    throw new Error(`boardToTensor: expected 64 cells, got ${flat.length}`);
   }
 
   const input = new Float32Array(257);
   for (let i = 0; i < 64; i++) {
     const val = flat[i];
-    // 4 channels: empty, white piece, black piece, king
-    // Piece encoding: 0=empty, 1=white pawn, 2=white king, 3=black pawn, 4=black king
-    // Also supports sign encoding: positive=white, negative=black, |val|=2 for king
+    // 4 channels: empty, white piece (my), black piece (opponent), king
+    // After flipping, "white" channel = current player's pieces
     const base = i * 4;
     if (val === 0) {
       input[base] = 1;           // empty
     } else {
-      const isBlack = val === 3 || val === 4 || val < 0;
-      const isKing = val === 2 || val === 4 || Math.abs(val) === 2;
-      if (isBlack) {
-        input[base + 2] = 1;     // black channel
+      const isOpponent = val === 3 || val === 4; // opponent pieces
+      const isKing = val === 2 || val === 4;
+      if (isOpponent) {
+        input[base + 2] = 1;     // opponent channel
       } else {
-        input[base + 1] = 1;     // white channel
+        input[base + 1] = 1;     // my pieces channel
       }
       if (isKing) {
         input[base + 3] = 1;     // king flag
       }
     }
   }
-  input[256] = turn; // turn indicator
+  input[256] = 1; // always 1 (board is always from current player's perspective)
 
   return tf.tensor2d([Array.from(input)]);
 }
