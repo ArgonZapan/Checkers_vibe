@@ -294,11 +294,12 @@ export async function train(model, batch, epochs = 5) {
     }
     policyTargets.push(Array.from(policyTarget));
 
-    // Value target: Bellman equation if shaped rewards available, else terminal result
+    // Value target: Bellman equation with negated opponent Q (zero-sum game)
     let valueTarget;
     if (hasShapedRewards && sample.reward !== undefined && nextQValues != null) {
       const done = sample.done ? 1 : 0;
-      valueTarget = sample.reward + GAMMA * nextQValues[i] * (1 - done);
+      // nextQValues[i] is from opponent's perspective — negate for zero-sum
+      valueTarget = sample.reward + GAMMA * (-nextQValues[i]) * (1 - done);
       // Clamp to [-1, 1] (matches tanh output range)
       valueTarget = Math.max(-1, Math.min(1, valueTarget));
     } else {
