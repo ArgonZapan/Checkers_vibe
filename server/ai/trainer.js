@@ -576,8 +576,8 @@ export class SelfPlay {
 
       turn = -turn;
 
-      // Train after each move (continuous learning) — 3 epochs, fresh batch each time
-      if (this.buffer.size() >= this.modelParams.batchSize) {
+      // Train after each move — skip when pure random (epsilon=1.0)
+      if (this.buffer.size() >= this.modelParams.batchSize && (this.epsilonWhite < 1.0 || this.epsilonBlack < 1.0)) {
         let lastLoss = 0;
         for (let epoch = 0; epoch < 3; epoch++) {
           const batch = this.buffer.sample(this.modelParams.batchSize);
