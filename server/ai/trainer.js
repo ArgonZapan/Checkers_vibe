@@ -255,7 +255,7 @@ export class SelfPlay {
       turn = -turn;
 
       // Small delay so clients can observe the move
-      await this._sleep(500);
+      await this._sleep(200);
     }
 
     // 3. Train on mini-batch after each game
