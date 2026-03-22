@@ -1,5 +1,9 @@
 # API — C++ Engine (port 8080)
 
+Biblioteka: **cpp-httplib** (header-only HTTP server).
+
+Kompilacja: osobny proces wykonywalny, nasłuchuje na porcie 8080.
+
 ## Endpointy
 
 ### GET /api/status

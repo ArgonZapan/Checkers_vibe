@@ -1,5 +1,31 @@
 # Architektura systemu
 
+## Struktura projektu
+
+```
+Checkers_vibe/
+├── engine/          ← C++ (CMake, silnik gry + HTTP server)
+│   ├── CMakeLists.txt
+│   ├── src/
+│   └── tests/
+├── server/          ← Node.js (Express, TensorFlow.js, proxy, socket.io)
+│   ├── package.json
+│   └── index.js
+├── client/          ← React (Vite, JavaScript)
+│   ├── package.json
+│   └── src/
+├── models/          ← gitignore (wagi AI)
+├── data/            ← gitignore (replay buffer)
+└── docs/
+```
+
+## Technologie
+
+- **C++**: cpp-httplib (REST API), kompilowany jako osobny proces
+- **Node.js**: Express, socket.io, tfjs-node, proxy do C++ na port 8080
+- **React**: Vite, JavaScript (bez TypeScript)
+- **WebSocket**: socket.io
+
 ## Struktura
 
 ```
