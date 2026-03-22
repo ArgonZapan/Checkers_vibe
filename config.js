@@ -50,12 +50,4 @@ export const CONFIG = {
     },
   },
 
-  // === REWARDS ===
-  rewards: {
-    capture: 0.5,
-    loss: -0.5,
-    promotion: 0.3,
-    centerControl: 0.1,
-  },
 };
-;

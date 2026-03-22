@@ -8,9 +8,6 @@ import { CONFIG } from '../../config.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ── Shaped Reward Calculation ────────────────────────────────────────────────
-const CENTER_SQUARES = [27, 28, 35, 36]; // (3,3), (3,4), (4,3), (4,4) flat indices
-const PROMOTION_RANK_WHITE = [56, 57, 58, 59, 60, 61, 62, 63]; // row 7
-const PROMOTION_RANK_BLACK = [0, 1, 2, 3, 4, 5, 6, 7];         // row 0
 
 function flattenBoard(board) {
   if (!Array.isArray(board)) return null;
@@ -32,47 +29,128 @@ function isKing(val, turn) {
   return turn === 1 ? val === 2 : val === 4;
 }
 
+// ── Piece Values ─────────────────────────────────────────────────────────────
+const PIECE_VALUE = { 1: 1, 2: 3, 3: 1, 4: 3 }; // white pawn=1, white king=3, black pawn=3(val=1), black king=4(val=3)
+
+// ── Helper: calcMaterial ─────────────────────────────────────────────────────
+function calcMaterial(prev, next, turn) {
+  let prevMy = 0, prevOpp = 0, nextMy = 0, nextOpp = 0;
+  for (let i = 0; i < 64; i++) {
+    if (prev[i] !== 0) {
+      const val = PIECE_VALUE[Math.abs(prev[i])] || 0;
+      if (isOwnPiece(prev[i], turn)) prevMy += val; else prevOpp += val;
+    }
+    if (next[i] !== 0) {
+      const val = PIECE_VALUE[Math.abs(next[i])] || 0;
+      if (isOwnPiece(next[i], turn)) nextMy += val; else nextOpp += val;
+    }
+  }
+  const myChange = nextMy - prevMy;
+  const oppChange = nextOpp - prevOpp;
+  return (myChange - oppChange) / 6; // normalize to [-1, 1]
+}
+
+// ── Helper: calcPosition ─────────────────────────────────────────────────────
+function calcPosition(board, turn) {
+  let score = 0;
+  const PAWN_ADVANCE = 0.1;
+  const CENTER_BONUS = 0.15;
+  const EDGE_PENALTY = -0.1;
+  const KING_CENTER = 0.2;
+  const KING_EDGE = -0.15;
+
+  for (let i = 0; i < 64; i++) {
+    const row = Math.floor(i / 8);
+    const col = i % 8;
+    const val = board[i];
+    if (!isOwnPiece(val, turn)) continue;
+
+    // Pawn advancement
+    if (isPawn(val, turn)) {
+      const advance = turn === 1 ? row : (7 - row);
+      score += advance * PAWN_ADVANCE / 7;
+      if (col >= 2 && col <= 5 && row >= 2 && row <= 5) score += CENTER_BONUS / 12;
+      if (col === 0 || col === 7) score += EDGE_PENALTY / 12;
+    }
+    // King position
+    if (isKing(val, turn)) {
+      if (col >= 2 && col <= 5 && row >= 2 && row <= 5) score += KING_CENTER;
+      else if (col === 0 || col === 7 || row === 0 || row === 7) score += KING_EDGE;
+    }
+  }
+  return Math.max(-1, Math.min(1, score));
+}
+
+// ── Helper: calcThreat ───────────────────────────────────────────────────────
+function calcThreat(board, turn) {
+  let myThreats = 0, oppThreats = 0;
+  // Simplified: check if pieces have opponent pieces adjacent that could capture
+  for (let i = 0; i < 64; i++) {
+    if (!board[i]) continue;
+    const row = Math.floor(i / 8);
+    const col = i % 8;
+    const isMy = isOwnPiece(board[i], turn);
+    // Check diagonals for opponent pieces that could capture this piece
+    for (const [dr, dc] of [[1,1],[1,-1],[-1,1],[-1,-1]]) {
+      const adjR = row + dr, adjC = col + dc;
+      const jumpR = row - dr, jumpC = col - dc;
+      if (adjR < 0 || adjR > 7 || adjC < 0 || adjC > 7) continue;
+      if (jumpR < 0 || jumpR > 7 || jumpC < 0 || jumpC > 7) continue;
+      const adjIdx = adjR * 8 + adjC;
+      const jumpIdx = jumpR * 8 + jumpC;
+      if (board[adjIdx] && !isOwnPiece(board[adjIdx], turn) && !board[jumpIdx]) {
+        if (isMy) myThreats++; else oppThreats++;
+      }
+    }
+  }
+  return (oppThreats - myThreats) / Math.max(oppThreats + myThreats, 1);
+}
+
+// ── Helper: calcTempo ────────────────────────────────────────────────────────
+function calcTempo(prev, next, turn) {
+  // Count pieces in advanced positions (rows 4-6 for white, rows 1-3 for black)
+  let myAdv = 0, oppAdv = 0;
+  for (let i = 0; i < 64; i++) {
+    const row = Math.floor(i / 8);
+    const nextVal = next[i];
+    if (isOwnPiece(nextVal, turn) && ((turn === 1 && row >= 4) || (turn === -1 && row <= 3))) myAdv++;
+    if (nextVal && !isOwnPiece(nextVal, turn) && ((turn === -1 && row >= 4) || (turn === 1 && row <= 3))) oppAdv++;
+  }
+  return (myAdv - oppAdv) / Math.max(myAdv + oppAdv, 1);
+}
+
 /**
  * Calculate shaped intermediate reward from the perspective of `turn` (the player who just moved).
+ * Weighted sum: material (0.4) + position (0.25) + mobility (0.15) + threat (0.1) + tempo (0.1)
  * @param {number[]|null} prevBoardFlat - flat 64 array before the move (null for first move)
  * @param {number[]} nextBoardFlat - flat 64 array after the move
  * @param {number} turn - 1 (white) or -1 (black)
- * @returns {number} shaped reward
+ * @returns {number} shaped reward in [-1, 1]
  */
 function calculateReward(prevBoardFlat, nextBoardFlat, turn) {
   if (!prevBoardFlat || !nextBoardFlat) return 0;
 
   let reward = 0;
 
-  // 1. Piece capture/loss (±0.5 per piece)
-  let prevOwn = 0, nextOwn = 0;
-  let prevOpp = 0, nextOpp = 0;
-  for (let i = 0; i < 64; i++) {
-    if (isOwnPiece(prevBoardFlat[i], turn)) prevOwn++;
-    else if (prevBoardFlat[i] !== 0) prevOpp++;
-    if (isOwnPiece(nextBoardFlat[i], turn)) nextOwn++;
-    else if (nextBoardFlat[i] !== 0) nextOpp++;
-  }
-  reward += (prevOpp - nextOpp) * CONFIG.rewards.capture; // captured opponent pieces
-  reward -= (prevOwn - nextOwn) * Math.abs(CONFIG.rewards.loss); // lost own pieces
+  // 1. Materiał (0.4)
+  const matReward = calcMaterial(prevBoardFlat, nextBoardFlat, turn);
+  reward += matReward * 0.4;
 
-  // 2. King promotion (±0.3)
-  const promoRank = turn === 1 ? PROMOTION_RANK_WHITE : PROMOTION_RANK_BLACK;
-  for (const idx of promoRank) {
-    if (isKing(nextBoardFlat[idx], turn) && isPawn(prevBoardFlat[idx], turn)) {
-      reward += CONFIG.rewards.promotion;
-    }
-  }
+  // 2. Pozycja (0.25)
+  const posReward = calcPosition(nextBoardFlat, turn);
+  reward += posReward * 0.25;
 
-  // 3. Center control (±0.1)
-  let prevCenter = 0, nextCenter = 0;
-  for (const sq of CENTER_SQUARES) {
-    if (isOwnPiece(prevBoardFlat[sq], turn)) prevCenter++;
-    if (isOwnPiece(nextBoardFlat[sq], turn)) nextCenter++;
-  }
-  reward += (nextCenter - prevCenter) * CONFIG.rewards.centerControl;
+  // 3. Mobilność (0.15) — skipped here (requires MoveGenerator), handled via captures in tempo
 
-  return Math.round(reward * 1000) / 1000; // avoid float drift
+  // 4. Zagrożenie (0.1)
+  const threatReward = calcThreat(nextBoardFlat, turn);
+  reward += threatReward * 0.1;
+
+  // 5. Tempo (0.1)
+  const tempoReward = calcTempo(prevBoardFlat, nextBoardFlat, turn);
+  reward += tempoReward * 0.1;
+
+  return Math.max(-1, Math.min(1, Math.round(reward * 1000) / 1000));
 }
 const STATE_FILE = path.join(__dirname, '..', '..', 'data', 'state.json');
 
