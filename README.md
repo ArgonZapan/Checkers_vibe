@@ -8,12 +8,23 @@ Klasyczne warcaby (ang. checkers / draughts) jako web app. Dwóch graczy, 8×8, 
 
 ## Plan
 
-- [ ] Plansza 8×8
-- [ ] Logika ruchu (zwykły + bicie)
-- [ ] Bicie wielokrotne
-- [ ] Promocja na damkę
-- [ ] Gracz vs AI
-- [ ] AI vs AI (obserwacja)
+- [ ] Silnik gry (C++, bitboard) ✅ podstawy
+- [ ] REST API (C++)
+- [ ] Node.js server (Express + proxy do C++)
+- [ ] Plansza React
+- [ ] Sieć neuronowa (TensorFlow.js)
+- [ ] Tryb PvAI
+- [ ] Tryb AI vs AI (self-play)
+- [ ] Dashboard (loss, statystyki, parametry)
+- [ ] Replay buffer + auto-save
+- [ ] Auto-zapis modeli
+
+## Stack
+
+- **Backend:** C++ (silnik gry, REST API)
+- **Frontend:** React (Node.js)
+- **Server:** Node.js (Express, TensorFlow.js, proxy)
+- **AI engine:** TensorFlow.js (tfjs-node)
 
 ## AI
 
@@ -24,26 +35,25 @@ Sieć neuronowa (ten sam model dla obu stron). Różne parametry = różne style
 - Self-play: AI vs AI → zbieranie danych z gry → po zakończeniu szkolenie na danych + aktualizacja wag → kolejna gra automatycznie
 - Replay buffer: ostatnie 10k ruchów (FIFO)
 - Auto-zapis bufora na dysk co 10 minut (binarny)
-- [ ] UI — czyste, responsywne
-- [ ] Animacje ruchów
 
-## Stack
+## Tryby
 
-- **Backend:** C++
-- **Frontend:** React (Node.js)
-- **AI engine:** TensorFlow.js
-
-## Jak uruchomić
-
-TBD
-
-## Status
-
-🏗️ Planowanie
+- [ ] Gracz vs AI
+- [ ] AI vs AI (obserwacja + dashboard)
 
 ## Dokumentacja
 
-- [Silnik gry](docs/engine.md) — zasady, reprezentacja, generowanie ruchów
-- [Sieć neuronowa](docs/neural-network.md) — architektura, uczenie, format zapisu
-- [Self-play](docs/self-play.md) — cykl uczenia, replay buffer, szkolenie
-- [API](docs/api.md) — endpointy REST, WebSocket
+- [Architektura](docs/architecture.md) — struktura systemu, komponenty, przepływ danych
+- [Silnik gry](docs/engine.md) — zasady, bitboard, generowanie ruchów
+- [Sieć neuronowa](docs/neural-network.md) — architektura, warianty, parametry
+- [Self-play](docs/self-play.md) — cykl uczenia, replay buffer, dashboard
+- [API C++](docs/api-cpp.md) — endpointy silnika
+- [API Node.js](docs/api-node.md) — endpointy serwera, WebSocket
+
+## Status
+
+🏗️ Planowanie — silnik C++ gotowy (10 testów ✅)
+
+## Uruchomienie
+
+TBD
