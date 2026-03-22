@@ -40,10 +40,22 @@ export default function App() {
     blackNetworkSize: 'medium',
   });
 
+  const [modelParams, setModelParams] = useState({
+    layers: 3,
+    neurons: 128,
+    activation: 'relu',
+    lr: 0.001,
+    batchSize: 64,
+    dropout: 0,
+  });
+
   const [stats, setStats] = useState({ games: 0, whiteWins: 0, blackWins: 0, draws: 0 });
   const [lossHistory, setLossHistory] = useState([]);
   const [gameHistory, setGameHistory] = useState([]);
   const [selfPlayActive, setSelfPlayActive] = useState(false);
+  const [avgTime, setAvgTime] = useState(0);
+  const [totalTimeMs, setTotalTimeMs] = useState(0);
+  const [lastRoundTime, setLastRoundTime] = useState(0);
 
   const socketRef = useRef(null);
 
@@ -116,6 +128,10 @@ export default function App() {
           blackWins: data.stats.blackWins ?? 0,
           draws: data.stats.draws ?? 0,
         });
+      }
+      if (data.avgTime !== undefined) setAvgTime(data.avgTime);
+      if (data.roundTimes !== undefined && data.roundTimes.length > 0) {
+        setLastRoundTime(data.roundTimes[data.roundTimes.length - 1]);
       }
     });
 

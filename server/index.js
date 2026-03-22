@@ -86,6 +86,19 @@ app.post('/api/ai/params', (req, res) => {
   res.json({ ok: true, ...trainer.getStatus() });
 });
 
+app.post('/api/ai/reset', async (_req, res) => {
+  try {
+    await trainer.resetModel();
+    // Reset C++ game state
+    await cppFetch('/api/game/reset', { method: 'POST', body: '{}' }).catch(() => {});
+    io.emit('selfPlayStatus', { active: false, gameNumber: 0, stats: trainer.stats });
+    res.json({ ok: true, stats: trainer.getStatus().stats });
+  } catch (err) {
+    console.error('[AI] Reset error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/ai/restart', async (req, res) => {
   const { side = 'both' } = req.body;
   await trainer.restart(side);
@@ -305,6 +318,30 @@ io.on('connection', async (socket) => {
     console.log(`[WS] stopSelfPlay from ${socket.id}`);
     trainer.stop();
     io.emit('selfPlayStatus', { active: false });
+  });
+
+  // ── Model params ──────────────────────────────────────────────────────
+  socket.on('setParams', (newParams) => {
+    console.log(`[WS] setParams from ${socket.id}:`, newParams);
+    trainer.setModelParams(newParams);
+    io.emit('paramsUpdate', { modelParams: { ...trainer.modelParams } });
+  });
+
+  // ── Full reset (model + stats + buffer + game) ─────────────────────────
+  socket.on('reset', async () => {
+    try {
+      console.log(`[WS] reset from ${socket.id}`);
+      await trainer.resetModel();
+      // Reset C++ game state
+      await cppFetch('/api/game/reset', { method: 'POST', body: '{}' }).catch(() => {});
+      // Broadcast reset status to all clients
+      io.emit('selfPlayStatus', { active: false, gameNumber: 0, stats: trainer.stats });
+      io.emit('modelRestart', { side: 'both' });
+      console.log('[WS] Full reset complete');
+    } catch (err) {
+      console.error('[WS] reset error:', err.message);
+      socket.emit('error', { message: err.message });
+    }
   });
 });
 

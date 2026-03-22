@@ -15,17 +15,42 @@ const NETWORK_CONFIGS = {
 };
 
 // ── Create model ─────────────────────────────────────────────────────────────
-export function createModel(size = 'small') {
-  const config = NETWORK_CONFIGS[size] || NETWORK_CONFIGS.small;
+// Accepts either a size string ('small'|'medium'|'large') or an options object:
+//   { layers, neurons, activation, dropout, lr }
+export function createModel(sizeOrOpts = 'small') {
+  let layerSizes, activation, dropout, lr, modelName;
 
-  // We need two separate models since tf.sequential doesn't support multi-output.
-  // Strategy: one shared trunk + two heads via the functional API.
+  if (typeof sizeOrOpts === 'object') {
+    const { layers: numLayers = 3, neurons = 128, activation: act = 'relu', dropout: drop = 0, lr: learningRate = 0.001 } = sizeOrOpts;
+    // Build uniform layer sizes: each hidden layer has `neurons` units
+    layerSizes = Array.from({ length: numLayers }, () => neurons);
+    activation = act;
+    dropout = drop;
+    lr = learningRate;
+    modelName = `checkers-custom-${numLayers}x${neurons}`;
+  } else {
+    const config = NETWORK_CONFIGS[sizeOrOpts] || NETWORK_CONFIGS.small;
+    layerSizes = config.layers;
+    activation = 'relu';
+    dropout = 0;
+    lr = 0.001;
+    modelName = `checkers-${sizeOrOpts}`;
+  }
+
   const input = tf.input({ shape: [257] });
 
   // Shared trunk
   let x = input;
-  for (const units of config.layers) {
-    x = tf.layers.dense({ units, activation: 'relu' }).apply(x);
+  for (const units of layerSizes) {
+    if (activation === 'leaky_relu') {
+      x = tf.layers.dense({ units, activation: 'linear' }).apply(x);
+      x = tf.layers.leakyReLU({ alpha: 0.1 }).apply(x);
+    } else {
+      x = tf.layers.dense({ units, activation }).apply(x);
+    }
+    if (dropout > 0) {
+      x = tf.layers.dropout({ rate: dropout }).apply(x);
+    }
   }
 
   // Policy head — 48 possible moves (max)
@@ -37,11 +62,11 @@ export function createModel(size = 'small') {
   const model = tf.model({
     inputs: input,
     outputs: [policyHead, valueHead],
-    name: `checkers-${size}`
+    name: modelName
   });
 
   model.compile({
-    optimizer: tf.train.adam(0.001),
+    optimizer: tf.train.adam(lr),
     loss: ['categoricalCrossentropy', 'meanSquaredError']
   });
 

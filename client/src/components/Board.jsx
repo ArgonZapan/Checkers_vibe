@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 
 const CELL_SIZE = 60;
 const BOARD_SIZE = CELL_SIZE * 8;
@@ -20,6 +20,54 @@ export default function Board({
   gameOver,
   winner,
 }) {
+  const prevBoardRef = useRef(null);
+  const animationRef = useRef({ offsets: {}, from: {} });
+  const animFlagRef = useRef(false);
+  const [, forceUpdate] = useState(0);
+
+  // Detect moved pieces and set animation offsets
+  const prev = prevBoardRef.current;
+  const anim = animationRef.current;
+  if (prev && !animFlagRef.current) {
+    let hasAnim = false;
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const cur = board[r][c];
+        const old = prev[r][c];
+        if (cur && old && cur.color === old.color && cur.king === old.king) {
+          // Same piece type — check if it moved from somewhere else
+          let foundOld = false;
+          for (let pr = 0; pr < 8; pr++) {
+            for (let pc = 0; pc < 8; pc++) {
+              if ((pr !== r || pc !== c) && prev[pr][pc] === cur) {
+                // Piece moved from (pr,pc) to (r,c)
+                anim.offsets[`piece-${r}-${c}`] = {
+                  x: (pc - c) * CELL_SIZE,
+                  y: (pr - r) * CELL_SIZE,
+                };
+                hasAnim = true;
+                foundOld = true;
+                break;
+              }
+            }
+            if (foundOld) break;
+          }
+        }
+      }
+    }
+    if (hasAnim) {
+      anim.from = { ...anim.offsets };
+      animFlagRef.current = true;
+      // On next frame, clear animation (CSS transition animates from offset to 0)
+      requestAnimationFrame(() => {
+        anim.from = {};
+        animFlagRef.current = false;
+        forceUpdate((n) => n + 1);
+      });
+    }
+  }
+  prevBoardRef.current = board.map((row) => [...row]);
+
   const cells = [];
   const pieces = [];
 
@@ -90,16 +138,30 @@ export default function Board({
 
       const piece = board[row][col];
       if (piece) {
-        const cx = x + CELL_SIZE / 2;
-        const cy = y + CELL_SIZE / 2;
+        const px = x + CELL_SIZE / 2;
+        const py = y + CELL_SIZE / 2;
         const radius = CELL_SIZE * 0.38;
         const isWhite = piece.color === 'white';
+        const pieceKey = `piece-${row}-${col}`;
+        const animOffset = anim.from[pieceKey];
+        const pieceStyle = {
+          cursor: 'pointer',
+          ...(animOffset
+            ? {
+                transform: `translate(${animOffset.x}px, ${animOffset.y}px)`,
+                transition: 'none',
+              }
+            : {
+                transform: 'translate(0, 0)',
+                transition: 'transform 100ms ease-in-out',
+              }),
+        };
 
         pieces.push(
-          <g key={`piece-${row}-${col}`} onClick={() => onCellClick(row, col)} style={{ cursor: 'pointer' }}>
+          <g key={pieceKey} onClick={() => onCellClick(row, col)} style={pieceStyle}>
             <circle
-              cx={cx}
-              cy={cy}
+              cx={px}
+              cy={py}
               r={radius}
               fill={isWhite ? '#f0f0f0' : '#2a2a2a'}
               stroke={isWhite ? '#999' : '#555'}
@@ -108,8 +170,8 @@ export default function Board({
             />
             {piece.king && (
               <text
-                x={cx}
-                y={cy}
+                x={px}
+                y={py}
                 textAnchor="middle"
                 dominantBaseline="central"
                 fontSize="20"
@@ -121,8 +183,8 @@ export default function Board({
             )}
             {isValidMove && (
               <circle
-                cx={cx}
-                cy={cy}
+                cx={px}
+                cy={py}
                 r={radius + 3}
                 fill="none"
                 stroke="#00ff00"

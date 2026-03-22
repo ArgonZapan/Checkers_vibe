@@ -6,6 +6,9 @@ export default function Dashboard({
   gameHistory = [],
   currentGame,
   active,
+  avgTime = 0,
+  totalTimeMs = 0,
+  lastRoundTime = 0,
 }) {
   const canvasRef = useRef(null);
 
@@ -135,6 +138,26 @@ export default function Dashboard({
             ))}
           </ul>
         )}
+      </div>
+
+      <div className="dashboard-section">
+        <h3>⏱ Czas</h3>
+        <div className="stats-grid">
+          <div className="stat-item">
+            <div className="stat-label">Średni czas rundy</div>
+            <div className="stat-value">{(avgTime / 1000).toFixed(1)}s</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-label">Ostatnia runda</div>
+            <div className="stat-value">{(lastRoundTime / 1000).toFixed(1)}s</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-label">Całkowity czas</div>
+            <div className="stat-value">
+              {Math.floor(totalTimeMs / 3600000)}h {Math.floor((totalTimeMs % 3600000) / 60000)}m
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

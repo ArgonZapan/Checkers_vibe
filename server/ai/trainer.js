@@ -32,6 +32,16 @@ export class SelfPlay {
     this.networkSizeWhite = 'small';
     this.networkSizeBlack = 'small';
 
+    // Custom model architecture params
+    this.modelParams = {
+      layers: 3,
+      neurons: 128,
+      activation: 'relu',
+      lr: 0.001,
+      batchSize: 64,
+      dropout: 0,
+    };
+
     // Models
     this.modelWhite = null;
     this.modelBlack = null;
@@ -49,12 +59,21 @@ export class SelfPlay {
       epsilonWhite: this.epsilonWhite,
       epsilonBlack: this.epsilonBlack
     };
+
+    // Timing
+    this.roundTimes = []; // last 10 round times in ms
+    this.totalTimeMs = 0; // cumulative training time
   }
 
   async init() {
-    this.modelWhite = createModel(this.networkSizeWhite);
-    this.modelBlack = createModel(this.networkSizeBlack);
+    this.modelWhite = createModel({ ...this.modelParams });
+    this.modelBlack = createModel({ ...this.modelParams });
     console.log('[SelfPlay] Models initialized');
+  }
+
+  setModelParams(newParams) {
+    Object.assign(this.modelParams, newParams);
+    console.log('[SelfPlay] Model params updated:', this.modelParams);
   }
 
   setParams(epsilon, networkSize, side) {
@@ -62,27 +81,78 @@ export class SelfPlay {
       if (epsilon !== undefined) this.epsilonWhite = epsilon;
       if (networkSize !== undefined) {
         this.networkSizeWhite = networkSize;
-        this.modelWhite = createModel(networkSize);
+        this.modelWhite = createModel({ ...this.modelParams });
       }
     }
     if (side === 'black' || side === 'both') {
       if (epsilon !== undefined) this.epsilonBlack = epsilon;
       if (networkSize !== undefined) {
         this.networkSizeBlack = networkSize;
-        this.modelBlack = createModel(networkSize);
+        this.modelBlack = createModel({ ...this.modelParams });
       }
     }
     this.stats.epsilonWhite = this.epsilonWhite;
     this.stats.epsilonBlack = this.epsilonBlack;
   }
 
+  async resetModel() {
+    // 1. Stop self-play
+    this.running = false;
+
+    // 2. Clear replay buffer
+    this.buffer.clear();
+
+    // 3. Reset all stats
+    this.stats.gamesPlayed = 0;
+    this.stats.whiteWins = 0;
+    this.stats.blackWins = 0;
+    this.stats.draws = 0;
+    this.stats.lastLoss = null;
+
+    // 4. Reset epsilon
+    this.epsilonWhite = 0.3;
+    this.epsilonBlack = 0.3;
+    this.stats.epsilonWhite = 0.3;
+    this.stats.epsilonBlack = 0.3;
+
+    // 5. Create fresh models
+    this.modelWhite = createModel({ ...this.modelParams });
+    this.modelBlack = createModel({ ...this.modelParams });
+
+    // 6. Save reset state
+    await this.saveState();
+
+    // 7. Delete saved model files from disk
+    try {
+      const { rm } = await import('node:fs/promises');
+      const modelDir = path.join(__dirname, '..', '..', 'data', 'model');
+      await rm(modelDir, { recursive: true, force: true });
+      console.log('[SelfPlay] Deleted saved model files');
+    } catch (err) {
+      console.error('[SelfPlay] Could not delete model files:', err.message);
+    }
+
+    // 8. Delete buffer file from disk
+    try {
+      const { rm } = await import('node:fs/promises');
+      const bufferFile = path.join(__dirname, '..', '..', 'data', 'buffer.json');
+      await rm(bufferFile, { force: true });
+      console.log('[SelfPlay] Deleted buffer file');
+    } catch (err) {
+      console.error('[SelfPlay] Could not delete buffer file:', err.message);
+    }
+
+    this.io?.emit('selfPlayStatus', { active: false, gameNumber: 0, stats: this.stats });
+    console.log('[SelfPlay] Model fully reset — fresh weights, cleared buffer, zero stats');
+  }
+
   async restart(side) {
     if (side === 'white' || side === 'both') {
-      this.modelWhite = createModel(this.networkSizeWhite);
+      this.modelWhite = createModel({ ...this.modelParams });
       this.stats.whiteWins = 0;
     }
     if (side === 'black' || side === 'both') {
-      this.modelBlack = createModel(this.networkSizeBlack);
+      this.modelBlack = createModel({ ...this.modelParams });
       this.stats.blackWins = 0;
     }
     if (side === 'both') {
@@ -111,12 +181,19 @@ export class SelfPlay {
   }
 
   getStatus() {
+    const avgRoundTimeMs = this.roundTimes.length > 0
+      ? Math.round(this.roundTimes.reduce((a, b) => a + b, 0) / this.roundTimes.length)
+      : 0;
     return {
       running: this.running,
       stats: this.stats,
       bufferSize: this.buffer.size(),
       networkSizeWhite: this.networkSizeWhite,
-      networkSizeBlack: this.networkSizeBlack
+      networkSizeBlack: this.networkSizeBlack,
+      modelParams: { ...this.modelParams },
+      avgRoundTimeMs,
+      last10Times: [...this.roundTimes],
+      totalTimeMs: this.totalTimeMs,
     };
   }
 
@@ -177,6 +254,8 @@ export class SelfPlay {
   }
 
   async _playGame() {
+    const roundStart = Date.now();
+
     // 1. Start new game
     const startRes = await cppFetch(`${CPP_BASE}/api/game/start`, { method: 'POST' });
     if (!startRes.ok) throw new Error(`Game start failed: ${startRes.status}`);
@@ -225,7 +304,25 @@ export class SelfPlay {
         for (const s of samples) this.buffer.add(s);
 
         this.io?.emit('gameOver', { winner: winner || 'draw', moves: samples.length });
-        this.io?.emit('selfPlayStatus', { active: this.running, gameNumber: this.stats.gamesPlayed, stats: this.stats });
+
+        // Track round time
+        const roundTime = Date.now() - roundStart;
+        this.roundTimes.push(roundTime);
+        if (this.roundTimes.length > 10) this.roundTimes.shift();
+        this.totalTimeMs += roundTime;
+
+        const avgTime = this.roundTimes.length > 0
+          ? Math.round(this.roundTimes.reduce((a, b) => a + b, 0) / this.roundTimes.length)
+          : 0;
+
+        this.io?.emit('selfPlayStatus', {
+          active: this.running,
+          gameNumber: this.stats.gamesPlayed,
+          stats: this.stats,
+          avgTime,
+          roundTimes: [...this.roundTimes],
+          totalTimeMs: this.totalTimeMs,
+        });
         break;
       }
 
@@ -309,8 +406,8 @@ export class SelfPlay {
     }
 
     // 3. Train on mini-batch after each game
-    if (this.buffer.size() >= 256) {
-      const batch = this.buffer.sample(256);
+    if (this.buffer.size() >= this.modelParams.batchSize) {
+      const batch = this.buffer.sample(this.modelParams.batchSize);
 
       // Pre-split batch by turn to avoid repeated filtering
       const batchWhite = [];
