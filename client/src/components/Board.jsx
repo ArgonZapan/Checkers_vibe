@@ -21,46 +21,60 @@ export default function Board({
   winner,
 }) {
   const prevBoardRef = useRef(null);
-  const animationRef = useRef({ offsets: {}, from: {} });
+  const animOffsetsRef = useRef({});
+  const animFromRef = useRef({});
   const animFlagRef = useRef(false);
   const [, forceUpdate] = useState(0);
 
-  // Detect moved pieces and set animation offsets
+  // Detect moved pieces by tracking per-position changes
   const prev = prevBoardRef.current;
-  const anim = animationRef.current;
-  if (prev && !animFlagRef.current) {
-    let hasAnim = false;
+  // Only animate if board actually changed
+  const boardChanged = prev && board.some((row, r) => row.some((cell, c) => {
+    const old = prev[r][c];
+    if (!old && !cell) return false;
+    if (!old || !cell) return true;
+    return old.color !== cell.color || old.king !== cell.king;
+  }));
+  if (prev && !animFlagRef.current && boardChanged) {
+    // Find empty cells (pieces left or were captured)
+    const empties = []; // positions that lost a piece
+    const newPieces = []; // positions that gained a piece
+
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
+        const old = prev[r][c];
         const cur = board[r][c];
-        if (cur) {
-          // Check if this piece was in a different position before
-          let foundOld = false;
-          for (let pr = 0; pr < 8; pr++) {
-            for (let pc = 0; pc < 8; pc++) {
-              const old = prev[pr][pc];
-              if (old && cur.color === old.color && cur.king === old.king && (pr !== r || pc !== c)) {
-                // Piece moved from (pr,pc) to (r,c)
-                anim.offsets[`piece-${r}-${c}`] = {
-                  x: (pc - c) * CELL_SIZE,
-                  y: (pr - r) * CELL_SIZE,
-                };
-                hasAnim = true;
-                foundOld = true;
-                break;
-              }
-            }
-            if (foundOld) break;
-          }
+        if (old && !cur) {
+          empties.push({ r, c, color: old.color, king: old.king });
+        } else if (!old && cur) {
+          newPieces.push({ r, c, color: cur.color, king: cur.king });
+        } else if (old && cur && (old.color !== cur.color || old.king !== cur.king)) {
+          // Captured + new piece placed — skip animation
         }
       }
     }
-    if (hasAnim) {
-      anim.from = { ...anim.offsets };
+
+    // Match new pieces with empties of the same type — that's a move
+    const animOffsets = {};
+    for (const np of newPieces) {
+      for (let i = 0; i < empties.length; i++) {
+        const e = empties[i];
+        if (e.color === np.color && e.king === np.king) {
+          animOffsets[`piece-${np.r}-${np.c}`] = {
+            x: (e.c - np.c) * CELL_SIZE,
+            y: (e.r - np.r) * CELL_SIZE,
+          };
+          empties.splice(i, 1);
+          break;
+        }
+      }
+    }
+
+    if (Object.keys(animOffsets).length > 0) {
+      animFromRef.current = { ...animOffsets };
       animFlagRef.current = true;
-      // On next frame, clear animation (CSS transition animates from offset to 0)
       requestAnimationFrame(() => {
-        anim.from = {};
+        animFromRef.current = {};
         animFlagRef.current = false;
         forceUpdate((n) => n + 1);
       });
@@ -143,7 +157,7 @@ export default function Board({
         const radius = CELL_SIZE * 0.38;
         const isWhite = piece.color === 'white';
         const pieceKey = `piece-${row}-${col}`;
-        const animOffset = anim.from[pieceKey];
+        const animOffset = animFromRef.current[pieceKey];
         const pieceStyle = {
           cursor: 'pointer',
           ...(animOffset
