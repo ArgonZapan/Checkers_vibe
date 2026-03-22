@@ -18,6 +18,9 @@ Klasyczne warcaby (ang. checkers / draughts) jako web app. Dwóch graczy, 8×8, 
 ## AI
 
 Sieć neuronowa (ten sam model dla obu stron). Różne parametry = różne style gry.
+
+- Modele wczytywane przy starcie serwera
+- Auto-zapis co 5 minut
 - [ ] UI — czyste, responsywne
 - [ ] Animacje ruchów
 
