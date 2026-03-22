@@ -498,38 +498,36 @@ export class SelfPlay {
 
       turn = -turn;
 
+      // Train after each move (continuous learning) — 3 epochs, fresh batch each time
+      if (this.buffer.size() >= this.modelParams.batchSize) {
+        let lastLoss = 0;
+        for (let epoch = 0; epoch < 3; epoch++) {
+          const batch = this.buffer.sample(this.modelParams.batchSize);
+          const batchWhite = [];
+          const batchBlack = [];
+          for (const s of batch) {
+            if (s.turn === 1) batchWhite.push(s);
+            else batchBlack.push(s);
+          }
+          const lw = batchWhite.length > 0 ? await train(this.modelWhite, batchWhite, 1) : { loss: 0 };
+          const lb = batchBlack.length > 0 ? await train(this.modelBlack, batchBlack, 1) : { loss: 0 };
+          lastLoss = ((lw.loss || 0) + (lb.loss || 0)) / 2;
+        }
+        this.stats.lastLoss = lastLoss;
+        this.io?.emit('loss', { loss: lastLoss });
+      }
+
       // Small delay so clients can observe the move
       await this._sleep(CONFIG.server.aiMoveDelayMs);
     }
 
-    // 3. Train on mini-batch after each game
-    if (this.buffer.size() >= this.modelParams.batchSize) {
-      const batch = this.buffer.sample(this.modelParams.batchSize);
-
-      // Pre-split batch by turn to avoid repeated filtering
-      const batchWhite = [];
-      const batchBlack = [];
-      for (const s of batch) {
-        if (s.turn === 1) batchWhite.push(s);
-        else batchBlack.push(s);
-      }
-
-      // Train both models
-      const lossWhite = await train(this.modelWhite, batchWhite, CONFIG.ai.trainEpochs);
-      const lossBlack = await train(this.modelBlack, batchBlack, CONFIG.ai.trainEpochs);
-
-      const avgLoss = ((lossWhite.loss || 0) + (lossBlack.loss || 0)) / 2;
-      this.stats.lastLoss = avgLoss;
-      this.io?.emit('loss', { loss: avgLoss });
-    }
-
-    // 4. Decay epsilon
+    // 3. Decay epsilon after each game
     this.epsilonWhite = Math.max(CONFIG.ai.minEpsilon, this.epsilonWhite - CONFIG.ai.epsilonDecay);
     this.epsilonBlack = Math.max(CONFIG.ai.minEpsilon, this.epsilonBlack - CONFIG.ai.epsilonDecay);
     this.stats.epsilonWhite = this.epsilonWhite;
     this.stats.epsilonBlack = this.epsilonBlack;
 
-    // 5. Save state after each game
+    // 4. Save state after each game
     await this.saveState();
   }
 
