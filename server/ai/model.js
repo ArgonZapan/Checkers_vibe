@@ -202,14 +202,56 @@ export async function predict(model, boardArray, legalMoves, turn = 1) {
 }
 
 // ── Train ───────────────────────────────────────────────────────────────────
+const GAMMA = 0.95; // discount factor for Bellman equation
+
 export async function train(model, batch, epochs = 5) {
   if (batch.length === 0) return { loss: 0 };
+
+  // Pre-compute next-state Q-values for Bellman targets (batch prediction)
+  const hasShapedRewards = batch.some(s => s.nextState != null && s.reward !== undefined);
+
+  let nextQValues = null;
+  if (hasShapedRewards) {
+    // Collect samples that have nextState for Bellman update
+    const withNext = [];
+    const withNextIdx = [];
+    for (let i = 0; i < batch.length; i++) {
+      if (batch[i].nextState != null) {
+        withNext.push(batch[i]);
+        withNextIdx.push(i);
+      }
+    }
+
+    if (withNext.length > 0) {
+      // Batch predict Q(nextState) for all samples with nextState
+      const nextBoards = [];
+      for (const s of withNext) {
+        const nextFlat = Array.isArray(s.nextState) ? s.nextState.flat() : s.nextState;
+        const t = boardToTensor(nextFlat, -s.turn); // next turn is opponent's
+        const data = await t.data();
+        nextBoards.push(Array.from(data));
+        t.dispose();
+      }
+
+      const nextTensor = tf.tensor2d(nextBoards);
+      const [, nextValues] = model.predict(nextTensor);
+      const nextVals = await nextValues.data();
+      nextTensor.dispose();
+      nextValues.dispose();
+
+      nextQValues = new Float32Array(batch.length).fill(0);
+      for (let j = 0; j < withNext.length; j++) {
+        nextQValues[withNextIdx[j]] = nextVals[j];
+      }
+    }
+  }
 
   const boards = [];
   const policyTargets = [];
   const valueTargets = [];
 
-  for (const sample of batch) {
+  for (let i = 0; i < batch.length; i++) {
+    const sample = batch[i];
     const { board, legalMoves, chosenMove, result, turn = 1 } = sample;
     const tensor = boardToTensor(board, turn);
     const data = await tensor.data();
@@ -223,8 +265,17 @@ export async function train(model, batch, epochs = 5) {
     }
     policyTargets.push(Array.from(policyTarget));
 
-    // Value target: game result from perspective of current player
-    valueTargets.push([result]);
+    // Value target: Bellman equation if shaped rewards available, else terminal result
+    let valueTarget;
+    if (hasShapedRewards && sample.reward !== undefined && nextQValues != null) {
+      const done = sample.done ? 1 : 0;
+      valueTarget = sample.reward + GAMMA * nextQValues[i] * (1 - done);
+      // Clamp to [-1, 1] (matches tanh output range)
+      valueTarget = Math.max(-1, Math.min(1, valueTarget));
+    } else {
+      valueTarget = result;
+    }
+    valueTargets.push([valueTarget]);
 
     tensor.dispose();
   }

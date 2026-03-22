@@ -1,10 +1,78 @@
-import { createModel, predict, train, saveModel, loadModel } from './model.js';
+import { createModel, predict, train, saveModel, loadModel, boardToTensor } from './model.js';
 import { ReplayBuffer } from './buffer.js';
 import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// ── Shaped Reward Calculation ────────────────────────────────────────────────
+const CENTER_SQUARES = [27, 28, 35, 36]; // (3,3), (3,4), (4,3), (4,4) flat indices
+const PROMOTION_RANK_WHITE = [56, 57, 58, 59, 60, 61, 62, 63]; // row 7
+const PROMOTION_RANK_BLACK = [0, 1, 2, 3, 4, 5, 6, 7];         // row 0
+
+function flattenBoard(board) {
+  if (!Array.isArray(board)) return null;
+  if (board.length === 64 && !Array.isArray(board[0])) return [...board];
+  if (board.length === 8 && Array.isArray(board[0])) return board.flat();
+  return null;
+}
+
+function isOwnPiece(val, turn) {
+  if (turn === 1) return val === 1 || val === 2; // white
+  return val === 3 || val === 4;                  // black
+}
+
+function isPawn(val, turn) {
+  return turn === 1 ? val === 1 : val === 3;
+}
+
+function isKing(val, turn) {
+  return turn === 1 ? val === 2 : val === 4;
+}
+
+/**
+ * Calculate shaped intermediate reward from the perspective of `turn` (the player who just moved).
+ * @param {number[]|null} prevBoardFlat - flat 64 array before the move (null for first move)
+ * @param {number[]} nextBoardFlat - flat 64 array after the move
+ * @param {number} turn - 1 (white) or -1 (black)
+ * @returns {number} shaped reward
+ */
+function calculateReward(prevBoardFlat, nextBoardFlat, turn) {
+  if (!prevBoardFlat || !nextBoardFlat) return 0;
+
+  let reward = 0;
+
+  // 1. Piece capture/loss (±0.5 per piece)
+  let prevOwn = 0, nextOwn = 0;
+  let prevOpp = 0, nextOpp = 0;
+  for (let i = 0; i < 64; i++) {
+    if (isOwnPiece(prevBoardFlat[i], turn)) prevOwn++;
+    else if (prevBoardFlat[i] !== 0) prevOpp++;
+    if (isOwnPiece(nextBoardFlat[i], turn)) nextOwn++;
+    else if (nextBoardFlat[i] !== 0) nextOpp++;
+  }
+  reward += (prevOpp - nextOpp) * 0.5; // captured opponent pieces
+  reward -= (prevOwn - nextOwn) * 0.5; // lost own pieces
+
+  // 2. King promotion (±0.3)
+  const promoRank = turn === 1 ? PROMOTION_RANK_WHITE : PROMOTION_RANK_BLACK;
+  for (const idx of promoRank) {
+    if (isKing(nextBoardFlat[idx], turn) && isPawn(prevBoardFlat[idx], turn)) {
+      reward += 0.3;
+    }
+  }
+
+  // 3. Center control (±0.1)
+  let prevCenter = 0, nextCenter = 0;
+  for (const sq of CENTER_SQUARES) {
+    if (isOwnPiece(prevBoardFlat[sq], turn)) prevCenter++;
+    if (isOwnPiece(nextBoardFlat[sq], turn)) nextCenter++;
+  }
+  reward += (nextCenter - prevCenter) * 0.1;
+
+  return Math.round(reward * 1000) / 1000; // avoid float drift
+}
 const STATE_FILE = path.join(__dirname, '..', '..', 'data', 'state.json');
 
 const CPP_BASE = 'http://localhost:8080';
@@ -301,11 +369,14 @@ export class SelfPlay {
         }
         this.stats.gamesPlayed++;
 
-        // Assign results to samples
-        // result is already 1 (white wins), -1 (black wins), or 0 (draw)
+        // Assign terminal results to samples (backward-compatible field)
         const winnerTurn = result; // 1, -1, or 0
         for (const s of samples) {
           s.result = s.turn === winnerTurn ? 1 : winnerTurn === 0 ? 0 : -1;
+        }
+        // Mark last sample as terminal
+        if (samples.length > 0) {
+          samples[samples.length - 1].done = true;
         }
 
         // Add to buffer
@@ -356,13 +427,19 @@ export class SelfPlay {
         chosenMove = pred.move;
       }
 
-      // Save sample (result will be assigned later)
+      // Save board state before move for reward calculation
+      const prevBoardFlat = flattenBoard(boardArray);
+
+      // Save sample (result will be assigned later at game end)
       samples.push({
         board: Array.isArray(boardArray) ? boardArray.flat() : boardArray,
         legalMoves,
         chosenMove,
         turn,
-        result: 0 // placeholder
+        result: 0, // placeholder — terminal reward assigned at game end
+        reward: 0, // placeholder — shaped intermediate reward set below
+        nextState: null, // placeholder — set below
+        done: false
       });
 
       // Make move — send from/to coordinates (C++ engine format)
@@ -384,6 +461,12 @@ export class SelfPlay {
       const newState = await newStateRes.json();
       const lmRes2 = await fetch(`${CPP_BASE}/api/legal-moves`);
       const { moves: newLegalMoves } = await lmRes2.json();
+
+      // Calculate shaped intermediate reward for the sample we just pushed
+      const nextBoardFlat = flattenBoard(newState.board);
+      const currentSample = samples[samples.length - 1];
+      currentSample.reward = calculateReward(prevBoardFlat, nextBoardFlat, turn);
+      currentSample.nextState = Array.isArray(newState.board) ? newState.board.flat() : newState.board;
 
       // Convert board from C++ ints to React objects
       let board2D = newState.board;
