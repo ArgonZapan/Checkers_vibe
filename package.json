@@ -7,7 +7,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test:e2e": "node tests/e2e-test.mjs"
+    "test:e2e": "node tests/e2e-smoke.mjs && node tests/e2e-pvai.mjs && node tests/e2e-aivai.mjs"
   },
   "repository": {
     "type": "git",
