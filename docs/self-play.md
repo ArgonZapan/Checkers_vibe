@@ -1,41 +1,72 @@
 # Self-play training
 
-## Cykl uczenia
+## Cykl
 
-1. **Start:** Załaduj model z dysku (lub losowe wagi jeśli brak)
-2. **Gra:** AI vs AI — pełna rozgrywka
-3. **Zbieranie danych:** Każdy ruch → zapisz do replay buffer
-4. **Wynik:** Określ zwycięzcę (+1 / -1 / 0)
-5. **Szkolenie:** Naucz sieć na danych z bufora
-6. **Update:** Aktualizuj wagi modelu
-7. **Zapisz:** Auto-zapis modelu na dysk
-8. **Powtórz:** Kolejna gra od kroku 2
+1. Node.js → C++: start gry
+2. Pętla: predykcja → ruch → zapis do bufora → powtórz
+3. Po grze: szkolenie na danych z bufora
+4. Aktualizacja wag
+5. Zapis modelu na dysk
+6. Kolejna gra (automatycznie)
 
-## Wybór ruchu (podczas gry)
+## Przepływ jednej gry
 
-- Losowo z rozkładu prawdopodobieństw (policy head)
-- Temperatura: na początku wysoka (eksploracja), potem niska (exploit)
-- Przez pierwsze 10 ruchów: temperatura = 1.0 (pełna losowość)
-- Po 10 ruchach: temperatura = 0.5 (preferuj najlepsze)
-- Ostatnie 5 ruchów: temperatura = 0.1 (prawie deterministyczne)
+```
+Node.js:
+  1. POST /api/game/start → C++ (nowa plansza)
+  2. GET /api/legal-moves → C++
+  3. TensorFlow.js.predict(board, legalMoves) → ruch
+  4. POST /api/move → C++ (wykonaj)
+  5. Zapisz {board, move, turn} do bufora
+  6. Sprawdź gameOver
+  7. Jeśli nie → goto 2
+  8. Określ wynik: +1 (biały wygrał) / -1 (czarny wygrał) / 0 (remis)
+  9. Oznacz wszystkie ruchy w buforze wynikiem gry
+```
+
+## Epsilon (eksploracja)
+
+- Osobny epsilon dla białych i czarnych
+- Każdy gracz może mieć inną wartość
+- Decay: -0.001 po każdej grze (min 0.01)
+- Użytkownik może zmienić ręcznie z UI
 
 ## Replay buffer
 
 - FIFO, max 10k wpisów
-- Wpis = {stan, ruch, wynik_gry}
-- Przy przepełnieniu: najstarszy wpis wypada
-- Auto-zapis na dysk co 10 minut (binarny)
+- Wpis: `{board: 8x8x4, legalMoves: [...], chosenMove: int, result: float, turn: string}`
+- Auto-zapis na dysk co 10 minut (binarny: `data/buffer.bin`)
+- Przy starcie: wczytaj z dysku jeśli istnieje
 
-## Szkolenie na danych
+## Szkolenie
 
-- Losowy mini-batch z bufora (256 próbek)
+- Po każdej grze: 1 runda szkolenia
+- Mini-batch: 256 losowych próbek z bufora
 - 5 epok na batch
-- Aktualizacja wag po każdej grze
-- Loss: policy cross-entropy + value MSE
+- Loss:
+  - Policy: cross-entropy (predicted vs actual move)
+  - Value: MSE (predicted vs game result)
+- Optimizer: Adam (lr=0.001)
 
-## Czas
+## Dashboard (AI vs AI)
 
-- Jedna gra: ~1-5 sekund (zależy od głębokości)
-- Szkolenie: ~0.5-2 sekund na batch
-- Cykl: gra + szkolenie = ~2-7 sekund
-- 100 gier: ~3-12 minut
+Użytkownik widzi:
+- Planszę w czasie rzeczywistym
+- Aktualną turę i numer gry
+- Wykres loss (ostatnie 100 rund)
+- Statystyki: gry, wygrane białe, wygrane czarne, remisy
+- Historia ostatnich 10 gier (wynik, liczba ruchów)
+
+Użytkownik może:
+- Start/stop self-play
+- Zmienić epsilon (dla białych/czarnych osobno)
+- Zmienić rozmiar sieci (dla białych/czarnych osobno)
+- Restartować model (biały/czarny/oba)
+
+## Pliki
+
+- `models/white.json` — wagi białych
+- `models/black.json` — wagi czarnych
+- `models/meta.json` — metadata
+- `data/buffer.bin` — replay buffer (binarny)
+- `.gitignore` — wyklucz `models/` i `data/`
