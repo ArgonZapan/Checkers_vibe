@@ -262,9 +262,17 @@ export class SelfPlay {
     if (this.buffer.size() >= 256) {
       const batch = this.buffer.sample(256);
 
+      // Pre-split batch by turn to avoid repeated filtering
+      const batchWhite = [];
+      const batchBlack = [];
+      for (const s of batch) {
+        if (s.turn === 1) batchWhite.push(s);
+        else batchBlack.push(s);
+      }
+
       // Train both models
-      const lossWhite = await train(this.modelWhite, batch.filter(s => s.turn === 1), 5);
-      const lossBlack = await train(this.modelBlack, batch.filter(s => s.turn === -1), 5);
+      const lossWhite = await train(this.modelWhite, batchWhite, 5);
+      const lossBlack = await train(this.modelBlack, batchBlack, 5);
 
       const avgLoss = ((lossWhite.loss || 0) + (lossBlack.loss || 0)) / 2;
       this.stats.lastLoss = avgLoss;

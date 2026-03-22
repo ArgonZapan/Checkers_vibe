@@ -23,8 +23,8 @@ public:
     // Generuj ruchy (publiczne dla testów)
     static std::vector<Move> generatePawnMoves(const Board& board, int row, int col, Color color);
     static std::vector<Move> generateKingMoves(const Board& board, int row, int col, Color color);
-    static std::vector<Move> generatePawnCaptures(const Board& board, int row, int col, Color color);
-    static std::vector<Move> generateKingCaptures(const Board& board, int row, int col, Color color);
+    static std::vector<Move> generatePawnCaptures(Board& board, int row, int col, Color color);
+    static std::vector<Move> generateKingCaptures(Board& board, int row, int col, Color color);
 };
 
 } // namespace checkers
