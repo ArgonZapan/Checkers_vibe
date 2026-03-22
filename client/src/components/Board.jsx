@@ -56,6 +56,7 @@ export default function Board({
           fill={fillColor}
           onClick={() => onCellClick(row, col)}
           style={{ cursor: isDark ? 'pointer' : 'default' }}
+          pointerEvents="visible"
         />
       );
 
@@ -103,6 +104,7 @@ export default function Board({
               fill={isWhite ? '#f0f0f0' : '#2a2a2a'}
               stroke={isWhite ? '#999' : '#555'}
               strokeWidth="2"
+              pointerEvents="visible"
             />
             {piece.king && (
               <text

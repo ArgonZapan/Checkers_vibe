@@ -143,31 +143,32 @@ export default function App() {
   }, [gameOver]);
 
   const handleCellClick = useCallback((row, col) => {
-    console.log(`[DEBUG] handleCellClick(${row},${col}) gameOver=${gameOver} mode=${mode} turn=${turn} selected=${JSON.stringify(selected)} lmCount=${legalMoves?.length}`);
     if (gameOver) return;
     if (mode === 'aivai') return;
 
     const piece = board[row][col];
-    console.log(`[DEBUG] piece at (${row},${col}):`, JSON.stringify(piece));
 
+    // If a piece is selected, check if clicking on a valid move target
     if (selected) {
       const isLegal = legalMoves.some(
         (m) => m.to[0] === row && m.to[1] === col
       );
-      console.log(`[DEBUG] isLegal: ${isLegal}, legalMoves:`, JSON.stringify(legalMoves));
       if (isLegal) {
-        console.log(`[DEBUG] Making move: ${JSON.stringify(selected)} -> [${row},${col}]`);
         handleMove(selected, [row, col]);
         return;
       }
     }
 
-    if (piece && piece.color === turn && (mode === 'pvai' && piece.color === 'white')) {
-      console.log(`[DEBUG] Selecting piece at (${row},${col})`);
+    // In PvAI, human controls white pieces — allow selecting white pieces
+    // regardless of current turn (to handle race conditions with AI)
+    const isHumanPiece = mode === 'pvai'
+      ? piece && piece.color === 'white'
+      : piece && piece.color === turn;
+
+    if (isHumanPiece) {
       setSelected([row, col]);
       socketRef.current?.emit('getLegalMoves', { from: [row, col] });
     } else {
-      console.log(`[DEBUG] Deselecting. piece=${JSON.stringify(piece)} turn=${turn}`);
       setSelected(null);
       setLegalMoves([]);
     }
