@@ -9,8 +9,8 @@ export class ReplayBuffer {
 
   add(sample) {
     this.buffer.push(sample);
-    while (this.buffer.length > this.maxSize) {
-      this.buffer.shift();
+    if (this.buffer.length > this.maxSize) {
+      this.buffer.splice(0, this.buffer.length - this.maxSize);
     }
   }
 
