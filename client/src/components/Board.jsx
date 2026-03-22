@@ -24,6 +24,7 @@ export default function Board({
   captures = [],
 }) {
   const prevBoardRef = useRef(null);
+  const animPrevBoardRef = useRef(null); // stable copy for multi-capture animation
   const animOffsetsRef = useRef({});
   const animFromRef = useRef({});
   const animFlagRef = useRef(false);
@@ -53,7 +54,7 @@ export default function Board({
     if (JSON.stringify(prevPathRef.current) === pathKey) return;
     prevPathRef.current = path;
 
-    const prevBoard = prevBoardRef.current;
+    const prevBoard = animPrevBoardRef.current;
     if (!prevBoard) return;
 
     const startR = path[0][0], startC = path[0][1];
@@ -167,6 +168,10 @@ export default function Board({
       });
     }
   }
+  // Save old board for animation BEFORE overwriting (deep copy)
+  if (prevBoardRef.current) {
+    animPrevBoardRef.current = prevBoardRef.current.map(row => row.map(cell => cell ? { ...cell } : null));
+  }
   prevBoardRef.current = board.map((row) => [...row]);
 
   const cells = [];
@@ -177,7 +182,7 @@ export default function Board({
 
   // Moving piece info for multi-capture animation overlay
   const movingPieceInfo = (animStep >= 0 && animBoard && path) ? (() => {
-    const prevBoard = prevBoardRef.current;
+    const prevBoard = animPrevBoardRef.current;
     if (!prevBoard) return null;
     const mp = prevBoard[path[0][0]]?.[path[0][1]];
     if (!mp) return null;
