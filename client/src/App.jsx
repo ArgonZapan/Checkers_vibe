@@ -61,7 +61,8 @@ export default function App() {
       if (data.gameOver !== undefined) setGameOver(data.gameOver);
       if (data.winner !== undefined) setWinner(data.winner);
       if (data.lastMove) setLastMove(data.lastMove);
-      if (data.legalMoves) setLegalMoves(data.legalMoves);
+      // Note: do NOT set legalMoves from state — only from getLegalMoves event
+      // State includes ALL legal moves for current turn, not per-piece filtered moves
     });
 
     // Legal moves for a specific piece (from getLegalMoves request)

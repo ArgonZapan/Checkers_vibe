@@ -7,7 +7,8 @@ const LIGHT_COLOR = '#deb887';
 const DARK_COLOR = '#8b4513';
 const HIGHLIGHT_COLOR = 'rgba(255, 255, 0, 0.3)';
 const SELECTED_COLOR = 'rgba(0, 255, 0, 0.35)';
-const VALID_MOVE_COLOR = 'rgba(0, 200, 0, 0.25)';
+const VALID_MOVE_COLOR = 'rgba(0, 200, 0, 0.45)';
+const VALID_MOVE_DOT_COLOR = 'rgba(0, 160, 0, 0.7)';
 
 export default function Board({
   board,
@@ -67,6 +68,20 @@ export default function Board({
             width={CELL_SIZE}
             height={CELL_SIZE}
             fill={overlay}
+            pointerEvents="none"
+          />
+        );
+      }
+
+      // Green dot for valid empty target cells
+      if (isValidMove && !board[row][col]) {
+        cells.push(
+          <circle
+            key={`valid-dot-${row}-${col}`}
+            cx={x + CELL_SIZE / 2}
+            cy={y + CELL_SIZE / 2}
+            r={CELL_SIZE * 0.18}
+            fill={VALID_MOVE_DOT_COLOR}
             pointerEvents="none"
           />
         );
