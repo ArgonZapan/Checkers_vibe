@@ -78,7 +78,7 @@ public:
     std::string toString() const;
 
     // Wykonaj ruch
-    void makeMove(const Move& move);
+    void makeMove(Move& move);
 
     // Cofnij ruch (do searcha)
     void undoMove(const Move& move);

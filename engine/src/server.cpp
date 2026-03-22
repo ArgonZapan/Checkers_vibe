@@ -93,6 +93,7 @@ static json moveToJson(const Move& m) {
 namespace checkers_api {
 
 Engine engine;
+std::mutex engineMutex;
 std::atomic<int> gamesPlayed{0};
 
 void registerRoutes(httplib::Server& svr) {
@@ -207,6 +208,7 @@ void registerRoutes(httplib::Server& svr) {
 
     // POST /api/game/reset
     svr.Post("/api/game/reset", [](const httplib::Request&, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(engineMutex);
         engine.reset();
         gamesPlayed++;
         res.set_content(gameStateJson(engine).dump(), "application/json");
@@ -216,15 +218,56 @@ void registerRoutes(httplib::Server& svr) {
     svr.Post("/api/board/set", [](const httplib::Request& req, httplib::Response& res) {
         try {
             auto body = json::parse(req.body);
-            Color turn = (body["turn"].get<std::string>() == "white") ? WHITE : BLACK;
-            Board b = arrayToBoard(body["board"], turn);
+            // Validate turn
+            if (!body.contains("turn") || !body["turn"].is_string()) {
+                json err; err["error"] = "missing or invalid 'turn' field";
+                res.status = 400; res.set_content(err.dump(), "application/json"); return;
+            }
+            std::string turnStr = body["turn"].get<std::string>();
+            if (turnStr != "white" && turnStr != "black") {
+                json err; err["error"] = "'turn' must be 'white' or 'black'";
+                res.status = 400; res.set_content(err.dump(), "application/json"); return;
+            }
+            Color turn = (turnStr == "white") ? WHITE : BLACK;
+            // Validate board dimensions
+            if (!body.contains("board") || !body["board"].is_array()) {
+                json err; err["error"] = "missing or invalid 'board' field";
+                res.status = 400; res.set_content(err.dump(), "application/json"); return;
+            }
+            auto& boardArr = body["board"];
+            if (boardArr.size() != 8) {
+                json err; err["error"] = "board must have 8 rows";
+                res.status = 400; res.set_content(err.dump(), "application/json"); return;
+            }
+            for (int r = 0; r < 8; r++) {
+                if (!boardArr[r].is_array() || boardArr[r].size() != 8) {
+                    json err; err["error"] = "each board row must have 8 columns";
+                    res.status = 400; res.set_content(err.dump(), "application/json"); return;
+                }
+                for (int c = 0; c < 8; c++) {
+                    int v = boardArr[r][c].get<int>();
+                    if (v < 0 || v > 4) {
+                        json err; err["error"] = "board values must be 0-4";
+                        res.status = 400; res.set_content(err.dump(), "application/json"); return;
+                    }
+                }
+            }
+            std::lock_guard<std::mutex> lock(engineMutex);
+            Board b = arrayToBoard(boardArr, turn);
             engine.getBoard() = b;
             res.set_content(gameStateJson(engine).dump(), "application/json");
+        } catch (json::parse_error& e) {
+            json err; err["error"] = std::string("invalid json: ") + e.what();
+            res.status = 400; res.set_content(err.dump(), "application/json");
+        } catch (json::type_error& e) {
+            json err; err["error"] = std::string("invalid type in request: ") + e.what();
+            res.status = 400; res.set_content(err.dump(), "application/json");
+        } catch (std::exception& e) {
+            json err; err["error"] = e.what();
+            res.status = 500; res.set_content(err.dump(), "application/json");
         } catch (...) {
-            json err;
-            err["error"] = "invalid json";
-            res.status = 400;
-            res.set_content(err.dump(), "application/json");
+            json err; err["error"] = "internal error";
+            res.status = 500; res.set_content(err.dump(), "application/json");
         }
     });
 }

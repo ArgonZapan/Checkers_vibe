@@ -18,11 +18,13 @@ export class ReplayBuffer {
   sample(n) {
     if (this.count === 0) return [];
     const count = Math.min(n, this.count);
-    const indices = new Set();
-    while (indices.size < count) {
-      indices.add(Math.floor(Math.random() * this.count));
+    // Fisher-Yates shuffle on indices, take first `count`
+    const indices = Array.from({ length: this.count }, (_, i) => i);
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
     }
-    return [...indices].map(i => this.buffer[i]);
+    return indices.slice(0, count).map(i => this.buffer[i]);
   }
 
   size() {

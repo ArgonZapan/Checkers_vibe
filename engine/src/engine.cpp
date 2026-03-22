@@ -10,7 +10,6 @@ Engine::Engine() {
 void Engine::reset() {
     board_.reset();
     history_.clear();
-    boardHistory_.clear();
 }
 
 const Board& Engine::getBoard() const {
@@ -29,7 +28,7 @@ std::vector<Move> Engine::getLegalMoves(Color color) const {
     return MoveGenerator::generateAll(board_, color);
 }
 
-bool Engine::makeMove(const Move& move) {
+bool Engine::makeMove(Move& move) {
     // Sprawdź czy ruch jest legalny
     auto legalMoves = getLegalMoves();
     bool found = false;

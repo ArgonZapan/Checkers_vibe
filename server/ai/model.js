@@ -52,6 +52,21 @@ export function createModel(size = 'small') {
 export function boardToTensor(boardArray, turn) {
   // boardArray: 8x8 int array (flat 64 or 2D 8x8)
   // C++ engine encoding: 0=empty, 1=white pawn, 2=white king, 3=black pawn, 4=black king
+  if (!Array.isArray(boardArray)) {
+    throw new Error(`boardToTensor: expected array, got ${typeof boardArray}`);
+  }
+  // Handle 1D array (64 elements) — wrap into 2D
+  if (boardArray.length === 64 && !Array.isArray(boardArray[0])) {
+    const wrapped = [];
+    for (let r = 0; r < 8; r++) {
+      wrapped.push(boardArray.slice(r * 8, r * 8 + 8));
+    }
+    boardArray = wrapped;
+  }
+  // Validate 2D 8x8
+  if (boardArray.length !== 8) {
+    throw new Error(`boardToTensor: expected 8 rows, got ${boardArray.length}`);
+  }
   const flat = boardArray.flat();
   if (flat.length !== 64) {
     throw new Error(`boardToTensor: expected 64 cells, got ${flat.length}`);

@@ -95,7 +95,7 @@ std::string Board::toString() const {
     return os.str();
 }
 
-void Board::makeMove(const Move& move) {
+void Board::makeMove(Move& move) {
     Bitboard fromMask = squareToMask(move.from.row, move.from.col);
     Bitboard toMask = squareToMask(move.to.row, move.to.col);
 
@@ -106,13 +106,13 @@ void Board::makeMove(const Move& move) {
     Bitboard& myPieces = isWhite ? whitePieces : blackPieces;
     Bitboard& myKings = isWhite ? whiteKings : blackKings;
 
-    // Record pre-move state for undo (const_cast to allow makeMove to set metadata)
-    const_cast<Move&>(move).wasKing = isKing;
-    const_cast<Move&>(move).capturedKings.clear();
+    // Record pre-move state for undo
+    move.wasKing = isKing;
+    move.capturedKings.clear();
     for (const auto& cap : move.captures) {
         Bitboard capMask = squareToMask(cap.row, cap.col);
         bool capWasKing = (whiteKings | blackKings) & capMask;
-        const_cast<Move&>(move).capturedKings.push_back(capWasKing);
+        move.capturedKings.push_back(capWasKing);
     }
 
     // Przesuń pionek

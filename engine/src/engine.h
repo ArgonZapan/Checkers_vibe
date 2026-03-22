@@ -23,7 +23,7 @@ public:
     std::vector<Move> getLegalMoves(Color color) const;
 
     // Wykonaj ruch
-    bool makeMove(const Move& move);
+    bool makeMove(Move& move);
 
     // Sprawdź czy ruch jest legalny
     bool isLegal(const Move& move) const;
@@ -43,7 +43,6 @@ public:
 private:
     Board board_;
     std::vector<Move> history_;
-    std::vector<Board> boardHistory_; // do undo
 };
 
 } // namespace checkers

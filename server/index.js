@@ -340,9 +340,13 @@ async function aiMove(currentState) {
       // Fallback: random move
       const randomIdx = Math.floor(Math.random() * legalMoves.length);
       const randomMove = legalMoves[randomIdx];
+      const fallbackBody = { from: randomMove.from, to: randomMove.to };
+      if (randomMove.captures && randomMove.captures.length > 0) {
+        fallbackBody.captures = randomMove.captures;
+      }
       await cppFetch('/api/move', {
         method: 'POST',
-        body: JSON.stringify({ from: randomMove.from, to: randomMove.to }),
+        body: JSON.stringify(fallbackBody),
       });
       return;
     }
@@ -354,9 +358,13 @@ async function aiMove(currentState) {
     let selectedMove = legalMoves[moveIndex] || legalMoves[0];
 
     // Execute AI move via C++
+    const aiMoveBody = { from: selectedMove.from, to: selectedMove.to };
+    if (selectedMove.captures && selectedMove.captures.length > 0) {
+      aiMoveBody.captures = selectedMove.captures;
+    }
     await cppFetch('/api/move', {
       method: 'POST',
-      body: JSON.stringify({ from: selectedMove.from, to: selectedMove.to }),
+      body: JSON.stringify(aiMoveBody),
     });
 
     console.log(`[AI] Played move: ${JSON.stringify(selectedMove.from)} → ${JSON.stringify(selectedMove.to)}`);
@@ -367,9 +375,13 @@ async function aiMove(currentState) {
       const { moves: legalMoves } = await cppFetch('/api/legal-moves');
       if (legalMoves && legalMoves.length > 0) {
         const randomMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+        const fbBody = { from: randomMove.from, to: randomMove.to };
+        if (randomMove.captures && randomMove.captures.length > 0) {
+          fbBody.captures = randomMove.captures;
+        }
         await cppFetch('/api/move', {
           method: 'POST',
-          body: JSON.stringify({ from: randomMove.from, to: randomMove.to }),
+          body: JSON.stringify(fbBody),
         });
       }
     } catch (_) { /* give up */ }
