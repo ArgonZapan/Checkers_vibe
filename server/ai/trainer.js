@@ -493,6 +493,7 @@ export class SelfPlay {
       const lmRes = await fetch(`${CPP_BASE}/api/legal-moves`);
       if (!lmRes.ok) throw new Error(`Legal moves failed: ${lmRes.status}`);
       const { moves: legalMoves } = await lmRes.json();
+      const movesWithIndex = legalMoves.map((m, i) => ({ ...m, index: i }));
 
       // Choose model based on turn
       const model = turn === 1 ? this.modelWhite : this.modelBlack;
