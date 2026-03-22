@@ -31,6 +31,7 @@ Sieć neuronowa (ten sam model dla obu stron). Różne parametry = różne style
 
 - **Backend:** C++
 - **Frontend:** React (Node.js)
+- **AI engine:** TensorFlow.js
 
 ## Jak uruchomić
 

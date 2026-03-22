@@ -1,5 +1,9 @@
 # Sieć neuronowa — Architektura
 
+## Silnik
+
+TensorFlow.js — sieć działa w C++ (backend) z bindingiem do JS lub natywnie przez tfjs-node.
+
 ## Wejście (input)
 
 Stan planszy jako tensor wejściowy:
