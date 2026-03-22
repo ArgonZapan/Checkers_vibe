@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { Server as SocketIO } from 'socket.io';
 import { setupProxy } from './proxy.js';
 import { SelfPlay } from './ai/trainer.js';
+import { predict } from './ai/model.js';
 import { saveModel, loadModel } from './ai/model.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -319,7 +320,7 @@ async function aiMove(currentState) {
     // Use array position as index — model policy maps to these indices
     const movesWithIndex = legalMoves.map((m, i) => ({ ...m, index: i }));
 
-    // Predict best move
+    // Predict best move (direct call instead of HTTP self-call)
     const turn = colorToTurn(currentState.turn);
     // Convert board back to flat int array for model
     // C++ encoding: 0=empty, 1=white pawn, 2=white king, 3=black pawn, 4=black king
@@ -329,14 +330,13 @@ async function aiMove(currentState) {
       return p.king ? 4 : 3;
     });
 
-    const predRes = await fetch('http://localhost:3000/api/ai/predict', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ board: boardFlat, legalMoves: movesWithIndex, turn }),
-    });
-
-    if (!predRes.ok) {
-      console.error('[AI] Predict failed:', predRes.status);
+    let prediction;
+    try {
+      const model = turn === 1 ? trainer.modelWhite : trainer.modelBlack;
+      if (!model) throw new Error('Model not initialized');
+      prediction = await predict(model, boardFlat, movesWithIndex, turn);
+    } catch (err) {
+      console.error('[AI] Predict failed:', err.message);
       // Fallback: random move
       const randomIdx = Math.floor(Math.random() * legalMoves.length);
       const randomMove = legalMoves[randomIdx];
@@ -351,7 +351,6 @@ async function aiMove(currentState) {
       return;
     }
 
-    const prediction = await predRes.json();
     const moveIndex = prediction.move;
 
     // Find the actual move from legalMoves by index
