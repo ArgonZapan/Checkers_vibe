@@ -35,13 +35,24 @@ async function test() {
   assert('2 kolory pionków', pieceColors.length === 2);
   console.log('      Kolory:', pieceColors);
 
-  // Click a piece — try clicking on the board area
-  const gElements = await page.$$('svg g');
-  console.log('      Elementów <g>:', gElements.length);
+  // Click a white piece (human plays white in PvAI)
+  const whitePieceIndex = await page.evaluate(() => {
+    const gEls = document.querySelectorAll('svg g');
+    for (let i = 0; i < gEls.length; i++) {
+      const circle = gEls[i].querySelector('circle');
+      const fill = circle?.getAttribute('fill');
+      if (fill && (fill.includes('f0f0f0') || fill.includes('white'))) {
+        return i;
+      }
+    }
+    return -1;
+  });
+  console.log('      Białych elementów <g> pierwszy indeks:', whitePieceIndex);
 
-  if (gElements.length > 0) {
-    // Click on a g element (piece)
-    await gElements[0].click();
+  if (whitePieceIndex >= 0) {
+    const gElements = await page.$$('svg g');
+    // Click on a white piece
+    await gElements[whitePieceIndex].click();
     await page.waitForTimeout(1000);
 
     // Check for green indicators (valid moves)

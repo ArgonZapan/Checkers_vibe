@@ -98,6 +98,8 @@ export default function App() {
     s.on('disconnect', () => setConnected(false));
 
     s.on('state', (data) => {
+      // Ignore state events from self-play when in a player game mode
+      if (data.source === 'selfPlay' && (modeRef.current === 'pvai' || modeRef.current === 'pvp')) return;
       if (data.board) setBoard(data.board);
       if (data.turn) setTurn(data.turn);
       if (data.gameOver !== undefined) setGameOver(data.gameOver);
@@ -132,6 +134,8 @@ export default function App() {
     });
 
     s.on('gameOver', (data) => {
+      // Ignore gameOver events from self-play when in a player game mode
+      if (data.source === 'selfPlay' && (modeRef.current === 'pvai' || modeRef.current === 'pvp')) return;
       setGameOver(true);
       setWinner(data.winner);
       // Stats are updated via selfPlayStatus event (server is source of truth)
