@@ -30,11 +30,11 @@ function validateSetParamsAuth(gameMode) {
 
 function validateSetParams(params) {
   const errors = [];
-  if (params.layers != null && (params.layers < 1 || params.layers > 8)) {
-    errors.push(`layers=${params.layers} (zakres: 1-8)`);
+  if (params.layers != null && (params.layers < 1 || params.layers > 5)) {
+    errors.push(`layers=${params.layers} (zakres: 1-5)`);
   }
-  if (params.neurons != null && (params.neurons < 32 || params.neurons > 1024)) {
-    errors.push(`neurons=${params.neurons} (zakres: 32-1024)`);
+  if (params.neurons != null && (params.neurons < 32 || params.neurons > 512)) {
+    errors.push(`neurons=${params.neurons} (zakres: 32-512)`);
   }
   if (params.batchSize != null && (params.batchSize < 8 || params.batchSize > 256)) {
     errors.push(`batchSize=${params.batchSize} (zakres: 8-256)`);
@@ -162,8 +162,8 @@ export async function runWsHandlerLogicTests() {
     assert.equal(validateSetParams({ layers: 1 }).valid, true);
   });
 
-  test('setParams: layers boundary 8 passes', () => {
-    assert.equal(validateSetParams({ layers: 8 }).valid, true);
+  test('setParams: layers boundary 5 passes', () => {
+    assert.equal(validateSetParams({ layers: 5 }).valid, true);
   });
 
   test('setParams: layers=0 rejected', () => {
@@ -172,8 +172,8 @@ export async function runWsHandlerLogicTests() {
     assert.ok(r.errors[0].includes('layers'));
   });
 
-  test('setParams: layers=9 rejected', () => {
-    const r = validateSetParams({ layers: 9 });
+  test('setParams: layers=6 rejected', () => {
+    const r = validateSetParams({ layers: 6 });
     assert.equal(r.valid, false);
   });
 
@@ -186,12 +186,12 @@ export async function runWsHandlerLogicTests() {
     assert.equal(validateSetParams({ neurons: 32 }).valid, true);
   });
 
-  test('setParams: neurons=1024 passes', () => {
-    assert.equal(validateSetParams({ neurons: 1024 }).valid, true);
+  test('setParams: neurons=512 passes', () => {
+    assert.equal(validateSetParams({ neurons: 512 }).valid, true);
   });
 
-  test('setParams: neurons=1025 rejected', () => {
-    const r = validateSetParams({ neurons: 1025 });
+  test('setParams: neurons=513 rejected', () => {
+    const r = validateSetParams({ neurons: 513 });
     assert.equal(r.valid, false);
   });
 
