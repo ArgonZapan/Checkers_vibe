@@ -31,7 +31,8 @@ function evaluate(flatBoard, turn) {
     let posBonus = 0;
     if (val === 1 || val === 3) {
       // Pawn: advance bonus + center bonus
-      const advance = turn === 1 ? row : (7 - row);
+      // White advances toward row 0, black toward row 7
+      const advance = turn === 1 ? (7 - row) : row;
       posBonus = advance * 0.05;
       if (col >= 2 && col <= 5 && row >= 2 && row <= 5) posBonus += 0.1;
     } else {
