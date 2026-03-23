@@ -688,7 +688,7 @@ export class SelfPlay {
 
       // Choose model based on turn
       const model = turn === 1 ? this.modelWhite : this.modelBlack;
-      const epsilon = this.epsilonWhite; // shared epsilon (same for both sides now)
+      const epsilon = turn === 1 ? this.epsilonWhite : this.epsilonBlack;
 
       // Epsilon-greedy: explore or exploit
       let chosenMove;
