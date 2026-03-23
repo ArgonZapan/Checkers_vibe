@@ -30,6 +30,7 @@ import { runAutoSaveLogicTests } from './autoSaveLogic.test.js';
 import { runApiEndpointValidationTests } from './apiEndpointValidation.test.js';
 import { runWsConnectionLifecycleTests } from './wsConnectionLifecycle.test.js';
 import { runProxyLogicTests } from './proxyLogic.test.js';
+import { runIssues132to134Tests } from './issues132to134.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -58,6 +59,7 @@ const suites = [
   { name: 'apiEndpointValidation', run: runApiEndpointValidationTests },
   { name: 'wsConnectionLifecycle', run: runWsConnectionLifecycleTests },
   { name: 'proxyLogic',          run: runProxyLogicTests },
+  { name: 'issues132to134',      run: runIssues132to134Tests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
