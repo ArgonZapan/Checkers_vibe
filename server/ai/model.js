@@ -317,10 +317,18 @@ export async function train(model, batch, epochs = 5) {
       }
 
       const nextTensor = tf.tensor2d(nextBoards);
-      const [, nextValues] = model.predictOnBatch(nextTensor);
-      const nextVals = await nextValues.data();
-      nextTensor.dispose();
-      nextValues.dispose();
+      let nextValues;
+      try {
+        [, nextValues] = model.predictOnBatch(nextTensor);
+        const nextVals = await nextValues.data();
+        nextQValues = new Float32Array(batch.length).fill(0);
+        for (let j = 0; j < withNext.length; j++) {
+          nextQValues[withNextIdx[j]] = nextVals[j];
+        }
+      } finally {
+        nextTensor.dispose();
+        if (nextValues) nextValues.dispose();
+      }
 
       nextQValues = new Float32Array(batch.length).fill(0);
       for (let j = 0; j < withNext.length; j++) {
