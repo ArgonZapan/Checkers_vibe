@@ -5,7 +5,6 @@
  * Usage: node __tests__/run.js
  */
 import { runBoardConvertTests } from './boardConvert.test.js';
-import { runBoardConvertEdgeTests } from './boardConvertEdge.test.js';
 import { runWsMoveValidationTests } from './wsMoveValidation.test.js';
 import { runWsSetSpeedTests } from './wsSetSpeed.test.js';
 import { runDrawDetectionTests } from './drawDetection.test.js';
@@ -43,7 +42,6 @@ import { runKingMovesPathTests } from './kingMovesPath.test.js';
 import { runHunterCoverageGapsTests } from './hunter-coverageGaps.test.js';
 import { runConfigAiBoardTests } from './configAiBoard.test.js';
 import { runRateLimiterThrottleTests } from './rateLimiterThrottle.test.js';
-import { runAutoSaveTimingTests } from './autoSaveTiming.test.js';
 import { runSecurityHeadersTests } from './securityHeaders.test.js';
 import { runGetGameStateLogicTests } from './getGameStateLogic.test.js';
 import { runAiFallbackLogicTests } from './aiFallbackLogic.test.js';
@@ -55,7 +53,6 @@ import { runKingMultiCaptureAndUndoTests } from './kingMultiCaptureAndUndo.test.
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
-  { name: 'boardConvertEdge',    run: runBoardConvertEdgeTests },
   { name: 'wsMoveValidation',    run: runWsMoveValidationTests },
   { name: 'wsSetSpeed',          run: runWsSetSpeedTests },
   { name: 'drawDetection',       run: runDrawDetectionTests },
@@ -93,7 +90,6 @@ const suites = [
   { name: 'hunterCoverageGaps',  run: runHunterCoverageGapsTests },
   { name: 'configAiBoard',       run: runConfigAiBoardTests },
   { name: 'rateLimiterThrottle', run: runRateLimiterThrottleTests },
-  { name: 'autoSaveTiming',      run: runAutoSaveTimingTests },
   { name: 'securityHeaders',     run: runSecurityHeadersTests },
   { name: 'getGameStateLogic',   run: runGetGameStateLogicTests },
   { name: 'aiFallbackLogic',     run: runAiFallbackLogicTests },

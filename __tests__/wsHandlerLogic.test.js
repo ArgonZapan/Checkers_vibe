@@ -45,12 +45,6 @@ function validateSetParams(params) {
   return { valid: errors.length === 0, errors };
 }
 
-// ── Extracted: setSpeedMode ─────────────────────────────────────────────────
-
-function validateSpeedMode(mode) {
-  return mode === 'fast' || mode === 'normal';
-}
-
 // ── Extracted: getLegalMoves filtering ──────────────────────────────────────
 
 function filterLegalMoves(legalMoves, from) {
@@ -243,9 +237,11 @@ export async function runWsHandlerLogicTests() {
     assert.equal(validateSetParams({}).valid, true);
   });
 
-  // ═══════════════════════════════════════════════════════════════════════
   // setSpeedMode
-  // ═══════════════════════════════════════════════════════════════════════
+
+  function validateSpeedMode(mode) {
+    return mode === 'fast' || mode === 'normal';
+  }
 
   test('setSpeedMode: "fast" is valid', () => {
     assert.ok(validateSpeedMode('fast'));
