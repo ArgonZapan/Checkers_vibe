@@ -5,6 +5,8 @@ function useDebouncedCallback(fn, ms) {
   const timerRef = useRef(null);
   const fnRef = useRef(fn);
   fnRef.current = fn;
+  // Cleanup pending timer on unmount to prevent stale callbacks
+  useEffect(() => () => clearTimeout(timerRef.current), []);
   return useCallback((...args) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => fnRef.current(...args), ms);
