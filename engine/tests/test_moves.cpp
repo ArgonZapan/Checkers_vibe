@@ -1,5 +1,6 @@
 #include "engine.h"
 #include <cassert>
+#include <cmath>
 #include <iostream>
 #include <string>
 
@@ -1039,7 +1040,28 @@ void test_issue135_king_multi_capture_undo() {
 void test_issue136_king_move_path() {
     std::cout << "Test: Issue #136 — king non-capture moves have path/numPath..." << std::flush;
 
-    // White king at (3,3), open board — check all generated moves have path set
+    // Helper: verify a king move's path is consistent
+    // - path[0] == from
+    // - path[numPath-1] == to
+    // - numPath >= 2
+    // - all intermediate squares are on the diagonal between from and to
+    auto verifyPath = [](const Move& m) {
+        assert(m.numPath >= 2);
+        assert(m.path[0].row == m.from.row && m.path[0].col == m.from.col);
+        assert(m.path[m.numPath - 1].row == m.to.row && m.path[m.numPath - 1].col == m.to.col);
+        // Verify all path entries are in-bounds
+        for (int i = 0; i < m.numPath; i++) {
+            assert(Board::inBounds(m.path[i].row, m.path[i].col));
+        }
+        // Verify consecutive path entries are adjacent diagonals
+        for (int i = 1; i < m.numPath; i++) {
+            int dr = m.path[i].row - m.path[i-1].row;
+            int dc = m.path[i].col - m.path[i-1].col;
+            assert(std::abs(dr) == 1 && std::abs(dc) == 1);
+        }
+    };
+
+    // White king at (3,3), open board
     {
         Board b;
         b.whitePieces = 0;
@@ -1051,11 +1073,13 @@ void test_issue136_king_move_path() {
         auto moves = MoveGenerator::generateKingMoves(b, 3, 3, WHITE);
         assert(!moves.empty());
 
+        bool foundSingle = false, foundMulti = false;
         for (auto& m : moves) {
-            assert(m.numPath == 2);
-            assert(m.path[0].row == 3 && m.path[0].col == 3); // from
-            assert(m.path[1].row == m.to.row && m.path[1].col == m.to.col); // to
+            verifyPath(m);
+            if (m.numPath == 2) foundSingle = true;
+            if (m.numPath > 2) foundMulti = true;
         }
+        assert(foundSingle && foundMulti); // open board should have both
     }
 
     // Black king at (5,5) — same check
@@ -1071,13 +1095,12 @@ void test_issue136_king_move_path() {
         assert(!moves.empty());
 
         for (auto& m : moves) {
-            assert(m.numPath == 2);
+            verifyPath(m);
             assert(m.path[0].row == 5 && m.path[0].col == 5);
-            assert(m.path[1].row == m.to.row && m.path[1].col == m.to.col);
         }
     }
 
-    // King at edge (0,7) — limited moves, still should have path
+    // King at edge (0,7) — limited moves, all single-step
     {
         Board b;
         b.whitePieces = 0;
@@ -1090,13 +1113,12 @@ void test_issue136_king_move_path() {
         assert(!moves.empty());
 
         for (auto& m : moves) {
-            assert(m.numPath == 2);
+            verifyPath(m);
             assert(m.path[0].row == 0 && m.path[0].col == 7);
-            assert(m.path[1].row == m.to.row && m.path[1].col == m.to.col);
         }
     }
 
-    // King blocked partially — ensure moves that DO exist have path
+    // King blocked partially — ensure moves that DO exist have valid path
     {
         Board b;
         b.whitePieces = 0;
@@ -1109,9 +1131,8 @@ void test_issue136_king_move_path() {
         assert(!moves.empty());
 
         for (auto& m : moves) {
-            assert(m.numPath == 2);
+            verifyPath(m);
             assert(m.path[0].row == 3 && m.path[0].col == 3);
-            assert(m.path[1].row == m.to.row && m.path[1].col == m.to.col);
             // Should not land on (4,4) or beyond in NE direction
             assert(!(m.to.row >= 4 && m.to.col >= 4));
         }
@@ -1132,10 +1153,404 @@ void test_issue136_king_move_path() {
         assert(!moves.empty());
 
         for (auto& m : moves) {
-            assert(m.numPath == 2);
+            verifyPath(m);
             assert(m.path[0].row == 3 && m.path[0].col == 3);
-            assert(m.path[1].row == m.to.row && m.path[1].col == m.to.col);
+            assert(m.path[m.numPath - 1].row == m.to.row);
+            assert(m.path[m.numPath - 1].col == m.to.col);
         }
+    }
+
+    std::cout << " OK" << std::endl;
+}
+
+// === Regression: King move path/numPath comprehensive tests ===
+
+void test_king_move_path_single_step() {
+    std::cout << "Test: king move path — single-step (numPath=2)..." << std::flush;
+
+    // King at (3,3), piece at (4,4) blocking — only 1-step moves in SE direction
+    // Other directions have multi-step moves, but we verify the single-step ones
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(3, 3);
+        b.blackPieces = squareToMask(4, 4); // blocks beyond (4,4)
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        auto moves = MoveGenerator::generateKingMoves(b, 3, 3, WHITE);
+        assert(!moves.empty());
+
+        // Every move from (3,3) on this board has numPath >= 2
+        // The 1-step move toward (4,4) doesn't exist (blocked)
+        // But 1-step moves in other directions exist
+        for (auto& m : moves) {
+            assert(m.numPath >= 2);
+            assert(m.path[0].row == 3 && m.path[0].col == 3);
+            assert(m.path[m.numPath - 1].row == m.to.row);
+            assert(m.path[m.numPath - 1].col == m.to.col);
+
+            // If numPath == 2, it's a single step
+            if (m.numPath == 2) {
+                int dr = std::abs(m.to.row - 3);
+                int dc = std::abs(m.to.col - 3);
+                assert(dr == 1 && dc == 1); // exactly 1 diagonal step
+            }
+        }
+    }
+
+    // King at (0,1) — only 2 directions available, short range
+    // All moves from corner are multi-step at most, verify single-step ones
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(0, 1);
+        b.blackPieces = 0;
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        auto moves = MoveGenerator::generateKingMoves(b, 0, 1, WHITE);
+        assert(!moves.empty());
+
+        // Find the adjacent (1-step) move
+        bool foundAdj = false;
+        for (auto& m : moves) {
+            if (m.numPath == 2) {
+                int dr = std::abs(m.to.row - 0);
+                int dc = std::abs(m.to.col - 1);
+                assert(dr == 1 && dc == 1);
+                foundAdj = true;
+            }
+        }
+        assert(foundAdj);
+    }
+
+    // Via getLegalMoves — king at (5,5), blocked at (6,6)
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(5, 5);
+        b.blackPieces = squareToMask(6, 6);
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        Engine e;
+        e.getBoard() = b;
+        auto moves = e.getLegalMoves(WHITE);
+        assert(!moves.empty());
+
+        for (auto& m : moves) {
+            assert(m.numPath >= 2);
+            assert(m.path[0].row == 5 && m.path[0].col == 5);
+        }
+    }
+
+    std::cout << " OK" << std::endl;
+}
+
+void test_king_move_path_multi_step() {
+    std::cout << "Test: king move path — multi-step (numPath>2, intermediate squares)..." << std::flush;
+
+    // King at (0,0), open board — can slide SE: (1,1),(2,2)...(7,7)
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(0, 0);
+        b.blackPieces = 0;
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        auto moves = MoveGenerator::generateKingMoves(b, 0, 0, WHITE);
+        assert(!moves.empty());
+
+        // SE direction moves: (1,1), (2,2), ..., (7,7)
+        // Move to (3,3) should have numPath=4, path=[(0,0),(1,1),(2,2),(3,3)]
+        bool found33 = false;
+        for (auto& m : moves) {
+            if (m.to.row == 3 && m.to.col == 3) {
+                assert(m.numPath == 4);
+                assert(m.path[0].row == 0 && m.path[0].col == 0);
+                assert(m.path[1].row == 1 && m.path[1].col == 1);
+                assert(m.path[2].row == 2 && m.path[2].col == 2);
+                assert(m.path[3].row == 3 && m.path[3].col == 3);
+                found33 = true;
+            }
+        }
+        assert(found33);
+
+        // Move to (7,7) should have numPath=8
+        bool found77 = false;
+        for (auto& m : moves) {
+            if (m.to.row == 7 && m.to.col == 7) {
+                assert(m.numPath == 8);
+                for (int i = 0; i < 8; i++) {
+                    assert(m.path[i].row == i && m.path[i].col == i);
+                }
+                found77 = true;
+            }
+        }
+        assert(found77);
+    }
+
+    // King at (3,3), open board — verify multi-step in each direction
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(3, 3);
+        b.blackPieces = 0;
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        auto moves = MoveGenerator::generateKingMoves(b, 3, 3, WHITE);
+        // SE: (4,4),(5,5),(6,6),(7,7) — 4 moves
+        // NE: (2,4),(1,5),(0,6) — 3 moves
+        // SW: (4,2),(5,1),(6,0) — 3 moves
+        // NW: (2,2),(1,1),(0,0) — 3 moves
+        // Total: 13 moves
+        assert(moves.size() == 13);
+
+        // Verify multi-step moves have correct intermediate squares
+        // Move to (5,5): numPath=3, path=[(3,3),(4,4),(5,5)]
+        for (auto& m : moves) {
+            if (m.to.row == 5 && m.to.col == 5) {
+                assert(m.numPath == 3);
+                assert(m.path[0].row == 3 && m.path[0].col == 3);
+                assert(m.path[1].row == 4 && m.path[1].col == 4);
+                assert(m.path[2].row == 5 && m.path[2].col == 5);
+            }
+            // Move to (0,0): numPath=4, path=[(3,3),(2,2),(1,1),(0,0)]
+            if (m.to.row == 0 && m.to.col == 0) {
+                assert(m.numPath == 4);
+                assert(m.path[0].row == 3 && m.path[0].col == 3);
+                assert(m.path[1].row == 2 && m.path[1].col == 2);
+                assert(m.path[2].row == 1 && m.path[2].col == 1);
+                assert(m.path[3].row == 0 && m.path[3].col == 0);
+            }
+        }
+    }
+
+    // Via getLegalMoves — same position through full pipeline
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(0, 0);
+        b.blackPieces = 0;
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        Engine e;
+        e.getBoard() = b;
+        auto moves = e.getLegalMoves(WHITE);
+        assert(!moves.empty());
+
+        // Verify multi-step path through engine
+        for (auto& m : moves) {
+            if (m.to.row == 5 && m.to.col == 5) {
+                assert(m.numPath == 6); // (0,0),(1,1),(2,2),(3,3),(4,4),(5,5)
+                for (int i = 0; i < 6; i++) {
+                    assert(m.path[i].row == i && m.path[i].col == i);
+                }
+            }
+        }
+    }
+
+    // Black king multi-step
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.blackKings = squareToMask(7, 7);
+        b.blackPieces = 0;
+        b.whiteKings = 0;
+        b.currentTurn = BLACK;
+
+        auto moves = MoveGenerator::generateKingMoves(b, 7, 7, BLACK);
+        assert(!moves.empty());
+
+        // NW direction: (6,6),(5,5),...,(0,0)
+        for (auto& m : moves) {
+            if (m.to.row == 4 && m.to.col == 4) {
+                assert(m.numPath == 4);
+                assert(m.path[0].row == 7 && m.path[0].col == 7);
+                assert(m.path[1].row == 6 && m.path[1].col == 6);
+                assert(m.path[2].row == 5 && m.path[2].col == 5);
+                assert(m.path[3].row == 4 && m.path[3].col == 4);
+            }
+        }
+    }
+
+    std::cout << " OK" << std::endl;
+}
+
+void test_king_capture_path() {
+    std::cout << "Test: king capture path — proper path with intermediate squares..." << std::flush;
+
+    // Helper: verify capture path consistency
+    auto verifyCapturePath = [](const Move& m) {
+        assert(m.isCapture());
+        assert(m.numPath >= 2);
+        assert(m.path[0].row == m.from.row && m.path[0].col == m.from.col);
+        assert(m.path[m.numPath - 1].row == m.to.row && m.path[m.numPath - 1].col == m.to.col);
+        // All path entries in-bounds
+        for (int i = 0; i < m.numPath; i++) {
+            assert(Board::inBounds(m.path[i].row, m.path[i].col));
+        }
+        // All consecutive path entries are on the same diagonal (same |dr| == |dc|)
+        // but NOT necessarily adjacent — king can slide multiple squares between captures
+        for (int i = 1; i < m.numPath; i++) {
+            int dr = m.path[i].row - m.path[i-1].row;
+            int dc = m.path[i].col - m.path[i-1].col;
+            assert(std::abs(dr) == std::abs(dc)); // same diagonal
+            assert(dr != 0 && dc != 0); // not horizontal/vertical
+        }
+    };
+
+    // Single king capture: king at (3,3), enemy at (4,4), landing at (5,5)
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(3, 3);
+        b.blackPieces = squareToMask(4, 4);
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        Engine e;
+        e.getBoard() = b;
+        auto moves = e.getLegalMoves(WHITE);
+        assert(!moves.empty());
+
+        bool found = false;
+        for (auto& m : moves) {
+            if (m.isCapture() && m.to.row == 5 && m.to.col == 5) {
+                verifyCapturePath(m);
+                assert(m.numCaptures == 1);
+                assert(m.captures[0].row == 4 && m.captures[0].col == 4);
+                assert(m.numPath == 2); // single capture: [from, to]
+                found = true;
+            }
+        }
+        assert(found);
+    }
+
+    // King capture from distance: king at (0,0), enemy at (3,3), landing at (4,4)
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(0, 0);
+        b.blackPieces = squareToMask(3, 3);
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        Engine e;
+        e.getBoard() = b;
+        auto moves = e.getLegalMoves(WHITE);
+        assert(!moves.empty());
+
+        // King can land at any square beyond (3,3) in SE direction
+        bool found44 = false;
+        for (auto& m : moves) {
+            if (m.isCapture() && m.captures[0].row == 3 && m.captures[0].col == 3) {
+                verifyCapturePath(m);
+                assert(m.to.row >= 4 && m.to.col >= 4); // must be beyond captured piece
+                assert(m.to.row == m.to.col); // still on diagonal
+                if (m.to.row == 4 && m.to.col == 4) found44 = true;
+            }
+        }
+        assert(found44);
+    }
+
+    // Multi-capture path: king at (1,1), enemies at (2,2) and (4,4)
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(1, 1);
+        b.blackPieces = squareToMask(2, 2) | squareToMask(4, 4);
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        Engine e;
+        e.getBoard() = b;
+        auto moves = e.getLegalMoves(WHITE);
+
+        bool foundMulti = false;
+        for (auto& m : moves) {
+            if (m.numCaptures >= 2) {
+                verifyCapturePath(m);
+                assert(m.numPath == m.numCaptures + 1); // captures + 1 landing positions
+                assert(m.numPath > 2); // multi-capture has numPath > 2
+                foundMulti = true;
+            }
+        }
+        assert(foundMulti);
+    }
+
+    // King captures enemy king — path still correct
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(3, 3);
+        b.blackPieces = 0;
+        b.blackKings = squareToMask(4, 4);
+        b.currentTurn = WHITE;
+
+        Engine e;
+        e.getBoard() = b;
+        auto moves = e.getLegalMoves(WHITE);
+
+        bool found = false;
+        for (auto& m : moves) {
+            if (m.isCapture() && m.to.row == 5 && m.to.col == 5) {
+                verifyCapturePath(m);
+                assert(m.capturedKing(0) == true);
+                found = true;
+            }
+        }
+        assert(found);
+    }
+
+    std::cout << " OK" << std::endl;
+}
+
+void test_king_move_path_consistency() {
+    std::cout << "Test: king move path — consistency checks across positions..." << std::flush;
+
+    // Verify that for every move: path[numPath-1] == to, path[0] == from
+    // across multiple board positions
+    auto verifyAllMoves = [](const std::vector<Move>& moves, int fr, int fc) {
+        for (auto& m : moves) {
+            assert(m.path[0].row == fr && m.path[0].col == fc);
+            assert(m.path[m.numPath - 1].row == m.to.row);
+            assert(m.path[m.numPath - 1].col == m.to.col);
+            assert(m.numPath >= 2);
+        }
+    };
+
+    // Multiple positions
+    int positions[][2] = {{0,0}, {0,7}, {7,0}, {7,7}, {3,3}, {4,4}, {1,1}, {6,6}};
+    for (auto& pos : positions) {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(pos[0], pos[1]);
+        b.blackPieces = 0;
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        auto moves = MoveGenerator::generateKingMoves(b, pos[0], pos[1], WHITE);
+        verifyAllMoves(moves, pos[0], pos[1]);
+    }
+
+    // Via Engine::getLegalMoves for various positions
+    for (auto& pos : positions) {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(pos[0], pos[1]);
+        b.blackPieces = 0;
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        Engine e;
+        e.getBoard() = b;
+        auto moves = e.getLegalMoves(WHITE);
+        verifyAllMoves(moves, pos[0], pos[1]);
     }
 
     std::cout << " OK" << std::endl;
@@ -1268,6 +1683,13 @@ int main() {
 
     test_issue135_king_multi_capture_undo();
     test_issue136_king_move_path();
+
+    std::cout << "\n--- King move path regression tests ---\n" << std::endl;
+
+    test_king_move_path_single_step();
+    test_king_move_path_multi_step();
+    test_king_capture_path();
+    test_king_move_path_consistency();
 
     std::cout << "\n=== Wszystkie testy przeszły ===" << std::endl;
     return 0;
