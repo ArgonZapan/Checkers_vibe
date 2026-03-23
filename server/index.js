@@ -29,6 +29,7 @@ app.use((_req, res, next) => {
   res.setHeader('X-XSS-Protection', '0');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: wss:; frame-ancestors 'none'");
   next();
 });
 
@@ -45,7 +46,17 @@ setInterval(() => {
       _rateLimitMap.delete(ip);
     }
   }
+  // Hard cap: if still over limit after cleanup, evict oldest entries
+  if (_rateLimitMap.size > RATE_LIMIT_MAX_ENTRIES) {
+    const sorted = [..._rateLimitMap.entries()].sort((a, b) => a[1].windowStart - b[1].windowStart);
+    const evictCount = _rateLimitMap.size - RATE_LIMIT_MAX_ENTRIES;
+    for (let i = 0; i < evictCount; i++) {
+      _rateLimitMap.delete(sorted[i][0]);
+    }
+  }
 }, RATE_LIMIT_WINDOW_MS);
+
+const RATE_LIMIT_MAX_ENTRIES = 10_000;
 
 app.use((req, res, next) => {
   const ip = req.ip || req.socket.remoteAddress;
@@ -597,6 +608,14 @@ io.on('connection', async (socket) => {
 
   // ── Speed control ──────────────────────────────────────────────────────
   socket.on('setSpeed', (ms) => {
+    // Throttle: max 1 per 1s per socket
+    if (!wsThrottle(socket, 'setSpeed', 1000)) return;
+    // Auth: only allow in aivai mode (LEAK-006)
+    if (socket.gameMode !== 'aivai') {
+      console.warn(`[WS] setSpeed rejected — mode is '${socket.gameMode}', not 'aivai'`);
+      socket.emit('error', { message: 'Zmiana prędkości dozwolona tylko w trybie AI vs AI' });
+      return;
+    }
     // Validate: must be a number 0-10000, not NaN (LEAK-006)
     if (typeof ms !== 'number' || ms < 0 || ms > 10000 || Number.isNaN(ms)) {
       socket.emit('error', { message: 'Invalid speed value — expected number 0-10000' });
@@ -611,6 +630,14 @@ io.on('connection', async (socket) => {
 
   // ── Speed mode control ────────────────────────────────────────────────
   socket.on('setSpeedMode', (mode) => {
+    // Throttle: max 1 per 1s per socket
+    if (!wsThrottle(socket, 'setSpeedMode', 1000)) return;
+    // Auth: only allow in aivai mode (LEAK-006)
+    if (socket.gameMode !== 'aivai') {
+      console.warn(`[WS] setSpeedMode rejected — mode is '${socket.gameMode}', not 'aivai'`);
+      socket.emit('error', { message: 'Zmiana trybu prędkości dozwolona tylko w trybie AI vs AI' });
+      return;
+    }
     // Validate: must be a string (LEAK-006)
     if (typeof mode !== 'string') {
       socket.emit('error', { message: 'Invalid speed mode — expected string' });

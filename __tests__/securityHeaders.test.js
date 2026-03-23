@@ -19,6 +19,7 @@ function getSecurityHeaders() {
     'X-XSS-Protection': '0',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: wss:; frame-ancestors 'none'",
   };
 }
 
@@ -75,9 +76,9 @@ export async function runSecurityHeadersTests() {
   // All headers present
   // ═══════════════════════════════════════════════════════════════════════
 
-  test('all 5 security headers are present', () => {
+  test('all 6 security headers are present', () => {
     const h = getSecurityHeaders();
-    assert.equal(Object.keys(h).length, 5);
+    assert.equal(Object.keys(h).length, 6);
   });
 
   test('no undefined header values', () => {
@@ -99,7 +100,7 @@ export async function runSecurityHeadersTests() {
       setHeader: (key, val) => { resHeaders[key] = val; }
     };
     applySecurityHeaders(mockRes);
-    assert.equal(Object.keys(resHeaders).length, 5);
+    assert.equal(Object.keys(resHeaders).length, 6);
     assert.equal(resHeaders['X-Content-Type-Options'], 'nosniff');
     assert.equal(resHeaders['X-Frame-Options'], 'DENY');
   });
@@ -139,9 +140,10 @@ export async function runSecurityHeadersTests() {
     assert.ok(!h['Permissions-Policy'].includes('camera=(self)'));
   });
 
-  test('missing Content-Security-Policy (intentional — not set)', () => {
+  test('Content-Security-Policy is set', () => {
     const h = getSecurityHeaders();
-    assert.equal(h['Content-Security-Policy'], undefined);
+    assert.ok(h['Content-Security-Policy'].includes("default-src 'self'"));
+    assert.ok(h['Content-Security-Policy'].includes("frame-ancestors 'none'"));
   });
 
   test('missing Strict-Transport-Security (intentional — not set)', () => {

@@ -8,6 +8,9 @@ namespace checkers_api {
 int main() {
     httplib::Server svr;
 
+    // Limit max request body size to 1MB (default is 100MB — DoS risk)
+    svr.set_payload_max_length(1024 * 1024);
+
     checkers_api::registerRoutes(svr);
 
     std::cout << "Checkers server listening on http://0.0.0.0:8080\n";
