@@ -5,7 +5,7 @@ import { Server as SocketIO } from 'socket.io';
 import { setupProxy } from './proxy.js';
 import { SelfPlay } from './ai/trainer.js';
 import { predict, createModel, train } from './ai/model.js';
-import { saveModel, loadModel, computePolicyIndex } from './ai/model.js';
+import { saveModel, computePolicyIndex } from './ai/model.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG } from '../config.js';
