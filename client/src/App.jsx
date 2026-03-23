@@ -197,6 +197,13 @@ export default function App() {
       if (data.modelParams) {
         setModelParams(data.modelParams);
       }
+      if (data.whiteEpsilon !== undefined || data.blackEpsilon !== undefined) {
+        setParams(prev => ({
+          ...prev,
+          ...(data.whiteEpsilon !== undefined && { whiteEpsilon: data.whiteEpsilon }),
+          ...(data.blackEpsilon !== undefined && { blackEpsilon: data.blackEpsilon }),
+        }));
+      }
     });
 
     return () => {
