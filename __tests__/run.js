@@ -64,6 +64,8 @@ import { runRaceConditionTests } from './raceCondition.test.js';
 import { runMoveQueueResilienceTests } from './moveQueueResilience.test.js';
 import { runBoardToCppValidationTests } from './boardToCppValidation.test.js';
 import { runLegalMovesMemoizationTests } from './legalMovesMemoization.test.js';
+import { runEpsilonValidationResilienceTests } from './epsilonValidationResilience.test.js';
+import { runCSPResilienceTests } from './cspResilience.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -126,6 +128,8 @@ const suites = [
   { name: 'moveQueueResilience',   run: runMoveQueueResilienceTests },
   { name: 'boardToCppValidation',  run: runBoardToCppValidationTests },
   { name: 'legalMovesMemoization', run: runLegalMovesMemoizationTests },
+  { name: 'epsilonValidationResilience', run: runEpsilonValidationResilienceTests },
+  { name: 'cspResilience', run: runCSPResilienceTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
