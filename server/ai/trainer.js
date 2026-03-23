@@ -583,6 +583,12 @@ export class SelfPlay {
   }
 
   async saveState() {
+    // Serialize concurrent saveState calls to prevent file corruption
+    // (_playGame, resetModel, and auto-save can all call this concurrently)
+    const prev = this._saveStateLock || Promise.resolve();
+    let unlock;
+    this._saveStateLock = new Promise(r => { unlock = r; });
+    await prev;
     try {
       await mkdir(path.dirname(STATE_FILE), { recursive: true });
       const state = {
@@ -603,6 +609,8 @@ export class SelfPlay {
       await rename(tmpFile, STATE_FILE);
     } catch (err) {
       console.error('[SelfPlay] saveState error:', err.message);
+    } finally {
+      unlock();
     }
   }
 

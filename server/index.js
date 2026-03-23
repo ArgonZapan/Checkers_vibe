@@ -901,7 +901,12 @@ function shutdown() {
   clearInterval(_rateLimitCleanupInterval);
   clearInterval(_autoSaveInterval);
   trainer.stop(); // stop self-play loop before closing HTTP server
-  httpServer.close(() => process.exit(0));
+  // Close WebSocket connections first so in-flight ops can finish
+  io.close(() => {
+    httpServer.close(() => process.exit(0));
+  });
+  // Force exit after 5s if graceful shutdown hangs
+  setTimeout(() => process.exit(1), 5000);
 }
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
