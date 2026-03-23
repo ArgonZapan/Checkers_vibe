@@ -106,9 +106,9 @@ function SideTab({
             value={networkSize}
             onChange={(e) => onNetworkSizeChange(e.target.value)}
           >
-            <option value="small">Mała (64-64)</option>
-            <option value="medium">Średnia (128-128)</option>
-            <option value="large">Duża (256-256)</option>
+            <option value="small">Mała (128-64)</option>
+            <option value="medium">Średnia (256-128-64)</option>
+            <option value="large">Duża (512-256-128-64)</option>
             <option value="custom">Niestandardowa</option>
           </select>
         </div>

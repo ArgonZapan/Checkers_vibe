@@ -721,6 +721,7 @@ io.on('connection', async (socket) => {
     const clamped = Math.max(0, Math.min(ms, 10000));
     CONFIG.server.aiMoveDelayMs = clamped;
     if (clamped > 0) CONFIG.server.normalModeDelayMs = clamped;
+    else CONFIG.server.normalModeDelayMs = 0; // reset to 0 when speed is 0 (no fallback to stale value)
     io.emit('speedUpdate', { aiMoveDelayMs: clamped });
     console.log(`[WS] Speed set to ${clamped}ms`);
   });

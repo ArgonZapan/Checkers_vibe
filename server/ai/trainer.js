@@ -370,8 +370,16 @@ export class SelfPlay {
    */
   async isEngineUp() {
     try {
-      const res = await cppFetch(`${CPP_BASE}/api/game/state`);
-      return res.ok;
+      // Use raw fetch instead of cppFetch — cppFetch throws on non-200 responses,
+      // which would bypass the catch and crash the recovery loop
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
+      try {
+        const res = await fetch(`${CPP_BASE}/api/game/state`, { signal: controller.signal });
+        return res.ok;
+      } finally {
+        clearTimeout(timer);
+      }
     } catch {
       return false;
     }

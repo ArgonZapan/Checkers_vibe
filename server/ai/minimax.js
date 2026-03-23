@@ -120,37 +120,66 @@ function generateLegalMoves(board, turn) {
     const col = i % 8;
     const isKing = val === myKing;
 
-    // Check all 4 diagonal directions for captures
-    for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
-      // Pawns can only capture forward (unless king)
-      // White starts rows 0-2, forward = increasing row (toward row 7)
-      // Black starts rows 5-7, forward = decreasing row (toward row 0)
-      if (!isKing) {
-        if (isWhiteTurn && dr < 0) continue; // white skips upward (captures downward)
-        if (!isWhiteTurn && dr > 0) continue; // black skips downward (captures upward)
+    if (!isKing) {
+      // Pawn: single-step capture (jump over adjacent opponent)
+      for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+        // White starts rows 0-2, forward = increasing row (toward row 7)
+        // Black starts rows 5-7, forward = decreasing row (toward row 0)
+        if (isWhiteTurn && dr < 0) continue;
+        if (!isWhiteTurn && dr > 0) continue;
+
+        const adjR = row + dr, adjC = col + dc;
+        const landR = row + dr * 2, landC = col + dc * 2;
+
+        if (adjR < 0 || adjR > 7 || adjC < 0 || adjC > 7) continue;
+        if (landR < 0 || landR > 7 || landC < 0 || landC > 7) continue;
+
+        const adjIdx = adjR * 8 + adjC;
+        const landIdx = landR * 8 + landC;
+        const adjVal = board[adjIdx];
+
+        if (adjVal && adjVal !== 0) {
+          const isOpponent = isWhiteTurn ? (adjVal === 3 || adjVal === 4) : (adjVal === 1 || adjVal === 2);
+          if (isOpponent && board[landIdx] === 0) {
+            captures.push({
+              from: [row, col],
+              to: [landR, landC],
+              captures: [[adjR, adjC]],
+              _multi: [[row, col], [landR, landC]],
+            });
+          }
+        }
       }
+    } else {
+      // King: sliding capture — find opponent piece along diagonal, land on first empty square after
+      for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+        let nr = row + dr, nc = col + dc;
+        let foundOpp = false;
+        let oppR = -1, oppC = -1;
 
-      // Find jump targets for simple captures
-      const adjR = row + dr, adjC = col + dc;
-      const landR = row + dr * 2, landC = col + dc * 2;
-
-      if (adjR < 0 || adjR > 7 || adjC < 0 || adjC > 7) continue;
-      if (landR < 0 || landR > 7 || landC < 0 || landC > 7) continue;
-
-      const adjIdx = adjR * 8 + adjC;
-      const landIdx = landR * 8 + landC;
-      const adjVal = board[adjIdx];
-
-      // Can capture if adjacent has opponent piece and landing is empty
-      if (adjVal && adjVal !== 0) {
-        const isOpponent = isWhiteTurn ? (adjVal === 3 || adjVal === 4) : (adjVal === 1 || adjVal === 2);
-        if (isOpponent && board[landIdx] === 0) {
-          captures.push({
-            from: [row, col],
-            to: [landR, landC],
-            captures: [[adjR, adjC]],
-            _multi: [[row, col], [landR, landC]], // for multi-capture tracking
-          });
+        while (nr >= 0 && nr <= 7 && nc >= 0 && nc <= 7) {
+          const idx = nr * 8 + nc;
+          if (board[idx] !== 0) {
+            if (foundOpp) break; // already found opponent, blocking piece stops search
+            const isOpponent = isWhiteTurn ? (board[idx] === 3 || board[idx] === 4) : (board[idx] === 1 || board[idx] === 2);
+            if (isOpponent) {
+              foundOpp = true;
+              oppR = nr;
+              oppC = nc;
+            } else {
+              break; // own piece blocks
+            }
+          } else if (foundOpp) {
+            // Empty square after opponent — valid capture
+            captures.push({
+              from: [row, col],
+              to: [nr, nc],
+              captures: [[oppR, oppC]],
+              _multi: [[row, col], [nr, nc]],
+            });
+          }
+          nr += dr;
+          nc += dc;
         }
       }
     }
@@ -174,25 +203,39 @@ function generateLegalMoves(board, turn) {
     const col = i % 8;
     const isKing = val === myKing;
 
-    for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
-      // Pawns can only move forward
-      // White starts rows 0-2, forward = increasing row (toward row 7)
-      // Black starts rows 5-7, forward = decreasing row (toward row 0)
-      if (!isKing) {
-        if (isWhiteTurn && dr < 0) continue; // white skips upward
-        if (!isWhiteTurn && dr > 0) continue; // black skips downward
+    if (!isKing) {
+      // Pawn: single-step forward
+      for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+        if (isWhiteTurn && dr < 0) continue;
+        if (!isWhiteTurn && dr > 0) continue;
+
+        const newR = row + dr, newC = col + dc;
+        if (newR < 0 || newR > 7 || newC < 0 || newC > 7) continue;
+
+        const newIdx = newR * 8 + newC;
+        if (board[newIdx] === 0) {
+          moves.push({
+            from: [row, col],
+            to: [newR, newC],
+            captures: [],
+          });
+        }
       }
-
-      const newR = row + dr, newC = col + dc;
-      if (newR < 0 || newR > 7 || newC < 0 || newC > 7) continue;
-
-      const newIdx = newR * 8 + newC;
-      if (board[newIdx] === 0) {
-        moves.push({
-          from: [row, col],
-          to: [newR, newC],
-          captures: [],
-        });
+    } else {
+      // King: sliding — move any distance along empty diagonal
+      for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+        let nr = row + dr, nc = col + dc;
+        while (nr >= 0 && nr <= 7 && nc >= 0 && nc <= 7) {
+          const newIdx = nr * 8 + nc;
+          if (board[newIdx] !== 0) break; // blocked
+          moves.push({
+            from: [row, col],
+            to: [nr, nc],
+            captures: [],
+          });
+          nr += dr;
+          nc += dc;
+        }
       }
     }
   }
@@ -213,38 +256,72 @@ function _extendCapture(board, cap, turn, result) {
 
   let foundMore = false;
 
-  for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
-    // Pawns can only capture forward
-    // White: forward = increasing row (toward row 7); Black: forward = decreasing row (toward row 0)
-    if (!isKing) {
-      if (isWhiteTurn && dr < 0) continue; // white skips upward
-      if (!isWhiteTurn && dr > 0) continue; // black skips downward
-    }
+  if (!isKing) {
+    // Pawn: single-step captures only
+    for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+      if (isWhiteTurn && dr < 0) continue;
+      if (!isWhiteTurn && dr > 0) continue;
 
-    const adjR = landR + dr, adjC = landC + dc;
-    const jumpR = landR + dr * 2, jumpC = landC + dc * 2;
+      const adjR = landR + dr, adjC = landC + dc;
+      const jumpR = landR + dr * 2, jumpC = landC + dc * 2;
 
-    if (adjR < 0 || adjR > 7 || adjC < 0 || adjC > 7) continue;
-    if (jumpR < 0 || jumpR > 7 || jumpC < 0 || jumpC > 7) continue;
+      if (adjR < 0 || adjR > 7 || adjC < 0 || adjC > 7) continue;
+      if (jumpR < 0 || jumpR > 7 || jumpC < 0 || jumpC > 7) continue;
 
-    const adjIdx = adjR * 8 + adjC;
-    const jumpIdx = jumpR * 8 + jumpC;
-    const adjVal = capturedBoard[adjIdx];
+      const adjIdx = adjR * 8 + adjC;
+      const jumpIdx = jumpR * 8 + jumpC;
+      const adjVal = capturedBoard[adjIdx];
 
-    if (adjVal && adjVal !== 0) {
-      const isOpponent = isWhiteTurn ? (adjVal === 3 || adjVal === 4) : (adjVal === 1 || adjVal === 2);
-      if (isOpponent && capturedBoard[jumpIdx] === 0) {
-        // Check we haven't already captured this piece
-        const alreadyCaptured = cap.captures.some(([cr, cc]) => cr === adjR && cc === adjC);
-        if (!alreadyCaptured) {
-          foundMore = true;
-          const newCap = {
-            from: cap.from,
-            to: [jumpR, jumpC],
-            captures: [...cap.captures, [adjR, adjC]],
-          };
-          _extendCapture(capturedBoard, newCap, turn, result);
+      if (adjVal && adjVal !== 0) {
+        const isOpponent = isWhiteTurn ? (adjVal === 3 || adjVal === 4) : (adjVal === 1 || adjVal === 2);
+        if (isOpponent && capturedBoard[jumpIdx] === 0) {
+          const alreadyCaptured = cap.captures.some(([cr, cc]) => cr === adjR && cc === adjC);
+          if (!alreadyCaptured) {
+            foundMore = true;
+            const newCap = {
+              from: cap.from,
+              to: [jumpR, jumpC],
+              captures: [...cap.captures, [adjR, adjC]],
+            };
+            _extendCapture(capturedBoard, newCap, turn, result);
+          }
         }
+      }
+    }
+  } else {
+    // King: sliding captures — find opponent along diagonal, land on first empty after
+    for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+      let nr = landR + dr, nc = landC + dc;
+      let foundOpp = false;
+      let oppR = -1, oppC = -1;
+
+      while (nr >= 0 && nr <= 7 && nc >= 0 && nc <= 7) {
+        const idx = nr * 8 + nc;
+        if (capturedBoard[idx] !== 0) {
+          if (foundOpp) break;
+          const isOpponent = isWhiteTurn ? (capturedBoard[idx] === 3 || capturedBoard[idx] === 4) : (capturedBoard[idx] === 1 || capturedBoard[idx] === 2);
+          if (isOpponent) {
+            foundOpp = true;
+            oppR = nr;
+            oppC = nc;
+          } else {
+            break; // own piece blocks
+          }
+        } else if (foundOpp) {
+          // Empty square after opponent — valid sliding capture
+          const alreadyCaptured = cap.captures.some(([cr, cc]) => cr === oppR && cc === oppC);
+          if (!alreadyCaptured) {
+            foundMore = true;
+            const newCap = {
+              from: cap.from,
+              to: [nr, nc],
+              captures: [...cap.captures, [oppR, oppC]],
+            };
+            _extendCapture(capturedBoard, newCap, turn, result);
+          }
+        }
+        nr += dr;
+        nc += dc;
       }
     }
   }
