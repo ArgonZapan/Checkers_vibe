@@ -66,6 +66,7 @@ import { runBoardToCppValidationTests } from './boardToCppValidation.test.js';
 import { runLegalMovesMemoizationTests } from './legalMovesMemoization.test.js';
 import { runEpsilonValidationResilienceTests } from './epsilonValidationResilience.test.js';
 import { runCSPResilienceTests } from './cspResilience.test.js';
+import { runResilienceHunterSubAlpha003Tests } from './resilience-hunter-sub-alpha-003.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -130,6 +131,7 @@ const suites = [
   { name: 'legalMovesMemoization', run: runLegalMovesMemoizationTests },
   { name: 'epsilonValidationResilience', run: runEpsilonValidationResilienceTests },
   { name: 'cspResilience', run: runCSPResilienceTests },
+  { name: 'resilienceHunterSubAlpha003', run: runResilienceHunterSubAlpha003Tests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
