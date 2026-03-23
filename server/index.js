@@ -17,6 +17,7 @@ const MODEL_DIR = path.join(__dirname, '..', 'data', 'model');
 const BUFFER_FILE = path.join(__dirname, '..', 'data', 'buffer.json');
 
 const app = express();
+app.disable('X-Powered-By'); // SEC-001: prevent framework disclosure
 const httpServer = createServer(app);
 const io = new SocketIO(httpServer, {
   cors: { origin: CONFIG.server.corsOrigin || 'http://localhost:3000' }
@@ -560,7 +561,10 @@ io.on('connection', async (socket) => {
         return;
       }
 
-      console.log(`[WS] setParams from ${socket.id}:`, newParams);
+      console.log(`[WS] setParams from ${socket.id}:`, {
+        speedMode: newParams.speedMode,
+        aiMoveDelayMs: newParams.aiMoveDelayMs,
+      });
       const wasRunning = trainer.running;
 
       // Handle speed settings (applied to CONFIG, no model reset needed)
