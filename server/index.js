@@ -403,23 +403,25 @@ io.on('connection', async (socket) => {
       const wasRunning = trainer.running;
       // 1. Stop self-play
       trainer.stop();
-      // 2. Update params
+      // 2. Increment params version to invalidate in-flight _playGame (#133)
+      trainer.paramsVersion++;
+      // 3. Update params
       trainer.setModelParams(newParams);
-      // 3. Create fresh models with new architecture
+      // 4. Create fresh models with new architecture
       trainer.modelWhite = createModel({ ...trainer.modelParams });
       trainer.modelBlack = createModel({ ...trainer.modelParams });
-      // 4. Clear buffer
+      // 5. Clear buffer
       trainer.buffer.clear();
-      // 5. Reset stats
+      // 6. Reset stats
       trainer.stats.gamesPlayed = 0;
       trainer.stats.whiteWins = 0;
       trainer.stats.blackWins = 0;
       trainer.stats.draws = 0;
       trainer.stats.lastLoss = null;
-      // 6. Broadcast updated params
+      // 7. Broadcast updated params
       io.emit('paramsUpdate', { modelParams: { ...trainer.modelParams } });
       io.emit('selfPlayStatus', { active: false, gameNumber: 0, stats: trainer.stats });
-      // 7. Restart if was running
+      // 8. Restart if was running
       if (wasRunning) {
         await trainer.start();
       }
