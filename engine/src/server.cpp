@@ -93,10 +93,10 @@ static json moveToJson(const Move& m) {
     j["from"] = json::array({m.from.row, m.from.col});
     j["to"]   = json::array({m.to.row,   m.to.col});
     json caps = json::array();
-    for (auto& c : m.captures) caps.push_back(json::array({c.row, c.col}));
+    for (int i = 0; i < m.numCaptures; i++) caps.push_back(json::array({m.captures[i].row, m.captures[i].col}));
     j["captures"] = caps;
     json pathArr = json::array();
-    for (auto& s : m.path) pathArr.push_back(json::array({s.row, s.col}));
+    for (int i = 0; i < m.numPath; i++) pathArr.push_back(json::array({m.path[i].row, m.path[i].col}));
     j["path"] = pathArr;
     return j;
 }
@@ -189,9 +189,9 @@ void registerRoutes(httplib::Server& svr) {
                     // If captures provided, match them exactly
                     if (body.contains("captures") && body["captures"].is_array()) {
                         auto caps = body["captures"];
-                        if (m.captures.size() != caps.size()) continue;
+                        if ((int)m.numCaptures != (int)caps.size()) continue;
                         bool match = true;
-                        for (size_t i = 0; i < m.captures.size(); i++) {
+                        for (int i = 0; i < m.numCaptures; i++) {
                             if (m.captures[i].row != caps[i][0].get<int>() ||
                                 m.captures[i].col != caps[i][1].get<int>()) {
                                 match = false;
@@ -216,10 +216,10 @@ void registerRoutes(httplib::Server& svr) {
             // Return game state with captures and path from the executed move
             json response = gameStateJson(engine);
             json caps = json::array();
-            for (auto& c : chosen.captures) caps.push_back(json::array({c.row, c.col}));
+            for (int i = 0; i < chosen.numCaptures; i++) caps.push_back(json::array({chosen.captures[i].row, chosen.captures[i].col}));
             response["captures"] = caps;
             json pathArr = json::array();
-            for (auto& s : chosen.path) pathArr.push_back(json::array({s.row, s.col}));
+            for (int i = 0; i < chosen.numPath; i++) pathArr.push_back(json::array({chosen.path[i].row, chosen.path[i].col}));
             response["path"] = pathArr;
             res.set_content(response.dump(), "application/json");
         } catch (json::parse_error& e) {

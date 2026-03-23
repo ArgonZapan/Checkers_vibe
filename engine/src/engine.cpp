@@ -1,7 +1,17 @@
 #include "engine.h"
 #include <algorithm>
+#include <cstring>
 
 namespace checkers {
+
+// Helper: compare two Move captures arrays
+static bool capturesEqual(const Move& a, const Move& b) {
+    if (a.numCaptures != b.numCaptures) return false;
+    for (int i = 0; i < a.numCaptures; i++) {
+        if (a.captures[i] != b.captures[i]) return false;
+    }
+    return true;
+}
 
 Engine::Engine() {
     reset();
@@ -34,7 +44,7 @@ bool Engine::makeMove(Move& move) {
     auto legalMoves = getLegalMoves();
     bool found = false;
     for (auto& m : legalMoves) {
-        if (m.from == move.from && m.to == move.to && m.captures == move.captures) {
+        if (m.from == move.from && m.to == move.to && capturesEqual(m, move)) {
             found = true;
             break;
         }
@@ -44,7 +54,7 @@ bool Engine::makeMove(Move& move) {
     // Wykonaj
     board_.makeMove(move);
     history_.push_back(move);
-    if (move.captures.empty()) movesWithoutCapture_++; else movesWithoutCapture_ = 0;
+    if (move.numCaptures == 0) movesWithoutCapture_++; else movesWithoutCapture_ = 0;
 
     return true;
 }
@@ -52,13 +62,13 @@ bool Engine::makeMove(Move& move) {
 void Engine::makeMoveUnchecked(Move& move) {
     board_.makeMove(move);
     history_.push_back(move);
-    if (move.captures.empty()) movesWithoutCapture_++; else movesWithoutCapture_ = 0;
+    if (move.numCaptures == 0) movesWithoutCapture_++; else movesWithoutCapture_ = 0;
 }
 
 bool Engine::isLegal(const Move& move) const {
     auto legalMoves = getLegalMoves();
     for (auto& m : legalMoves) {
-        if (m.from == move.from && m.to == move.to && m.captures == move.captures) {
+        if (m.from == move.from && m.to == move.to && capturesEqual(m, move)) {
             return true;
         }
     }

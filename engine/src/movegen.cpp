@@ -18,16 +18,18 @@ std::vector<Move> MoveGenerator::generateAll(const Board& board, Color color) {
     Bitboard pawns = (color == WHITE) ? board.whitePieces : board.blackPieces;
     Bitboard kings = (color == WHITE) ? board.whiteKings : board.blackKings;
 
-    for (int row = 0; row < 8; row++) {
-        for (int col = 0; col < 8; col++) {
-            if (!(myPieces & squareToMask(row, col))) continue;
-            if (pawns & squareToMask(row, col)) {
-                auto m = generatePawnMoves(board, row, col, color);
-                moves.insert(moves.end(), m.begin(), m.end());
-            } else {
-                auto m = generateKingMoves(board, row, col, color);
-                moves.insert(moves.end(), m.begin(), m.end());
-            }
+    Bitboard remaining = myPieces;
+    while (remaining) {
+        int sq = __builtin_ctzll(remaining);
+        int row = sq / 8;
+        int col = sq % 8;
+        remaining &= remaining - 1;
+        if (pawns & squareToMask(row, col)) {
+            auto m = generatePawnMoves(board, row, col, color);
+            moves.insert(moves.end(), m.begin(), m.end());
+        } else {
+            auto m = generateKingMoves(board, row, col, color);
+            moves.insert(moves.end(), m.begin(), m.end());
         }
     }
 
@@ -40,18 +42,20 @@ std::vector<Move> MoveGenerator::generateCaptures(const Board& board, Color colo
     Bitboard pawns = (color == WHITE) ? board.whitePieces : board.blackPieces;
     Bitboard kings = (color == WHITE) ? board.whiteKings : board.blackKings;
 
-    for (int row = 0; row < 8; row++) {
-        for (int col = 0; col < 8; col++) {
-            if (!(myPieces & squareToMask(row, col))) continue;
-            // Fresh copy per piece — multiCapture mutates board in place
-            Board temp = board;
-            if (pawns & squareToMask(row, col)) {
-                auto caps = generatePawnCaptures(temp, row, col, color);
-                allCaptures.insert(allCaptures.end(), caps.begin(), caps.end());
-            } else {
-                auto caps = generateKingCaptures(temp, row, col, color);
-                allCaptures.insert(allCaptures.end(), caps.begin(), caps.end());
-            }
+    Bitboard remaining = myPieces;
+    while (remaining) {
+        int sq = __builtin_ctzll(remaining);
+        int row = sq / 8;
+        int col = sq % 8;
+        remaining &= remaining - 1;
+        // Fresh copy per piece — multiCapture mutates board in place
+        Board temp = board;
+        if (pawns & squareToMask(row, col)) {
+            auto caps = generatePawnCaptures(temp, row, col, color);
+            allCaptures.insert(allCaptures.end(), caps.begin(), caps.end());
+        } else {
+            auto caps = generateKingCaptures(temp, row, col, color);
+            allCaptures.insert(allCaptures.end(), caps.begin(), caps.end());
         }
     }
 
@@ -72,27 +76,29 @@ bool MoveGenerator::hasAnyMove(const Board& board, Color color) {
     Bitboard pawns = (color == WHITE) ? board.whitePieces : board.blackPieces;
     Bitboard kings = (color == WHITE) ? board.whiteKings : board.blackKings;
 
-    for (int row = 0; row < 8; row++) {
-        for (int col = 0; col < 8; col++) {
-            if (!(myPieces & squareToMask(row, col))) continue;
-            if (pawns & squareToMask(row, col)) {
-                // Check one pawn move
-                auto& dirs = (color == WHITE) ? WHITE_DIRS : BLACK_DIRS;
-                for (auto& d : dirs) {
-                    int nr = row + d[0];
-                    int nc = col + d[1];
-                    if (Board::inBounds(nr, nc) && board.isEmpty(nr, nc)) {
-                        return true;
-                    }
+    Bitboard remaining = myPieces;
+    while (remaining) {
+        int sq = __builtin_ctzll(remaining);
+        int row = sq / 8;
+        int col = sq % 8;
+        remaining &= remaining - 1;
+        if (pawns & squareToMask(row, col)) {
+            // Check one pawn move
+            auto& dirs = (color == WHITE) ? WHITE_DIRS : BLACK_DIRS;
+            for (auto& d : dirs) {
+                int nr = row + d[0];
+                int nc = col + d[1];
+                if (Board::inBounds(nr, nc) && board.isEmpty(nr, nc)) {
+                    return true;
                 }
-            } else {
-                // Check one king move
-                for (auto& d : ALL_DIRS) {
-                    int nr = row + d[0];
-                    int nc = col + d[1];
-                    while (Board::inBounds(nr, nc) && board.isEmpty(nr, nc)) {
-                        return true;
-                    }
+            }
+        } else {
+            // Check one king move
+            for (auto& d : ALL_DIRS) {
+                int nr = row + d[0];
+                int nc = col + d[1];
+                while (Board::inBounds(nr, nc) && board.isEmpty(nr, nc)) {
+                    return true;
                 }
             }
         }
@@ -112,7 +118,9 @@ std::vector<Move> MoveGenerator::generatePawnMoves(const Board& board, int row, 
             Move m;
             m.from = Square(row, col);
             m.to = Square(nr, nc);
-            m.path = {Square(row, col), Square(nr, nc)};
+            m.path[0] = Square(row, col);
+            m.path[1] = Square(nr, nc);
+            m.numPath = 2;
             moves.push_back(m);
         }
     }
@@ -302,8 +310,12 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
         Move m;
         m.from = Square(origR, origC);
         m.to = Square(curR, curC);
-        m.captures = captures;
-        m.path = path;
+        for (size_t i = 0; i < captures.size() && i < Move::MAX_CAPTURES; i++)
+            m.captures[i] = captures[i];
+        m.numCaptures = static_cast<int>(captures.size());
+        for (size_t i = 0; i < path.size() && i < Move::MAX_PATH; i++)
+            m.path[i] = path[i];
+        m.numPath = static_cast<int>(path.size());
         result.push_back(m);
     }
 }

@@ -1,7 +1,6 @@
 #pragma once
 #include <cstdint>
 #include <string>
-#include <vector>
 
 namespace checkers {
 
@@ -27,11 +26,14 @@ struct Move {
 
     Square from;
     Square to;
-    std::vector<Square> captures; // zbite pionki (puste = zwykły ruch)
+    Square captures[MAX_CAPTURES]; // zbite pionki
+    int numCaptures = 0;
     bool wasKing = false;          // czy ruszający się pionek był damką PRZED ruchem
-    std::vector<bool> capturedKings; // czy zbite pionki były damkami
-    std::vector<Square> path;      // pozycje pośrednie przy wielobiciu (łącznie z from i to)
-    bool isCapture() const { return !captures.empty(); }
+    bool capturedKings[MAX_CAPTURES]; // czy zbite pionki były damkami
+    int numCapturedKings = 0;
+    Square path[MAX_PATH];         // pozycje pośrednie przy wielobiciu (łącznie z from i to)
+    int numPath = 0;
+    bool isCapture() const { return numCaptures > 0; }
 };
 
 // Bitboard: 64-bit, bit 0 = pole a1, bit 63 = pole h8
