@@ -33,7 +33,8 @@ export function boardFromCpp(cppBoard) {
     }
   }
   return board2D.map(row => row.map(val => {
-    if (val === 0) return null;
+    if (typeof val !== 'number' || val === 0) return null;
+    if (val < 1 || val > 4) return null; // guard against unexpected values
     const isWhite = val === 1 || val === 2;
     const isKing = val === 2 || val === 4;
     return { color: isWhite ? 'white' : 'black', king: isKing };
@@ -50,10 +51,19 @@ export function boardToCpp(board) {
     console.warn('[boardToCpp] Invalid input:', typeof board);
     return new Array(64).fill(0);
   }
-  return board.flat().map(p => {
-    if (!p || typeof p !== 'object') return 0;
-    if (p.color === 'white') return p.king ? 2 : 1;
-    if (p.color === 'black') return p.king ? 4 : 3;
+  const flat = board.flat();
+  // Guard against oversized arrays (DoS via memory)
+  if (flat.length > 64) {
+    console.warn('[boardToCpp] Board array too large:', flat.length, '— truncating to 64');
+    flat.length = 64;
+  }
+  return flat.map(p => {
+    if (!p || typeof p !== 'object' || Array.isArray(p)) return 0;
+    // Only read expected properties (prevent prototype pollution)
+    const color = p.color;
+    const king = p.king;
+    if (color === 'white') return king ? 2 : 1;
+    if (color === 'black') return king ? 4 : 3;
     return 0;
   });
 }

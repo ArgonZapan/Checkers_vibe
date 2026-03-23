@@ -25,7 +25,7 @@ export default class ErrorBoundary extends React.Component {
           <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>💥 Ups!</h1>
           <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Coś poszło nie tak.</p>
           <p style={{ color: '#e94560', fontFamily: 'monospace', marginBottom: '1.5rem', maxWidth: '600px', wordBreak: 'break-word' }}>
-            {this.state.error?.message}
+            Wystąpił nieoczekiwany błąd. Spróbuj odświeżyć stronę.
           </p>
           <button
             onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}

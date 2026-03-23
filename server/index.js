@@ -22,6 +22,55 @@ const io = new SocketIO(httpServer, {
   cors: { origin: CONFIG.server.corsOrigin || 'http://localhost:3000' }
 });
 
+// ── Security Headers (LEAK-001) ─────────────────────────────────────────────
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '0');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
+// ── Rate Limiting (LEAK-002) ────────────────────────────────────────────────
+const _rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 min
+const RATE_LIMIT_MAX = 120; // 120 req/min per IP
+
+// Periodic cleanup of expired rate limit entries to prevent unbounded memory growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of _rateLimitMap) {
+    if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+      _rateLimitMap.delete(ip);
+    }
+  }
+}, RATE_LIMIT_WINDOW_MS);
+
+app.use((req, res, next) => {
+  const ip = req.ip || req.socket.remoteAddress;
+  const now = Date.now();
+  let entry = _rateLimitMap.get(ip);
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    entry = { windowStart: now, count: 0 };
+    _rateLimitMap.set(ip, entry);
+  }
+  entry.count++;
+  if (entry.count > RATE_LIMIT_MAX) {
+    return res.status(429).json({ error: 'Too many requests' });
+  }
+  next();
+});
+// Periodic cleanup of expired rate-limit entries to prevent memory leak
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of _rateLimitMap) {
+    if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+      _rateLimitMap.delete(ip);
+    }
+  }
+}, RATE_LIMIT_WINDOW_MS);
+
 // ── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }));
 
@@ -55,6 +104,11 @@ app.post('/api/ai/predict', async (req, res) => {
     if (!Array.isArray(board) || board.length !== 64) {
       return res.status(400).json({ error: 'board must be an array of 64 elements' });
     }
+    for (let i = 0; i < board.length; i++) {
+      if (typeof board[i] !== 'number' || !Number.isInteger(board[i]) || board[i] < 0 || board[i] > 4) {
+        return res.status(400).json({ error: `Invalid board element at index ${i}: expected integer 0-4` });
+      }
+    }
     const model = turn === 1 ? trainer.modelWhite : trainer.modelBlack;
     if (!model) return res.status(503).json({ error: 'Model not initialized' });
 
@@ -74,6 +128,19 @@ app.post('/api/ai/train', async (req, res) => {
     }
     if (batch.length > 10000) {
       return res.status(400).json({ error: 'Batch too large — max 10000 samples' });
+    }
+    // Validate batch structure (LEAK-007) — validate ALL samples
+    for (let i = 0; i < batch.length; i++) {
+      const s = batch[i];
+      if (!s || typeof s !== 'object') {
+        return res.status(400).json({ error: `Invalid sample at index ${i}: expected object` });
+      }
+      if (!Array.isArray(s.board)) {
+        return res.status(400).json({ error: `Invalid sample at index ${i}: missing board array` });
+      }
+      if (s.turn !== 1 && s.turn !== -1) {
+        return res.status(400).json({ error: `Invalid sample at index ${i}: turn must be 1 or -1` });
+      }
     }
     // Filter batch by turn — each model should only train on its own samples
     const batchWhite = batch.filter(s => s.turn === 1);
@@ -165,7 +232,7 @@ const turnToColor = (turn) => {
   if (typeof turn === 'string') return turn; // already a color string (C++ engine format)
   if (turn === 1) return 'white';
   if (turn === -1) return 'black';
-  return 'white'; // default fallback (e.g., turn === 0 for draw)
+  return 'white'; // default fallback (e.g., turn === 0 for draw — game over prevents further moves)
 };
 
 // Helper: fetch JSON from C++ backend with timeout
@@ -287,6 +354,16 @@ async function handleMove(socket, { from, to, captures }) {
   }
 }
 
+// Per-socket throttle helper (LEAK-012)
+function wsThrottle(socket, key, minIntervalMs) {
+  const now = Date.now();
+  const last = socket._throttle?.[key] || 0;
+  if (now - last < minIntervalMs) return false;
+  if (!socket._throttle) socket._throttle = {};
+  socket._throttle[key] = now;
+  return true;
+}
+
 io.on('connection', async (socket) => {
   console.log(`[WS] Client connected: ${socket.id}`);
   socket.gameMode = 'pvai'; // default mode
@@ -360,6 +437,8 @@ io.on('connection', async (socket) => {
 
   // ── Player move (PvAI / PvP) — serialized per-socket to prevent races ───
   socket.on('move', (data) => {
+    // Throttle: max 1 move per 50ms per socket (prevents spam)
+    if (!wsThrottle(socket, 'move', 50)) return;
     // Validate move coordinates
     const { from, to, captures } = data || {};
     const isValidCoord = (c) =>
@@ -377,6 +456,15 @@ io.on('connection', async (socket) => {
     if (captures != null && !Array.isArray(captures)) {
       socket.emit('error', { message: 'Invalid "captures" — expected an array' });
       return;
+    }
+    // Validate captures elements are valid coordinates (LEAK-010)
+    if (Array.isArray(captures)) {
+      for (let i = 0; i < captures.length; i++) {
+        if (!isValidCoord(captures[i])) {
+          socket.emit('error', { message: `Invalid capture at index ${i} — expected [row, col] with values 0-7` });
+          return;
+        }
+      }
     }
 
     socket._moveQueue = (socket._moveQueue || Promise.resolve())
@@ -411,7 +499,30 @@ io.on('connection', async (socket) => {
 
   // ── Model params ──────────────────────────────────────────────────────
   socket.on('setParams', async (newParams) => {
+    // Throttle: max 1 setParams per 1s per socket
+    if (!wsThrottle(socket, 'setParams', 1000)) return;
     try {
+      // Type-check input (LEAK-005)
+      if (!newParams || typeof newParams !== 'object' || Array.isArray(newParams)) {
+        socket.emit('error', { message: 'Invalid params — expected object' });
+        return;
+      }
+
+      // Whitelist allowed keys to prevent prototype pollution (LEAK-011)
+      const ALLOWED_PARAMS = new Set([
+        'layers', 'neurons', 'activation', 'lr', 'batchSize', 'dropout',
+        'minEpsilon', 'epsilonDecay', 'gamma', 'bufferSize', 'epochs',
+        'rewardCapture', 'rewardLosePiece', 'rewardPromotion', 'rewardWin', 'rewardLose',
+        'speedMode', 'aiMoveDelayMs', // speed settings (applied to CONFIG, not model)
+      ]);
+      const filtered = {};
+      for (const key of Object.keys(newParams)) {
+        if (ALLOWED_PARAMS.has(key)) {
+          filtered[key] = newParams[key];
+        }
+      }
+      newParams = filtered;
+
       // Auth: only allow in aivai mode — PvAI/PvP players must not change the model
       if (socket.gameMode !== 'aivai') {
         console.warn(`[WS] setParams rejected — mode is '${socket.gameMode}', not 'aivai'`);
@@ -441,6 +552,19 @@ io.on('connection', async (socket) => {
 
       console.log(`[WS] setParams from ${socket.id}:`, newParams);
       const wasRunning = trainer.running;
+
+      // Handle speed settings (applied to CONFIG, no model reset needed)
+      if (newParams.speedMode != null) {
+        if (newParams.speedMode === 'fast' || newParams.speedMode === 'normal') {
+          CONFIG.server.speedMode = newParams.speedMode;
+        }
+      }
+      if (newParams.aiMoveDelayMs != null && typeof newParams.aiMoveDelayMs === 'number') {
+        const clamped = Math.max(0, Math.min(newParams.aiMoveDelayMs, 10000));
+        CONFIG.server.aiMoveDelayMs = clamped;
+        if (clamped > 0) CONFIG.server.normalModeDelayMs = clamped;
+      }
+
       // 1. Stop self-play
       trainer.stop();
       // 2. Increment params version to invalidate in-flight _playGame (#133)
