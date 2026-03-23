@@ -192,18 +192,26 @@ export function buildInputArray(boardArray, turn) {
 
 // ── Canonical Policy Index ──────────────────────────────────────────────────
 // Compute canonical policy index (0-47) from move geometry.
+// Convert [row,col] array or scalar 0-63 to scalar board index
+function toScalar(idx) {
+  if (Array.isArray(idx)) return idx[0] * 8 + idx[1];
+  return idx;
+}
+
 // 32 dark squares × 4 directions (NE, NW, SE, SW) = 128 max, but
 // only forward directions are valid for pawns → 48 effective slots.
-// fromSquare: 0-63 board index, toSquare: 0-63 board index
+// fromSquare: 0-63 board index or [row,col] array; toSquare: same
 const DIRECTION_MAP = { '-1,1': 0, '-1,-1': 1, '1,1': 2, '1,-1': 3 };
 
 export function computePolicyIndex(fromSquare, toSquare) {
-  const fromRow = Math.floor(fromSquare / 8);
-  const fromCol = fromSquare % 8;
+  const from = toScalar(fromSquare);
+  const to = toScalar(toSquare);
+  const fromRow = Math.floor(from / 8);
+  const fromCol = from % 8;
   // Dark square index: 0-31 (only dark squares are playable in checkers)
   const darkFrom = Math.floor((fromRow * 8 + fromCol) / 2);
-  const toRow = Math.floor(toSquare / 8);
-  const toCol = toSquare % 8;
+  const toRow = Math.floor(to / 8);
+  const toCol = to % 8;
   const dr = toRow - fromRow;
   const dc = toCol - fromCol;
   const dirKey = `${Math.sign(dr)},${Math.sign(dc)}`;
