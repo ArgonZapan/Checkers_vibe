@@ -47,10 +47,11 @@ PieceType Board::getPiece(int row, int col) const {
 }
 
 Color Board::getColor(int row, int col) const {
-    if (!inBounds(row, col)) return WHITE;
+    if (!inBounds(row, col)) return NO_COLOR;
     Bitboard mask = squareToMask(row, col);
     if ((whitePieces | whiteKings) & mask) return WHITE;
-    return BLACK;
+    if ((blackPieces | blackKings) & mask) return BLACK;
+    return NO_COLOR;
 }
 
 bool Board::isEmpty(int row, int col) const {

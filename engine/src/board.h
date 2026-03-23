@@ -6,7 +6,7 @@
 namespace checkers {
 
 // Kolory
-enum Color { WHITE = 0, BLACK = 1 };
+enum Color { NO_COLOR = -1, WHITE = 0, BLACK = 1 };
 
 // Typ pionka
 enum PieceType { NONE = 0, PAWN = 1, KING = 2 };

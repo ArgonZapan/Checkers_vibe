@@ -111,6 +111,7 @@ void registerRoutes(httplib::Server& svr) {
 
     // POST /api/game/start?first=white|black
     svr.Post("/api/game/start", [](const httplib::Request& req, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(engineMutex);
         engine.reset();
         // Alternate who starts (odd games = black first)
         if (gamesPlayed % 2 == 1) {
@@ -122,11 +123,13 @@ void registerRoutes(httplib::Server& svr) {
 
     // GET /api/game/state
     svr.Get("/api/game/state", [](const httplib::Request&, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(engineMutex);
         res.set_content(gameStateJson(engine).dump(), "application/json");
     });
 
     // GET /api/legal-moves
     svr.Get("/api/legal-moves", [](const httplib::Request&, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(engineMutex);
         auto moves = engine.getLegalMoves();
         json arr = json::array();
         for (auto& m : moves) arr.push_back(moveToJson(m));
@@ -137,6 +140,7 @@ void registerRoutes(httplib::Server& svr) {
 
     // POST /api/move   body: {"from":[r,c],"to":[r,c],"captures":[[r,c],...]}
     svr.Post("/api/move", [](const httplib::Request& req, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(engineMutex);
         try {
             auto body = json::parse(req.body);
             int fr = body["from"][0].get<int>();

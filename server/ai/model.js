@@ -147,6 +147,49 @@ export function boardToTensor(boardArray, turn) {
   return tf.tensor2d([Array.from(input)]);
 }
 
+// ── Build input array without creating a tensor ─────────────────────────────
+export function buildInputArray(boardArray, turn) {
+  // Same encoding as boardToTensor() but returns Float32Array(257) — no tensor created
+  if (!Array.isArray(boardArray)) {
+    throw new Error(`buildInputArray: expected array, got ${typeof boardArray}`);
+  }
+  let board = boardArray;
+  if (board.length === 64 && !Array.isArray(board[0])) {
+    const wrapped = [];
+    for (let r = 0; r < 8; r++) {
+      wrapped.push(board.slice(r * 8, r * 8 + 8));
+    }
+    board = wrapped;
+  }
+  const flat = board.flat();
+  if (flat.length !== 64) {
+    throw new Error(`buildInputArray: expected 64 cells, got ${flat.length}`);
+  }
+
+  const input = new Float32Array(257);
+  for (let i = 0; i < 64; i++) {
+    const val = flat[i];
+    const base = i * 4;
+    if (val === 0) {
+      input[base] = 1;
+    } else {
+      const absVal = Math.abs(val);
+      const isWhite = val > 0 && (absVal === 1 || absVal === 2);
+      const isKing = absVal === 2 || absVal === 4;
+      if (isWhite) {
+        input[base + 1] = 1;
+      } else {
+        input[base + 2] = 1;
+      }
+      if (isKing) {
+        input[base + 3] = 1;
+      }
+    }
+  }
+  input[256] = turn;
+  return input;
+}
+
 // ── Predict ─────────────────────────────────────────────────────────────────
 export async function predict(model, boardArray, legalMoves, turn = 1) {
   const tensor = boardToTensor(boardArray, turn);
@@ -235,10 +278,7 @@ export async function train(model, batch, epochs = 5) {
       const nextBoards = [];
       for (const s of withNext) {
         const nextFlat = Array.isArray(s.nextState) ? s.nextState.flat() : s.nextState;
-        const t = boardToTensor(nextFlat, -s.turn); // next turn is opponent's
-        const data = await t.data();
-        nextBoards.push(Array.from(data));
-        t.dispose();
+        nextBoards.push(Array.from(buildInputArray(nextFlat, -s.turn)));
       }
 
       const nextTensor = tf.tensor2d(nextBoards);
@@ -261,9 +301,7 @@ export async function train(model, batch, epochs = 5) {
   for (let i = 0; i < batch.length; i++) {
     const sample = batch[i];
     const { board, legalMoves, chosenMove, result, turn = 1 } = sample;
-    const tensor = boardToTensor(board, turn);
-    const data = await tensor.data();
-    boards.push(Array.from(data));
+    boards.push(Array.from(buildInputArray(board, turn)));
 
     // Policy target: one-hot on chosen move
     const policyTarget = new Float32Array(48).fill(0);
@@ -285,8 +323,6 @@ export async function train(model, batch, epochs = 5) {
       valueTarget = result;
     }
     valueTargets.push([valueTarget]);
-
-    tensor.dispose();
   }
 
   const xTensor = tf.tensor2d(boards);
