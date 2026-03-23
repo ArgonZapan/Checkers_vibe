@@ -346,7 +346,7 @@ function Board({
   }, [board, selected, legalMoves, lastMove, animStep, animBoard, onCellClick]);
 
   // Moving piece info for multi-capture animation overlay
-  const movingPieceInfo = (animStep >= 0 && animBoard && path) ? (() => {
+  const movingPieceInfo = (animStep >= 0 && animBoard && path && animStep < path.length) ? (() => {
     const prevBoard = animPrevBoardRef.current;
     if (!prevBoard) return null;
     const mp = prevBoard[path[0][0]]?.[path[0][1]];
