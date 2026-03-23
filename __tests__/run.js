@@ -12,6 +12,7 @@ import { runDrawDetectionTests } from './drawDetection.test.js';
 import { runTrainerPolicyFixTests } from './trainerPolicyFix.test.js';
 import { runTrainerLogicTests } from './trainerLogic.test.js';
 import { runBoardSetLookupTests } from './boardSetLookup.test.js';
+import { runBoardConvertInvalidTests } from './boardConvertInvalid.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -22,6 +23,7 @@ const suites = [
   { name: 'trainerPolicyFix',    run: runTrainerPolicyFixTests },
   { name: 'trainerLogic',        run: runTrainerLogicTests },
   { name: 'boardSetLookup',      run: runBoardSetLookupTests },
+  { name: 'boardConvertInvalid', run: runBoardConvertInvalidTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
