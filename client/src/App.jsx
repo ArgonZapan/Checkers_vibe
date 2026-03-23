@@ -37,6 +37,10 @@ export default function App() {
   const [moveHistory, setMoveHistory] = useState([]);
 
   const handleSpeed = (ms) => {
+    if (modeRef.current !== 'aivai') {
+      showToast('⚠️ Prędkość dostępna tylko w trybie AI vs AI');
+      return;
+    }
     setSpeed(ms);
     if (socketRef.current) {
       socketRef.current.emit('setSpeed', ms);
@@ -67,11 +71,13 @@ export default function App() {
   const [modelParams, setModelParams] = useState({ ...DEFAULT_MODEL_PARAMS });
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
+  const pendingModelParamsToast = useRef(null); // BUG-V3-002: delayed success toast for setParams
 
-  // Cleanup toast timer on unmount
+  // Cleanup toast timers on unmount
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (pendingModelParamsToast.current) clearTimeout(pendingModelParamsToast.current);
     };
   }, []);
 
@@ -242,6 +248,11 @@ export default function App() {
       // Clear stale selection — valid-move highlights are misleading after error
       setSelected(null);
       setLegalMoves([]);
+      // BUG-V3-002: Cancel pending success toast if server rejects
+      if (pendingModelParamsToast.current) {
+        clearTimeout(pendingModelParamsToast.current);
+        pendingModelParamsToast.current = null;
+      }
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       setToast({ message: data?.message || 'Błąd serwera', type: 'error' });
       toastTimerRef.current = setTimeout(() => setToast(null), 5000);
@@ -387,9 +398,16 @@ export default function App() {
   }, []);
 
   // "Zastosuj zmiany" — emit to server, reset model
+  // BUG-V3-002: Delay success toast so server 'error' can cancel it (PvAI rejects setParams)
   const handleApplyModelParams = useCallback(() => {
     socketRef.current?.emit('setParams', { ...modelParams });
-    showToast('✅ Model zresetowany, szkolenie od nowa');
+    // Cancel any previous pending toast
+    if (pendingModelParamsToast.current) clearTimeout(pendingModelParamsToast.current);
+    // Show success only if no error arrives within 500ms
+    pendingModelParamsToast.current = setTimeout(() => {
+      pendingModelParamsToast.current = null;
+      showToast('✅ Model zresetowany, szkolenie od nowa');
+    }, 500);
   }, [modelParams, showToast]);
 
   // "Resetuj domyślne" — restore max defaults
