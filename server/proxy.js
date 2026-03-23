@@ -21,7 +21,7 @@ export function setupProxy(app) {
           console.error('[Proxy] C++ backend error:', err.message);
           if (res && !res.headersSent) {
             res.writeHead(502, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'C++ backend unavailable', detail: err.message }));
+            res.end(JSON.stringify({ error: 'C++ backend unavailable' }));
           }
         },
         proxyReq: (_proxyReq, req) => {
