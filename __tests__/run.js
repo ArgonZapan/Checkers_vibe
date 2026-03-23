@@ -67,6 +67,10 @@ import { runLegalMovesMemoizationTests } from './legalMovesMemoization.test.js';
 import { runEpsilonValidationResilienceTests } from './epsilonValidationResilience.test.js';
 import { runCSPResilienceTests } from './cspResilience.test.js';
 import { runResilienceHunterSubAlpha003Tests } from './resilience-hunter-sub-alpha-003.test.js';
+import { runCspHeaderContentTests } from './cspHeaderContent.test.js';
+import { runPredictPolicyIndexTests } from './predictPolicyIndex.test.js';
+import { runBoardRoundTripTests } from './boardRoundTrip.test.js';
+import { runAutoSaveRaceConditionTests } from './autoSaveRaceCondition.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -132,6 +136,10 @@ const suites = [
   { name: 'epsilonValidationResilience', run: runEpsilonValidationResilienceTests },
   { name: 'cspResilience', run: runCSPResilienceTests },
   { name: 'resilienceHunterSubAlpha003', run: runResilienceHunterSubAlpha003Tests },
+  { name: 'cspHeaderContent', run: runCspHeaderContentTests },
+  { name: 'predictPolicyIndex', run: runPredictPolicyIndexTests },
+  { name: 'boardRoundTrip', run: runBoardRoundTripTests },
+  { name: 'autoSaveRaceCondition', run: runAutoSaveRaceConditionTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
