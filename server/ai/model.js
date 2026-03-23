@@ -309,8 +309,16 @@ export async function train(model, batch, epochs = 5) {
 }
 
 // ── Save / Load ─────────────────────────────────────────────────────────────
+import { rename, mkdir, rm } from 'node:fs/promises';
+
 export async function saveModel(model, dirPath) {
-  await model.save(`file://${dirPath}`);
+  const tmpDir = dirPath + '.tmp';
+  // Clean up any leftover tmp dir from a previous interrupted save
+  await rm(tmpDir, { recursive: true, force: true });
+  await mkdir(tmpDir, { recursive: true });
+  await model.save(`file://${tmpDir}`);
+  // Atomic swap: rename tmp → target (overwrites on Linux)
+  await rename(tmpDir, dirPath);
   console.log(`[Model] Saved to ${dirPath}`);
 }
 

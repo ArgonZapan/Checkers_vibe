@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { CONFIG } from '../../config.js';
 
@@ -47,7 +47,9 @@ export class ReplayBuffer {
 
   async save(filePath) {
     await mkdir(dirname(filePath), { recursive: true });
-    await writeFile(filePath, JSON.stringify(this._toArray()), 'utf-8');
+    const tmpPath = filePath + '.tmp';
+    await writeFile(tmpPath, JSON.stringify(this._toArray()), 'utf-8');
+    await rename(tmpPath, filePath);
     console.log(`[Buffer] Saved ${this.count} samples to ${filePath}`);
   }
 
