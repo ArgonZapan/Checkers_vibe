@@ -78,6 +78,9 @@ import { runCspCompletenessTests } from './cspCompleteness.test.js';
 import { runWsHandlerInputGapsTests } from './wsHandlerInputGaps.test.js';
 import { runRateLimitSecurityTests } from './rateLimitSecurity.test.js';
 import { runHunterSecurityFixesTests } from './hunter-security-fixes.test.js';
+import { runProxyErrorScenariosTests } from './proxyErrorScenarios.test.js';
+import { runDisconnectCleanupAndModeSwitchTests } from './disconnectCleanupAndModeSwitch.test.js';
+import { runClientComponentLogicTests } from './clientComponentLogic.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -154,6 +157,9 @@ const suites = [
   { name: 'wsHandlerInputGaps', run: runWsHandlerInputGapsTests },
   { name: 'rateLimitSecurity', run: runRateLimitSecurityTests },
   { name: 'hunterSecurityFixes', run: runHunterSecurityFixesTests },
+  { name: 'proxyErrorScenarios', run: runProxyErrorScenariosTests },
+  { name: 'disconnectCleanupAndModeSwitch', run: runDisconnectCleanupAndModeSwitchTests },
+  { name: 'clientComponentLogic', run: runClientComponentLogicTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
