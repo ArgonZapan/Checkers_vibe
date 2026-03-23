@@ -371,7 +371,7 @@ io.on('connection', async (socket) => {
   } catch (err) {
     console.log('[WS] Could not get game state for new client:', err.message);
   }
-  socket.emit('selfPlayStatus', { active: trainer.running, currentGame: trainer.stats.gamesPlayed, stats: trainer.stats });
+  socket.emit('selfPlayStatus', { active: trainer.running, gameNumber: trainer.stats.gamesPlayed, stats: trainer.stats });
   // Send current model params so UI matches server state on connect
   socket.emit('paramsUpdate', {
     modelParams: { ...trainer.modelParams },

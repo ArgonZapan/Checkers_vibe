@@ -1,4 +1,4 @@
-import { createModel, predict, train, saveModel, boardToTensor, computePolicyIndex } from './model.js';
+import { createModel, predict, train, saveModel, computePolicyIndex } from './model.js';
 import { ReplayBuffer } from './buffer.js';
 import { writeFile, readFile, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
