@@ -100,6 +100,10 @@ import { runHunterAlphaConfigSpeedEdgeTests } from './hunter-alpha-config-speed-
 import { runHunterAlphaTrainerStateTests } from './hunter-alpha-trainer-state.test.js';
 import { runHunterAlphaTestBoardconvertReal } from './hunter-alpha-test-boardconvert-real.test.js';
 import { runHunterAlphaTestProxyReal } from './hunter-alpha-test-proxy-real.test.js';
+import { runBoardLogicExtendedTests } from './boardLogicExtended.test.js';
+import { runEpsilonInputEdgeCasesTests } from './epsilonInputEdgeCases.test.js';
+import { runAutoSaveExtendedTests } from './autoSaveExtended.test.js';
+import { runIssues140to143ExtraRegressionTests } from './issues140to143-extra-regression.test.js';
 import { runMinimaxDirectionTests } from './hunter-sub-minimax-direction.test.js';
 
 const suites = [
@@ -200,6 +204,10 @@ const suites = [
   { name: 'hunterAlphaTestBoardconvertReal', run: runHunterAlphaTestBoardconvertReal },
   { name: 'hunterAlphaTestProxyReal', run: runHunterAlphaTestProxyReal },
   { name: 'minimaxDirection', run: runMinimaxDirectionTests },
+  { name: 'boardLogicExtended', run: runBoardLogicExtendedTests },
+  { name: 'epsilonInputEdgeCases', run: runEpsilonInputEdgeCasesTests },
+  { name: 'autoSaveExtended', run: runAutoSaveExtendedTests },
+  { name: 'issues140to143ExtraRegression', run: runIssues140to143ExtraRegressionTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
