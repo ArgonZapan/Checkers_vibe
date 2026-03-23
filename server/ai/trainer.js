@@ -533,8 +533,12 @@ export class SelfPlay {
           this.io?.emit('selfPlayStatus', { active: false, gameNumber: this.stats.gamesPlayed, stats: this.stats });
           break;
         }
-        // Brief pause before retry
+        // Brief pause then try to recover engine before next attempt
         await this._sleep(2000);
+        if (!await this.isEngineUp()) {
+          console.warn('[SelfPlay] Engine appears down, waiting for recovery...');
+          await this.waitForEngine(10, 1000);
+        }
       }
     }
   }
