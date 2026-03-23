@@ -120,6 +120,27 @@ function calcThreat(board, turn) {
   return (oppThreats - myThreats) / Math.max(oppThreats + myThreats, 1);
 }
 
+// ── Helper: calcAdvance ──────────────────────────────────────────────────────
+function calcAdvance(prev, next, turn) {
+  // Compare total pawn advancement score between boards.
+  // For white: closer to row 0 = more advanced. For black: closer to row 7 = more advanced.
+  let totalAdvance = 0;
+  let prevTotalAdvance = 0;
+  for (let i = 0; i < 64; i++) {
+    const row = Math.floor(i / 8);
+    if (isPawn(next[i], turn)) {
+      const adv = turn === 1 ? (7 - row) / 7 : row / 7;
+      totalAdvance += adv;
+    }
+    if (isPawn(prev[i], turn)) {
+      const adv = turn === 1 ? (7 - row) / 7 : row / 7;
+      prevTotalAdvance += adv;
+    }
+  }
+  const delta = totalAdvance - prevTotalAdvance;
+  return Math.max(-1, Math.min(1, delta));
+}
+
 // ── Helper: calcTempo ────────────────────────────────────────────────────────
 function calcTempo(prev, next, turn) {
   // Count pieces in advanced positions (rows 4-6 for white, rows 1-3 for black)
@@ -135,32 +156,41 @@ function calcTempo(prev, next, turn) {
 
 /**
  * Calculate shaped intermediate reward from the perspective of `turn` (the player who just moved).
- * Weighted sum (normalised, mobility skipped): material (0.47) + position (0.29) + threat (0.12) + tempo (0.12)
+ * Uses dual-strategy weights based on side (white=aggressor, black=fortress).
  * @param {number[]|null} prevBoardFlat - flat 64 array before the move (null for first move)
  * @param {number[]} nextBoardFlat - flat 64 array after the move
  * @param {number} turn - 1 (white) or -1 (black)
+ * @param {string} side - 'white' or 'black'
  * @returns {number} shaped reward in [-1, 1]
  */
-function calculateReward(prevBoardFlat, nextBoardFlat, turn) {
+function calculateReward(prevBoardFlat, nextBoardFlat, turn, side = 'white') {
   if (!prevBoardFlat || !nextBoardFlat) return 0;
+
+  const strategyName = CONFIG.ai.strategy[side];
+  const strat = CONFIG.ai.strategies[strategyName];
+  const weights = strat.weights;
 
   let reward = 0;
 
-  // 1. Materiał (0.47) — was 0.4, re-normalised without mobility
+  // 1. Materiał
   const matReward = calcMaterial(prevBoardFlat, nextBoardFlat, turn);
-  reward += matReward * 0.47;
+  reward += matReward * weights.material;
 
-  // 2. Pozycja (0.29) — was 0.25
+  // 2. Pozycja
   const posReward = calcPosition(nextBoardFlat, turn);
-  reward += posReward * 0.29;
+  reward += posReward * weights.position;
 
-  // 3. Zagrożenie (0.12) — was 0.1
+  // 3. Zagrożenie
   const threatReward = calcThreat(nextBoardFlat, turn);
-  reward += threatReward * 0.12;
+  reward += threatReward * weights.threat;
 
-  // 4. Tempo (0.12) — was 0.1
+  // 4. Tempo
   const tempoReward = calcTempo(prevBoardFlat, nextBoardFlat, turn);
-  reward += tempoReward * 0.12;
+  reward += tempoReward * weights.tempo;
+
+  // 5. Advance (bonus for pawns moving toward promotion)
+  const advanceReward = calcAdvance(prevBoardFlat, nextBoardFlat, turn);
+  reward += advanceReward * (weights.advance || 0);
 
   return Math.max(-1, Math.min(1, Math.round(reward * 1000) / 1000));
 }
@@ -278,8 +308,10 @@ export class SelfPlay {
     this.running = false;
 
     // Parameters per side
-    this.epsilonWhite = CONFIG.ai.defaultEpsilon;
-    this.epsilonBlack = CONFIG.ai.defaultEpsilon;
+    const stratWhite = CONFIG.ai.strategies[CONFIG.ai.strategy.white];
+    const stratBlack = CONFIG.ai.strategies[CONFIG.ai.strategy.black];
+    this.epsilonWhite = stratWhite.minEpsilon + 0.7; // start high
+    this.epsilonBlack = stratBlack.minEpsilon + 0.7;
     this.networkSizeWhite = 'small';
     this.networkSizeBlack = 'small';
 
@@ -456,10 +488,12 @@ export class SelfPlay {
     this.stats.lastLoss = null;
 
     // 4. Reset epsilon
-    this.epsilonWhite = CONFIG.ai.defaultEpsilon;
-    this.epsilonBlack = CONFIG.ai.defaultEpsilon;
-    this.stats.epsilonWhite = CONFIG.ai.defaultEpsilon;
-    this.stats.epsilonBlack = CONFIG.ai.defaultEpsilon;
+    const stratWhite = CONFIG.ai.strategies[CONFIG.ai.strategy.white];
+    const stratBlack = CONFIG.ai.strategies[CONFIG.ai.strategy.black];
+    this.epsilonWhite = stratWhite.minEpsilon + 0.7;
+    this.epsilonBlack = stratBlack.minEpsilon + 0.7;
+    this.stats.epsilonWhite = this.epsilonWhite;
+    this.stats.epsilonBlack = this.epsilonBlack;
 
     // 5. Create fresh models
     this.modelWhite = this._replaceModel(this.modelWhite, { ...this.modelParams });
@@ -506,8 +540,10 @@ export class SelfPlay {
       this.stats.gamesPlayed = 0;
       this.stats.draws = 0;
       this.stats.lastLoss = null;
-      this.epsilonWhite = CONFIG.ai.defaultEpsilon;
-      this.epsilonBlack = CONFIG.ai.defaultEpsilon;
+      const stratWhite = CONFIG.ai.strategies[CONFIG.ai.strategy.white];
+      const stratBlack = CONFIG.ai.strategies[CONFIG.ai.strategy.black];
+      this.epsilonWhite = stratWhite.minEpsilon + 0.7;
+      this.epsilonBlack = stratBlack.minEpsilon + 0.7;
     }
     this.dirty = true; // model restarted (#102)
     this.io?.emit('modelRestart', { side });
@@ -863,7 +899,7 @@ export class SelfPlay {
       // Calculate shaped intermediate reward for the sample we just pushed
       const nextBoardFlat = flattenBoard(newState.board);
       const currentSample = samples[samples.length - 1];
-      currentSample.reward = calculateReward(prevBoardFlat, nextBoardFlat, turn);
+      currentSample.reward = calculateReward(prevBoardFlat, nextBoardFlat, turn, turn === 1 ? 'white' : 'black');
       currentSample.nextState = Array.isArray(newState.board) ? newState.board.flat() : newState.board;
 
       const boardReact = boardFromCpp(newState.board);
@@ -906,8 +942,10 @@ export class SelfPlay {
       console.warn('[SelfPlay] Skipping epsilon decay — params changed mid-game');
       return;
     }
-    this.epsilonWhite = Math.max(CONFIG.ai.minEpsilon, this.epsilonWhite - CONFIG.ai.epsilonDecay);
-    this.epsilonBlack = Math.max(CONFIG.ai.minEpsilon, this.epsilonBlack - CONFIG.ai.epsilonDecay);
+    const stratWhite = CONFIG.ai.strategies[CONFIG.ai.strategy.white];
+    const stratBlack = CONFIG.ai.strategies[CONFIG.ai.strategy.black];
+    this.epsilonWhite = Math.max(stratWhite.minEpsilon, this.epsilonWhite - stratWhite.epsilonDecay);
+    this.epsilonBlack = Math.max(stratBlack.minEpsilon, this.epsilonBlack - stratBlack.epsilonDecay);
     this.stats.epsilonWhite = this.epsilonWhite;
     this.stats.epsilonBlack = this.epsilonBlack;
     this.dirty = true; // epsilon changed — auto-save must persist it (#132)

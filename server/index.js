@@ -416,6 +416,8 @@ io.on('connection', async (socket) => {
     blackNetworkSize: trainer.networkSizeBlack,
     speedMode: CONFIG.server.speedMode,
     aiMoveDelayMs: CONFIG.server.aiMoveDelayMs,
+    whiteStrategy: CONFIG.ai.strategy.white,
+    blackStrategy: CONFIG.ai.strategy.black,
   });
   if (trainer.stats.lastLoss != null) {
     socket.emit('loss', { loss: trainer.stats.lastLoss });
@@ -638,6 +640,8 @@ io.on('connection', async (socket) => {
         blackNetworkSize: trainer.networkSizeBlack,
         speedMode: CONFIG.server.speedMode,
         aiMoveDelayMs: CONFIG.server.aiMoveDelayMs,
+        whiteStrategy: CONFIG.ai.strategy.white,
+        blackStrategy: CONFIG.ai.strategy.black,
       });
       io.emit('selfPlayStatus', { active: false, gameNumber: 0, stats: trainer.stats });
       // 8. Restart if was running

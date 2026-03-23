@@ -50,6 +50,8 @@ export default function App() {
     blackNetworkSize: 'medium',
     speedMode: 'normal',
     aiMoveDelayMs: 500,
+    whiteStrategy: 'aggressor',
+    blackStrategy: 'fortress',
     _config: {},
   });
 
@@ -224,6 +226,13 @@ export default function App() {
       }
       if (data._config) {
         setParams(prev => ({ ...prev, _config: data._config }));
+      }
+      if (data.whiteStrategy !== undefined || data.blackStrategy !== undefined) {
+        setParams(prev => ({
+          ...prev,
+          ...(data.whiteStrategy !== undefined && { whiteStrategy: data.whiteStrategy }),
+          ...(data.blackStrategy !== undefined && { blackStrategy: data.blackStrategy }),
+        }));
       }
     });
 
@@ -468,6 +477,8 @@ export default function App() {
               whiteEpsilon={params.whiteEpsilon}
               blackEpsilon={params.blackEpsilon}
               connected={connected}
+              whiteStrategy={params.whiteStrategy}
+              blackStrategy={params.blackStrategy}
             />
           )}
           <ParamsPanel

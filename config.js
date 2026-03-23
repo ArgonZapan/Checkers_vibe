@@ -66,6 +66,33 @@ export const CONFIG = {
       batchSize: 64,
       dropout: 0,
     },
+    // Dual strategy: white = aggressor, black = fortress
+    strategy: {
+      white: 'aggressor',
+      black: 'fortress',
+    },
+    strategies: {
+      aggressor: {
+        weights: { material: 0.55, position: 0.15, threat: 0.20, tempo: 0.10 },
+        epsilonDecay: 0.015,  // uczy się szybciej (agresja)
+        minEpsilon: 0.02,
+        rewardCapture: 0.15,
+        rewardAdvance: 0.10,
+        rewardPromotion: 0.20,
+        rewardWin: 1.0,
+        rewardLose: -1.0,
+      },
+      fortress: {
+        weights: { material: 0.25, position: 0.40, threat: 0.10, tempo: 0.25 },
+        epsilonDecay: 0.008,  // wolniejszy decay (cierpliwa gra)
+        minEpsilon: 0.03,
+        rewardCapture: 0.08,
+        rewardAdvance: 0.03,
+        rewardPromotion: 0.40,
+        rewardWin: 1.0,
+        rewardLose: -1.2,
+      },
+    },
   },
 
 };

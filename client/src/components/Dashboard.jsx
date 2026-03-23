@@ -68,6 +68,8 @@ export default function Dashboard({
   whiteEpsilon,
   blackEpsilon,
   connected,
+  whiteStrategy,
+  blackStrategy,
 }) {
   const canvasRef = useRef(null);
   const lossRef = useRef(lossHistory);
@@ -166,6 +168,27 @@ export default function Dashboard({
               <div className="stat-item">
                 <div className="stat-label">⚫ Epsilon</div>
                 <div className="stat-value">{blackEpsilon.toFixed(2)}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Strategy display */}
+      {(whiteStrategy || blackStrategy) && (
+        <div className="dashboard-section">
+          <h3>⚔️ Strategia</h3>
+          <div className="stats-grid">
+            {whiteStrategy && (
+              <div className="stat-item">
+                <div className="stat-label">⚪ Białe</div>
+                <div className="stat-value winner-white" style={{ fontSize: '0.9rem' }}>🗡️ {whiteStrategy}</div>
+              </div>
+            )}
+            {blackStrategy && (
+              <div className="stat-item">
+                <div className="stat-label">⚫ Czarne</div>
+                <div className="stat-value" style={{ fontSize: '0.9rem' }}>🏰 {blackStrategy}</div>
               </div>
             )}
           </div>
