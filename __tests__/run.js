@@ -53,6 +53,13 @@ import { runTrainerHelpersDeepTests } from './trainerHelpersDeep.test.js';
 import { runBoardConvertOversizedTests } from './boardConvertOversized.test.js';
 import { runKingMultiCaptureAndUndoTests } from './kingMultiCaptureAndUndo.test.js';
 import { runDrawDetectionExtraTests } from './drawDetectionExtra.test.js';
+import { runHandleMoveFlowTests } from './handleMoveFlow.test.js';
+import { runAiMoveFlowTests } from './aiMoveFlow.test.js';
+import { runTrainBellmanTests } from './trainBellman.test.js';
+import { runSetParamsWhitelistTests } from './setParamsWhitelist.test.js';
+import { runMoveSerializationTests } from './moveSerialization.test.js';
+import { runProxyBodyReplayTests } from './proxyBodyReplay.test.js';
+import { runCspHeadersTests } from './cspHeaders.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -104,6 +111,13 @@ const suites = [
   { name: 'boardConvertOversized', run: runBoardConvertOversizedTests },
   { name: 'kingMultiCaptureAndUndo', run: runKingMultiCaptureAndUndoTests },
   { name: 'drawDetectionExtra',     run: runDrawDetectionExtraTests },
+  { name: 'handleMoveFlow',        run: runHandleMoveFlowTests },
+  { name: 'aiMoveFlow',            run: runAiMoveFlowTests },
+  { name: 'trainBellman',          run: runTrainBellmanTests },
+  { name: 'setParamsWhitelist',    run: runSetParamsWhitelistTests },
+  { name: 'moveSerialization',     run: runMoveSerializationTests },
+  { name: 'proxyBodyReplay',       run: runProxyBodyReplayTests },
+  { name: 'cspHeaders',            run: runCspHeadersTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
