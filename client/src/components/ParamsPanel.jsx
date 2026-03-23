@@ -1,4 +1,15 @@
-import React from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
+
+// Debounce helper — delays fn call by `ms`, resets on each call (#36)
+function useDebouncedCallback(fn, ms) {
+  const timerRef = useRef(null);
+  const fnRef = useRef(fn);
+  fnRef.current = fn;
+  return useCallback((...args) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => fnRef.current(...args), ms);
+  }, [ms]);
+}
 
 export default function ParamsPanel({
   params,
@@ -25,6 +36,22 @@ export default function ParamsPanel({
 
   const mp = modelParams || {};
 
+  // Local slider state for immediate visual feedback during drag (#36)
+  const [localWhiteEps, setLocalWhiteEps] = useState(params.whiteEpsilon);
+  const [localBlackEps, setLocalBlackEps] = useState(params.blackEpsilon);
+
+  // Sync local state when parent props change (e.g. after debounced update)
+  useEffect(() => { setLocalWhiteEps(params.whiteEpsilon); }, [params.whiteEpsilon]);
+  useEffect(() => { setLocalBlackEps(params.blackEpsilon); }, [params.blackEpsilon]);
+
+  // Debounced epsilon change handlers to avoid flooding events on every pixel (#36)
+  const debouncedWhiteEpsilon = useDebouncedCallback(
+    (val) => onParamsChange({ whiteEpsilon: val }), 300
+  );
+  const debouncedBlackEpsilon = useDebouncedCallback(
+    (val) => onParamsChange({ blackEpsilon: val }), 300
+  );
+
   return (
     <div className="params-panel">
       <h3>⚙️ Parametry AI</h3>
@@ -39,10 +66,14 @@ export default function ParamsPanel({
             min="0"
             max="1"
             step="0.01"
-            value={params.whiteEpsilon}
-            onChange={(e) => onParamsChange({ whiteEpsilon: parseFloat(e.target.value) })}
+            value={localWhiteEps}
+            onChange={(e) => {
+              const val = parseFloat(e.target.value);
+              setLocalWhiteEps(val);       // immediate visual feedback
+              debouncedWhiteEpsilon(val);  // debounced parent update
+            }}
           />
-          <span className="epsilon-val">{params.whiteEpsilon.toFixed(2)}</span>
+          <span className="epsilon-val">{localWhiteEps.toFixed(2)}</span>
         </div>
         <div className="param-row">
           <label>Sieć:</label>
@@ -66,10 +97,14 @@ export default function ParamsPanel({
             min="0"
             max="1"
             step="0.01"
-            value={params.blackEpsilon}
-            onChange={(e) => onParamsChange({ blackEpsilon: parseFloat(e.target.value) })}
+            value={localBlackEps}
+            onChange={(e) => {
+              const val = parseFloat(e.target.value);
+              setLocalBlackEps(val);       // immediate visual feedback
+              debouncedBlackEpsilon(val);  // debounced parent update
+            }}
           />
-          <span className="epsilon-val">{params.blackEpsilon.toFixed(2)}</span>
+          <span className="epsilon-val">{localBlackEps.toFixed(2)}</span>
         </div>
         <div className="param-row">
           <label>Sieć:</label>

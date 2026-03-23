@@ -401,3 +401,19 @@ function Board({
     </div>
   );
 }
+
+// Shallow-compare props to skip unnecessary re-renders (#52)
+function areEqual(prevProps, nextProps) {
+  if (prevProps.gameOver !== nextProps.gameOver) return false;
+  if (prevProps.winner !== nextProps.winner) return false;
+  if (prevProps.turn !== nextProps.turn) return false;
+  if (prevProps.selected?.[0] !== nextProps.selected?.[0] || prevProps.selected?.[1] !== nextProps.selected?.[1]) return false;
+  if (prevProps.board !== nextProps.board) return false;
+  if (prevProps.legalMoves !== nextProps.legalMoves) return false;
+  if (prevProps.lastMove !== nextProps.lastMove) return false;
+  if (prevProps.path !== nextProps.path) return false;
+  if (prevProps.onCellClick !== nextProps.onCellClick) return false;
+  return true;
+}
+
+export default React.memo(Board, areEqual);
