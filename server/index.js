@@ -327,7 +327,10 @@ io.on('connection', async (socket) => {
 
     socket._moveQueue = (socket._moveQueue || Promise.resolve())
       .then(() => handleMove(socket, data))
-      .catch(err => console.error('[WS] move error:', err));
+      .catch(err => {
+        console.error('[WS] move error:', err.message);
+        socket.emit('error', { message: err.message || 'Move failed' });
+      });
   });
 
   socket.on('disconnect', () => {
@@ -491,10 +494,14 @@ async function aiMove(currentState) {
       return;
     }
 
-    const moveIndex = prediction.move;
-
-    // Find the actual move from legalMoves by index
-    let selectedMove = legalMoves[moveIndex] || legalMoves[0];
+    // predict() returns { move: moveObject, ... } — use it directly
+    // (prediction.move IS the selected legal move object, not an index)
+    let selectedMove = prediction.move;
+    // Safety: validate the predicted move is actually in legalMoves
+    if (!selectedMove || !legalMoves.some(m => m.from === selectedMove.from && m.to === selectedMove.to)) {
+      console.warn('[AI] Predicted move not in legal moves, falling back to random');
+      selectedMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+    }
 
     // Execute AI move via C++
     const aiMoveBody = { from: selectedMove.from, to: selectedMove.to };
