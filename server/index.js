@@ -284,8 +284,8 @@ io.on('connection', async (socket) => {
   // Send current model params so UI matches server state on connect
   socket.emit('paramsUpdate', {
     modelParams: { ...trainer.modelParams },
-    epsilonWhite: trainer.epsilonWhite,
-    epsilonBlack: trainer.epsilonBlack,
+    whiteEpsilon: trainer.epsilonWhite,
+    blackEpsilon: trainer.epsilonBlack,
     speedMode: CONFIG.server.speedMode,
     aiMoveDelayMs: CONFIG.server.aiMoveDelayMs,
     _config: CONFIG.ai,  // default config snapshot for UI reference
@@ -312,7 +312,7 @@ io.on('connection', async (socket) => {
       }
     } catch (err) {
       console.error('[WS] startGame error:', err.message);
-      socket.emit('error', { message: 'Failed to start game' });
+      socket.emit('error', { message: 'Failed to start game: ' + err.message });
     }
   });
 
@@ -433,8 +433,8 @@ io.on('connection', async (socket) => {
       // 7. Broadcast updated params
       io.emit('paramsUpdate', {
         modelParams: { ...trainer.modelParams },
-        epsilonWhite: trainer.epsilonWhite,
-        epsilonBlack: trainer.epsilonBlack,
+        whiteEpsilon: trainer.epsilonWhite,
+        blackEpsilon: trainer.epsilonBlack,
         speedMode: CONFIG.server.speedMode,
         aiMoveDelayMs: CONFIG.server.aiMoveDelayMs,
       });
