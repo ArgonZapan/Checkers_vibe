@@ -278,6 +278,15 @@ io.on('connection', async (socket) => {
     console.log('[WS] Could not get game state for new client:', err.message);
   }
   socket.emit('selfPlayStatus', { active: trainer.running, currentGame: trainer.stats.gamesPlayed, stats: trainer.stats });
+  // Send current model params so UI matches server state on connect
+  socket.emit('paramsUpdate', {
+    modelParams: { ...trainer.modelParams },
+    epsilonWhite: trainer.epsilonWhite,
+    epsilonBlack: trainer.epsilonBlack,
+    speedMode: CONFIG.server.speedMode,
+    aiMoveDelayMs: CONFIG.server.aiMoveDelayMs,
+    _config: CONFIG.ai,  // default config snapshot for UI reference
+  });
   if (trainer.stats.lastLoss != null) {
     socket.emit('loss', { loss: trainer.stats.lastLoss });
   }

@@ -1,11 +1,10 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
 
-// Debounce helper — delays fn call by `ms`, resets on each call (#36)
+// Debounce helper — delays fn call by `ms`, resets on each call
 function useDebouncedCallback(fn, ms) {
   const timerRef = useRef(null);
   const fnRef = useRef(fn);
   fnRef.current = fn;
-  // Cleanup pending timer on unmount to prevent stale callbacks
   useEffect(() => () => clearTimeout(timerRef.current), []);
   return useCallback((...args) => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -13,6 +12,210 @@ function useDebouncedCallback(fn, ms) {
   }, [ms]);
 }
 
+// Log-scale slider helpers
+const LR_MIN_LOG = Math.log10(0.0001);
+const LR_MAX_LOG = Math.log10(0.1);
+const lrToSlider = (lr) => ((Math.log10(lr) - LR_MIN_LOG) / (LR_MAX_LOG - LR_MIN_LOG)) * 100;
+const sliderToLr = (val) => Math.pow(10, LR_MIN_LOG + (val / 100) * (LR_MAX_LOG - LR_MIN_LOG));
+
+const BATCH_SIZES = [8, 16, 32, 64, 128, 256];
+
+// ── Slider component ─────────────────────────────────────────────────────────
+function Slider({ label, value, min, max, step, onChange, format }) {
+  return (
+    <div className="param-row">
+      <label>{label}: <strong>{format ? format(value) : value}</strong></label>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+      />
+    </div>
+  );
+}
+
+// ── Side Tab (Białe / Czarne) ────────────────────────────────────────────────
+function SideTab({
+  side,             // 'white' | 'black'
+  emoji,            // '⚪' | '⚫'
+  epsilon,
+  onEpsilonChange,
+  networkSize,
+  onNetworkSizeChange,
+  modelParams,
+  onModelParamsChange,
+  config,
+}) {
+  const mp = modelParams || {};
+
+  // Local epsilon for immediate slider feedback
+  const [localEps, setLocalEps] = useState(epsilon);
+  useEffect(() => { setLocalEps(epsilon); }, [epsilon]);
+
+  const debouncedEpsilon = useDebouncedCallback(onEpsilonChange, 300);
+
+  return (
+    <div className="side-tab">
+      {/* ── Exploration ──────────────────────────────────────────────── */}
+      <div className="param-group">
+        <h4>🔍 Eksploracja</h4>
+        <div className="param-row">
+          <label>Epsilon:</label>
+          <input
+            type="range" min="0" max="1" step="0.01"
+            value={localEps}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              setLocalEps(v);
+              debouncedEpsilon(v);
+            }}
+          />
+          <span className="epsilon-val">{localEps.toFixed(2)}</span>
+        </div>
+        <div className="param-row">
+          <label>Min epsilon: <strong>{(mp.minEpsilon ?? config.minEpsilon ?? 0.01).toFixed(3)}</strong></label>
+          <input
+            type="range" min="0" max="0.2" step="0.005"
+            value={mp.minEpsilon ?? config.minEpsilon ?? 0.01}
+            onChange={(e) => onModelParamsChange({ minEpsilon: parseFloat(e.target.value) })}
+          />
+        </div>
+        <div className="param-row">
+          <label>Decay/grę: <strong>{(mp.epsilonDecay ?? config.epsilonDecay ?? 0.01).toFixed(4)}</strong></label>
+          <input
+            type="range" min="0" max="0.05" step="0.001"
+            value={mp.epsilonDecay ?? config.epsilonDecay ?? 0.01}
+            onChange={(e) => onModelParamsChange({ epsilonDecay: parseFloat(e.target.value) })}
+          />
+        </div>
+      </div>
+
+      {/* ── Architecture ─────────────────────────────────────────────── */}
+      <div className="param-group">
+        <h4>🏗️ Architektura sieci</h4>
+        <div className="param-row">
+          <label>Sieć:</label>
+          <select
+            value={networkSize}
+            onChange={(e) => onNetworkSizeChange(e.target.value)}
+          >
+            <option value="small">Mała (64-64)</option>
+            <option value="medium">Średnia (128-128)</option>
+            <option value="large">Duża (256-256)</option>
+            <option value="custom">Niestandardowa</option>
+          </select>
+        </div>
+        <Slider
+          label="Warstwy" value={mp.layers ?? 3}
+          min={1} max={5} step={1}
+          onChange={(v) => onModelParamsChange({ layers: Math.round(v) })}
+        />
+        <Slider
+          label="Neurony/warstwę" value={mp.neurons ?? 128}
+          min={32} max={512} step={32}
+          onChange={(v) => onModelParamsChange({ neurons: Math.round(v) })}
+        />
+        <div className="param-row">
+          <label>Aktywacja:</label>
+          <select
+            value={mp.activation ?? 'relu'}
+            onChange={(e) => onModelParamsChange({ activation: e.target.value })}
+          >
+            <option value="relu">ReLU</option>
+            <option value="tanh">Tanh</option>
+            <option value="sigmoid">Sigmoid</option>
+            <option value="leaky_relu">Leaky ReLU</option>
+            <option value="elu">ELU</option>
+          </select>
+        </div>
+        <Slider
+          label="Dropout" value={mp.dropout ?? 0}
+          min={0} max={0.5} step={0.05}
+          onChange={(v) => onModelParamsChange({ dropout: v })}
+          format={(v) => v.toFixed(2)}
+        />
+      </div>
+
+      {/* ── Training ─────────────────────────────────────────────────── */}
+      <div className="param-group">
+        <h4>🎓 Szkolenie</h4>
+        <div className="param-row">
+          <label>Learning Rate: <strong>{(mp.lr ?? 0.001).toExponential(1)}</strong></label>
+          <input
+            type="range" min="0" max="100" step="1"
+            value={lrToSlider(mp.lr ?? 0.001)}
+            onChange={(e) => onModelParamsChange({ lr: sliderToLr(parseFloat(e.target.value)) })}
+          />
+        </div>
+        <div className="param-row">
+          <label>Batch size: <strong>{mp.batchSize ?? 64}</strong></label>
+          <input
+            type="range" min="0" max={BATCH_SIZES.length - 1} step="1"
+            value={BATCH_SIZES.indexOf(mp.batchSize ?? 64)}
+            onChange={(e) => onModelParamsChange({ batchSize: BATCH_SIZES[parseInt(e.target.value)] })}
+          />
+        </div>
+        <Slider
+          label="Epoki/grę" value={mp.epochs ?? 5}
+          min={1} max={20} step={1}
+          onChange={(v) => onModelParamsChange({ epochs: Math.round(v) })}
+        />
+        <Slider
+          label="Gamma (discount)" value={mp.gamma ?? 0.95}
+          min={0.5} max={0.99} step={0.01}
+          onChange={(v) => onModelParamsChange({ gamma: v })}
+          format={(v) => v.toFixed(2)}
+        />
+        <Slider
+          label="Buffer size" value={mp.bufferSize ?? 10000}
+          min={1000} max={50000} step={1000}
+          onChange={(v) => onModelParamsChange({ bufferSize: Math.round(v) })}
+          format={(v) => v.toLocaleString()}
+        />
+      </div>
+
+      {/* ── Reward shaping ───────────────────────────────────────────── */}
+      <div className="param-group">
+        <h4>🏆 Nagrody</h4>
+        <Slider
+          label="Zbicie pionka" value={mp.rewardCapture ?? 0.1}
+          min={0} max={0.5} step={0.01}
+          onChange={(v) => onModelParamsChange({ rewardCapture: v })}
+          format={(v) => `+${v.toFixed(2)}`}
+        />
+        <Slider
+          label="Utrata pionka" value={mp.rewardLosePiece ?? -0.1}
+          min={-0.5} max={0} step={0.01}
+          onChange={(v) => onModelParamsChange({ rewardLosePiece: v })}
+          format={(v) => v.toFixed(2)}
+        />
+        <Slider
+          label="Promocja na damkę" value={mp.rewardPromotion ?? 0.3}
+          min={0} max={1} step={0.05}
+          onChange={(v) => onModelParamsChange({ rewardPromotion: v })}
+          format={(v) => `+${v.toFixed(2)}`}
+        />
+        <Slider
+          label="Wygrana gry" value={mp.rewardWin ?? 1.0}
+          min={0.5} max={2} step={0.1}
+          onChange={(v) => onModelParamsChange({ rewardWin: v })}
+          format={(v) => `+${v.toFixed(1)}`}
+        />
+        <Slider
+          label="Przegrana gry" value={mp.rewardLose ?? -1.0}
+          min={-2} max={-0.5} step={0.1}
+          onChange={(v) => onModelParamsChange({ rewardLose: v })}
+          format={(v) => v.toFixed(1)}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Main Panel ───────────────────────────────────────────────────────────────
 export default function ParamsPanel({
   params,
   onParamsChange,
@@ -24,226 +227,133 @@ export default function ParamsPanel({
   onApplyModelParams,
   onResetModelParams,
 }) {
-  // Log-scale slider helper for learning rate
-  const lrToSlider = (lr) => {
-    const minLog = Math.log10(0.0001); // -4
-    const maxLog = Math.log10(0.1);    // -1
-    return ((Math.log10(lr) - minLog) / (maxLog - minLog)) * 100;
-  };
-  const sliderToLr = (val) => {
-    const minLog = Math.log10(0.0001);
-    const maxLog = Math.log10(0.1);
-    return Math.pow(10, minLog + (val / 100) * (maxLog - minLog));
-  };
-
+  const [activeTab, setActiveTab] = useState('white');
   const mp = modelParams || {};
-
-  // Local slider state for immediate visual feedback during drag (#36)
-  const [localWhiteEps, setLocalWhiteEps] = useState(params.whiteEpsilon);
-  const [localBlackEps, setLocalBlackEps] = useState(params.blackEpsilon);
-
-  // Sync local state when parent props change (e.g. after debounced update)
-  useEffect(() => { setLocalWhiteEps(params.whiteEpsilon); }, [params.whiteEpsilon]);
-  useEffect(() => { setLocalBlackEps(params.blackEpsilon); }, [params.blackEpsilon]);
-
-  // Debounced epsilon change handlers to avoid flooding events on every pixel (#36)
-  const debouncedWhiteEpsilon = useDebouncedCallback(
-    (val) => onParamsChange({ whiteEpsilon: val }), 300
-  );
-  const debouncedBlackEpsilon = useDebouncedCallback(
-    (val) => onParamsChange({ blackEpsilon: val }), 300
-  );
+  const config = params._config || {}; // server config snapshot
 
   return (
     <div className="params-panel">
       <h3>⚙️ Parametry AI</h3>
 
-      {/* ── Epsilon / Network per side ─────────────────────────────────── */}
-      <div className="param-group">
-        <h4>⚪ Białe</h4>
-        <div className="param-row">
-          <label>Epsilon:</label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={localWhiteEps}
-            onChange={(e) => {
-              const val = parseFloat(e.target.value);
-              setLocalWhiteEps(val);       // immediate visual feedback
-              debouncedWhiteEpsilon(val);  // debounced parent update
-            }}
-          />
-          <span className="epsilon-val">{localWhiteEps.toFixed(2)}</span>
-        </div>
-        <div className="param-row">
-          <label>Sieć:</label>
-          <select
-            value={params.whiteNetworkSize}
-            onChange={(e) => onParamsChange({ whiteNetworkSize: e.target.value })}
-          >
-            <option value="small">Mała</option>
-            <option value="medium">Średnia</option>
-            <option value="large">Duża</option>
-          </select>
-        </div>
+      {/* ── Tabs ──────────────────────────────────────────────────────── */}
+      <div className="params-tabs">
+        <button
+          className={`params-tab ${activeTab === 'white' ? 'active' : ''}`}
+          onClick={() => setActiveTab('white')}
+        >
+          ⚪ Białe
+        </button>
+        <button
+          className={`params-tab ${activeTab === 'black' ? 'active' : ''}`}
+          onClick={() => setActiveTab('black')}
+        >
+          ⚫ Czarne
+        </button>
+        <button
+          className={`params-tab ${activeTab === 'general' ? 'active' : ''}`}
+          onClick={() => setActiveTab('general')}
+        >
+          🔧 Ogólne
+        </button>
       </div>
 
-      <div className="param-group">
-        <h4>⚫ Czarne</h4>
-        <div className="param-row">
-          <label>Epsilon:</label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={localBlackEps}
-            onChange={(e) => {
-              const val = parseFloat(e.target.value);
-              setLocalBlackEps(val);       // immediate visual feedback
-              debouncedBlackEpsilon(val);  // debounced parent update
-            }}
+      {/* ── Tab content ───────────────────────────────────────────────── */}
+      <div className="params-tab-content">
+        {activeTab === 'white' && (
+          <SideTab
+            side="white" emoji="⚪"
+            epsilon={params.whiteEpsilon}
+            onEpsilonChange={(v) => onParamsChange({ whiteEpsilon: v })}
+            networkSize={params.whiteNetworkSize}
+            onNetworkSizeChange={(v) => onParamsChange({ whiteNetworkSize: v })}
+            modelParams={mp}
+            onModelParamsChange={onModelParamsChange}
+            config={config}
           />
-          <span className="epsilon-val">{localBlackEps.toFixed(2)}</span>
-        </div>
-        <div className="param-row">
-          <label>Sieć:</label>
-          <select
-            value={params.blackNetworkSize}
-            onChange={(e) => onParamsChange({ blackNetworkSize: e.target.value })}
-          >
-            <option value="small">Mała</option>
-            <option value="medium">Średnia</option>
-            <option value="large">Duża</option>
-          </select>
-        </div>
-      </div>
+        )}
 
-      {/* ── Architecture ───────────────────────────────────────────────── */}
-      <div className="param-group">
-        <h4>🏗️ Architektura</h4>
-        <div className="param-row">
-          <label>Warstwy: <strong>{mp.layers ?? 3}</strong></label>
-          <input
-            type="range"
-            min="1"
-            max="5"
-            step="1"
-            value={mp.layers ?? 3}
-            onChange={(e) => onModelParamsChange({ layers: parseInt(e.target.value) })}
+        {activeTab === 'black' && (
+          <SideTab
+            side="black" emoji="⚫"
+            epsilon={params.blackEpsilon}
+            onEpsilonChange={(v) => onParamsChange({ blackEpsilon: v })}
+            networkSize={params.blackNetworkSize}
+            onNetworkSizeChange={(v) => onParamsChange({ blackNetworkSize: v })}
+            modelParams={mp}
+            onModelParamsChange={onModelParamsChange}
+            config={config}
           />
-        </div>
-        <div className="param-row">
-          <label>Neurony: <strong>{mp.neurons ?? 128}</strong></label>
-          <input
-            type="range"
-            min="32"
-            max="512"
-            step="32"
-            value={mp.neurons ?? 128}
-            onChange={(e) => onModelParamsChange({ neurons: parseInt(e.target.value) })}
-          />
-        </div>
-        <div className="param-row">
-          <label>Aktywacja: <strong>{mp.activation ?? 'relu'}</strong></label>
-          <select
-            value={mp.activation ?? 'relu'}
-            onChange={(e) => onModelParamsChange({ activation: e.target.value })}
-          >
-            <option value="relu">ReLU</option>
-            <option value="tanh">Tanh</option>
-            <option value="sigmoid">Sigmoid</option>
-            <option value="leaky_relu">Leaky ReLU</option>
-          </select>
-        </div>
-      </div>
+        )}
 
-      {/* ── Training ───────────────────────────────────────────────────── */}
-      <div className="param-group">
-        <h4>🎓 Szkolenie</h4>
-        <div className="param-row">
-          <label>LR: <strong>{(mp.lr ?? 0.001).toExponential(1)}</strong></label>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            step="1"
-            value={lrToSlider(mp.lr ?? 0.001)}
-            onChange={(e) => onModelParamsChange({ lr: sliderToLr(parseFloat(e.target.value)) })}
-          />
-        </div>
-        <div className="param-row">
-          <label>Batch: <strong>{mp.batchSize ?? 64}</strong></label>
-          <input
-            type="range"
-            min="0"
-            max="5"
-            step="1"
-            value={[8, 16, 32, 64, 128, 256].indexOf(mp.batchSize ?? 64)}
-            onChange={(e) => {
-              const sizes = [8, 16, 32, 64, 128, 256];
-              onModelParamsChange({ batchSize: sizes[parseInt(e.target.value)] });
-            }}
-          />
-        </div>
-        <div className="param-row">
-          <label>Dropout: <strong>{(mp.dropout ?? 0).toFixed(2)}</strong></label>
-          <input
-            type="range"
-            min="0"
-            max="0.5"
-            step="0.05"
-            value={mp.dropout ?? 0}
-            onChange={(e) => onModelParamsChange({ dropout: parseFloat(e.target.value) })}
-          />
-        </div>
-      </div>
+        {activeTab === 'general' && (
+          <div className="side-tab">
+            {/* ── Speed ───────────────────────────────────────────────── */}
+            <div className="param-group">
+              <h4>⚡ Prędkość</h4>
+              <div className="param-row">
+                <label>Tryb:</label>
+                <select
+                  value={params.speedMode || 'normal'}
+                  onChange={(e) => onParamsChange({ speedMode: e.target.value })}
+                >
+                  <option value="fast">🏎️ Szybki (bez animacji)</option>
+                  <option value="normal">🐢 Normalny (animacje)</option>
+                </select>
+              </div>
+              <Slider
+                label="Delay ruchu (ms)" value={params.aiMoveDelayMs ?? 500}
+                min={0} max={5000} step={100}
+                onChange={(v) => onParamsChange({ aiMoveDelayMs: Math.round(v) })}
+                format={(v) => `${v}ms`}
+              />
+            </div>
 
-      {/* ── Apply / Reset buttons ──────────────────────────────────────── */}
-      <div className="param-group">
-        <h4>📝 Zatwierdź zmiany</h4>
-        <div className="apply-buttons">
-          <button className="btn-small btn-apply" onClick={onApplyModelParams}>
-            ✅ Zastosuj zmiany
-          </button>
-          <button className="btn-small btn-reset-defaults" onClick={onResetModelParams}>
-            🔄 Resetuj domyślne
-          </button>
-        </div>
-      </div>
+            {/* ── Apply / Reset ───────────────────────────────────────── */}
+            <div className="param-group">
+              <h4>📝 Zatwierdź zmiany</h4>
+              <div className="apply-buttons">
+                <button className="btn-small btn-apply" onClick={onApplyModelParams}>
+                  ✅ Zastosuj zmiany
+                </button>
+                <button className="btn-small btn-reset-defaults" onClick={onResetModelParams}>
+                  🔄 Resetuj domyślne
+                </button>
+              </div>
+            </div>
 
-      {/* ── Restart ────────────────────────────────────────────────────── */}
-      <div className="param-group">
-        <h4>Restart sieci</h4>
-        <div className="restart-buttons">
-          <button className="btn-small btn-secondary" onClick={() => onRestart('white')}>
-            Restart ⚪
-          </button>
-          <button className="btn-small btn-secondary" onClick={() => onRestart('black')}>
-            Restart ⚫
-          </button>
-          <button className="btn-small btn-danger" onClick={() => onRestart('both')}>
-            Restart oba
-          </button>
-        </div>
-      </div>
+            {/* ── Restart ─────────────────────────────────────────────── */}
+            <div className="param-group">
+              <h4>🔄 Restart sieci</h4>
+              <div className="restart-buttons">
+                <button className="btn-small btn-secondary" onClick={() => onRestart('white')}>
+                  Restart ⚪
+                </button>
+                <button className="btn-small btn-secondary" onClick={() => onRestart('black')}>
+                  Restart ⚫
+                </button>
+                <button className="btn-small btn-danger" onClick={() => onRestart('both')}>
+                  Restart oba
+                </button>
+              </div>
+            </div>
 
-      {/* ── Self-Play ──────────────────────────────────────────────────── */}
-      <div className="param-group">
-        <h4>Self-Play</h4>
-        <div className="selfplay-buttons">
-          {active ? (
-            <button className="btn-small btn-danger" onClick={onToggleSelfplay}>
-              ⏹ Stop Self-Play
-            </button>
-          ) : (
-            <button className="btn-small btn-success" onClick={onToggleSelfplay}>
-              ▶ Start Self-Play
-            </button>
-          )}
-        </div>
+            {/* ── Self-Play ───────────────────────────────────────────── */}
+            <div className="param-group">
+              <h4>🎮 Self-Play</h4>
+              <div className="selfplay-buttons">
+                {active ? (
+                  <button className="btn-small btn-danger" onClick={onToggleSelfplay}>
+                    ⏹ Stop Self-Play
+                  </button>
+                ) : (
+                  <button className="btn-small btn-success" onClick={onToggleSelfplay}>
+                    ▶ Start Self-Play
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
