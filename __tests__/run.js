@@ -41,6 +41,12 @@ import { runCppFetchLogicTests } from './cppFetchLogic.test.js';
 import { runResetHandlerLogicTests } from './resetHandlerLogic.test.js';
 import { runKingMovesPathTests } from './kingMovesPath.test.js';
 import { runHunterCoverageGapsTests } from './hunter-coverageGaps.test.js';
+import { runConfigAiBoardTests } from './configAiBoard.test.js';
+import { runRateLimiterThrottleTests } from './rateLimiterThrottle.test.js';
+import { runAutoSaveTimingTests } from './autoSaveTiming.test.js';
+import { runSecurityHeadersTests } from './securityHeaders.test.js';
+import { runGetGameStateLogicTests } from './getGameStateLogic.test.js';
+import { runAiFallbackLogicTests } from './aiFallbackLogic.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -80,6 +86,12 @@ const suites = [
   { name: 'resetHandlerLogic',   run: runResetHandlerLogicTests },
   { name: 'kingMovesPath',       run: runKingMovesPathTests },
   { name: 'hunterCoverageGaps',  run: runHunterCoverageGapsTests },
+  { name: 'configAiBoard',       run: runConfigAiBoardTests },
+  { name: 'rateLimiterThrottle', run: runRateLimiterThrottleTests },
+  { name: 'autoSaveTiming',      run: runAutoSaveTimingTests },
+  { name: 'securityHeaders',     run: runSecurityHeadersTests },
+  { name: 'getGameStateLogic',   run: runGetGameStateLogicTests },
+  { name: 'aiFallbackLogic',     run: runAiFallbackLogicTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
