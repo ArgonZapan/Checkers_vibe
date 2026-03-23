@@ -1,4 +1,60 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
+
+// Shared chart drawing function
+function drawLossChart(canvas, data) {
+  if (!canvas) return;
+  const container = canvas.parentElement;
+  if (container) {
+    canvas.width = container.clientWidth;
+  }
+  canvas.height = 100;
+
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+  if (data.length < 2) {
+    ctx.fillStyle = '#666';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Brak danych loss', w / 2, h / 2);
+    return;
+  }
+
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < 5; i++) {
+    const y = (i / 4) * h;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = '#e94560';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  data.forEach((val, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = h - ((val - min) / range) * (h - 10) - 5;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  ctx.fillStyle = '#888';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`max: ${max.toFixed(3)}`, 4, 12);
+  ctx.textAlign = 'right';
+  ctx.fillText(`min: ${min.toFixed(3)}`, w - 4, h - 4);
+}
 
 export default function Dashboard({
   stats,
@@ -19,70 +75,13 @@ export default function Dashboard({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const draw = () => {
-      const data = lossRef.current;
-      const container = canvas.parentElement;
-      if (container) {
-        canvas.width = container.clientWidth;
-      }
-      canvas.height = 100;
-
-      const ctx = canvas.getContext('2d');
-      const w = canvas.width;
-      const h = canvas.height;
-
-      ctx.clearRect(0, 0, w, h);
-
-      if (data.length < 2) {
-        ctx.fillStyle = '#666';
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Brak danych loss', w / 2, h / 2);
-        return;
-      }
-
-      const max = Math.max(...data);
-      const min = Math.min(...data);
-      const range = max - min || 1;
-
-      ctx.strokeStyle = '#333';
-      ctx.lineWidth = 0.5;
-      for (let i = 0; i < 5; i++) {
-        const y = (i / 4) * h;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-        ctx.stroke();
-      }
-
-      ctx.strokeStyle = '#e94560';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      data.forEach((val, i) => {
-        const x = (i / (data.length - 1)) * w;
-        const y = h - ((val - min) / range) * (h - 10) - 5;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.stroke();
-
-      ctx.fillStyle = '#888';
-      ctx.font = '10px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(`max: ${max.toFixed(3)}`, 4, 12);
-      ctx.textAlign = 'right';
-      ctx.fillText(`min: ${min.toFixed(3)}`, w - 4, h - 4);
-    };
-
-    draw();
+    drawLossChart(canvas, lossRef.current);
 
     // Debounced resize handler to avoid excessive redraws during drag-resize
     let resizeTimer = null;
     const onResize = () => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(draw, 150);
+      resizeTimer = setTimeout(() => drawLossChart(canvasRef.current, lossRef.current), 150);
     };
     window.addEventListener('resize', onResize);
     return () => {
@@ -93,60 +92,7 @@ export default function Dashboard({
 
   // Redraw when data changes
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const container = canvas.parentElement;
-    if (container) {
-      canvas.width = container.clientWidth;
-    }
-    canvas.height = 100;
-
-    const ctx = canvas.getContext('2d');
-    const w = canvas.width;
-    const h = canvas.height;
-    const data = lossHistory;
-
-    ctx.clearRect(0, 0, w, h);
-
-    if (data.length < 2) {
-      ctx.fillStyle = '#666';
-      ctx.font = '12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Brak danych loss', w / 2, h / 2);
-      return;
-    }
-
-    const max = Math.max(...data);
-    const min = Math.min(...data);
-    const range = max - min || 1;
-
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < 5; i++) {
-      const y = (i / 4) * h;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-    }
-
-    ctx.strokeStyle = '#e94560';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    data.forEach((val, i) => {
-      const x = (i / (data.length - 1)) * w;
-      const y = h - ((val - min) / range) * (h - 10) - 5;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-
-    ctx.fillStyle = '#888';
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(`max: ${max.toFixed(3)}`, 4, 12);
-    ctx.textAlign = 'right';
-    ctx.fillText(`min: ${min.toFixed(3)}`, w - 4, h - 4);
+    drawLossChart(canvasRef.current, lossHistory);
   }, [lossHistory]);
 
   const winnerClass = (w) => {

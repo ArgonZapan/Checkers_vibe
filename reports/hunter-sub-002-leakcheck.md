@@ -32,6 +32,7 @@
   ```
   remote.origin.url=https://[REDACTED]@github.com/ArgonZapan/Checkers_vibe.git
   ```
+  Token jest jawny na maszynie — zredagowany w raporcie.
 - **Opis:** GitHub Personal Access Token (PAT) jest jawny w URL zdalnego repozytorium. Każdy z dostępem do maszyny może go odczytać i użyć do push/pull na repo.
 - **Naprawa:** Zmieniono URL na beztokenowy: `https://github.com/ArgonZapan/Checkers_vibe.git`. Token powinien zostać **zrotowany** na GitHubie (Settings → Developer settings → Personal access tokens).
 

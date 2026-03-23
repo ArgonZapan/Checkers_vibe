@@ -230,6 +230,9 @@ export default function App() {
     // Server-side error messages (invalid moves, rejected params, etc.)
     s.on('error', (data) => {
       console.warn('[Server error]', data?.message || data);
+      // Clear stale selection — valid-move highlights are misleading after error
+      setSelected(null);
+      setLegalMoves([]);
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       setToast({ message: data?.message || 'Błąd serwera', type: 'error' });
       toastTimerRef.current = setTimeout(() => setToast(null), 5000);
@@ -254,6 +257,7 @@ export default function App() {
     setMoveHistory([]);
     setGameHistory([]);
     setSelfPlayActive(false); // Clear stale self-play state
+    setLastRoundTime(0);
     socketRef.current?.emit('startGame', { mode: 'pvai' });
   }, []);
 
@@ -269,6 +273,7 @@ export default function App() {
     setMovePath(null);
     setMoveHistory([]);
     setGameHistory([]);
+    setLastRoundTime(0);
     socketRef.current?.emit('startGame', { mode: 'aivai' });
   }, []);
 
@@ -283,6 +288,7 @@ export default function App() {
     setLegalMoves([]);
     setMovePath(null);
     setMoveHistory([]);
+    setLastRoundTime(0);
     socketRef.current?.emit('reset');
   }, []);
 
