@@ -600,9 +600,14 @@ export class SelfPlay {
         this.stats.gamesPlayed++;
 
         // Assign terminal results to samples (backward-compatible field)
-        const winnerTurn = result; // 1, -1, or 0
+        // BUG-201 fix: use winner string ("white"/"black"/"draw") instead of integer result,
+        // because s.turn is a string ("white"/"black"), not an integer (1/-1)
         for (const s of samples) {
-          s.result = s.turn === winnerTurn ? 1 : winnerTurn === 0 ? 0 : -1;
+          if (winner === 'draw' || !winner) {
+            s.result = 0;
+          } else {
+            s.result = s.turn === winner ? 1 : -1;
+          }
         }
         // Mark last sample as terminal
         if (samples.length > 0) {
@@ -788,7 +793,7 @@ export class SelfPlay {
       const batchWhite = [];
       const batchBlack = [];
       for (const s of batch) {
-        if (s.turn === 1) batchWhite.push(s);
+        if (s.turn === 'white') batchWhite.push(s);
         else batchBlack.push(s);
       }
       const lw = batchWhite.length > 0 ? await train(this.modelWhite, batchWhite, 1) : { loss: 0 };
