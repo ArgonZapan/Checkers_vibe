@@ -334,6 +334,47 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   color: var(--accent);
 }
 
+/* Params Tabs */
+.params-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 0.5rem;
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 2px;
+}
+.params-tab {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.params-tab:hover {
+  color: var(--text);
+  background: var(--bg-card);
+}
+.params-tab.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.params-tab-content {
+  max-height: 420px;
+  overflow-y: auto;
+}
+.side-tab {
+  animation: fadeIn 0.15s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .restart-buttons, .selfplay-buttons, .apply-buttons {
   display: flex;
   gap: 0.4rem;

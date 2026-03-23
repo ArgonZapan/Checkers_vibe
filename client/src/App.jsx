@@ -44,10 +44,13 @@ export default function App() {
   };
 
   const [params, setParams] = useState({
-    whiteEpsilon: 0.1,
-    blackEpsilon: 0.1,
+    whiteEpsilon: 0.3,
+    blackEpsilon: 0.3,
     whiteNetworkSize: 'medium',
     blackNetworkSize: 'medium',
+    speedMode: 'normal',
+    aiMoveDelayMs: 500,
+    _config: {},
   });
 
   const DEFAULT_MODEL_PARAMS = {
@@ -203,6 +206,15 @@ export default function App() {
           ...(data.whiteEpsilon !== undefined && { whiteEpsilon: data.whiteEpsilon }),
           ...(data.blackEpsilon !== undefined && { blackEpsilon: data.blackEpsilon }),
         }));
+      }
+      if (data.speedMode !== undefined) {
+        setParams(prev => ({ ...prev, speedMode: data.speedMode }));
+      }
+      if (data.aiMoveDelayMs !== undefined) {
+        setParams(prev => ({ ...prev, aiMoveDelayMs: data.aiMoveDelayMs }));
+      }
+      if (data._config) {
+        setParams(prev => ({ ...prev, _config: data._config }));
       }
     });
 
