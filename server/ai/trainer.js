@@ -267,6 +267,9 @@ export class SelfPlay {
       epsilonWhite: this.epsilonWhite,
     };
 
+    // Race condition guard (#133)
+    this.paramsVersion = 0;
+
     // Timing
     this.roundTimes = []; // last 10 round times in ms
     this.totalTimeMs = 0; // cumulative training time
@@ -560,6 +563,7 @@ export class SelfPlay {
 
   async _playGame() {
     const roundStart = Date.now();
+    const playGameVersion = this.paramsVersion; // snapshot version for race guard (#133)
 
     // 0. Health check — ensure engine is up before starting (issue #120)
     if (!await this.isEngineUp()) {
@@ -605,6 +609,12 @@ export class SelfPlay {
       }
 
       if (gameOver) {
+        // Guard: skip if params changed mid-game (#133)
+        if (this.paramsVersion !== playGameVersion) {
+          console.warn('[SelfPlay] _playGame aborted — params changed mid-game');
+          break;
+        }
+
         // Record result
         let result = 0;
         if (winner === 1 || winner === 'white') {
@@ -670,6 +680,11 @@ export class SelfPlay {
       // it catches the edge case where engine state and legal moves are out of sync. (#121)
       if (!legalMoves || legalMoves.length === 0) {
         console.warn('[SelfPlay] No legal moves available — game should be over');
+        // Guard: skip if params changed mid-game (#133)
+        if (this.paramsVersion !== playGameVersion) {
+          console.warn('[SelfPlay] _playGame aborted — params changed mid-game');
+          break;
+        }
         // Force game over as draw (engine state may not reflect this yet)
         gameOver = true;
         winner = 'draw';
@@ -812,8 +827,8 @@ export class SelfPlay {
       if (CONFIG.moveDelayMs > 0) await this._sleep(CONFIG.moveDelayMs);
     }
 
-    // Train once per round — 2048 samples, 1 epoch
-    if (this.buffer.size() >= 2048) {
+    // Train once per round — 2048 samples, 1 epoch (skip if params changed mid-game, #133)
+    if (this.buffer.size() >= 2048 && this.paramsVersion === playGameVersion) {
       const batch = this.buffer.sample(2048);
       const batchWhite = [];
       const batchBlack = [];
@@ -829,11 +844,16 @@ export class SelfPlay {
       this.io?.emit('loss', { loss: avgLoss });
     }
 
-    // 3. Decay epsilon after each game
+    // 3. Decay epsilon after each game (skip if params changed mid-game, #133)
+    if (this.paramsVersion !== playGameVersion) {
+      console.warn('[SelfPlay] Skipping epsilon decay — params changed mid-game');
+      return;
+    }
     this.epsilonWhite = Math.max(CONFIG.ai.minEpsilon, this.epsilonWhite - CONFIG.ai.epsilonDecay);
     this.epsilonBlack = Math.max(CONFIG.ai.minEpsilon, this.epsilonBlack - CONFIG.ai.epsilonDecay);
     this.stats.epsilonWhite = this.epsilonWhite;
     this.stats.epsilonBlack = this.epsilonBlack;
+    this.dirty = true; // epsilon changed — auto-save must persist it (#132)
 
     // 4. Save state after each game
     await this.saveState();
