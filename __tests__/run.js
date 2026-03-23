@@ -106,6 +106,7 @@ import { runAutoSaveExtendedTests } from './autoSaveExtended.test.js';
 import { runIssues140to143ExtraRegressionTests } from './issues140to143-extra-regression.test.js';
 import { runMinimaxDirectionTests } from './hunter-sub-minimax-direction.test.js';
 import { runHunterAlphaV3RegressionTests } from './hunter-alpha-v3-regression.test.js';
+import { runBoardconvertRoundtripTests } from './hunter-sub-boardconvert-roundtrip.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -210,6 +211,7 @@ const suites = [
   { name: 'autoSaveExtended', run: runAutoSaveExtendedTests },
   { name: 'issues140to143ExtraRegression', run: runIssues140to143ExtraRegressionTests },
   { name: 'hunterAlphaV3Regression', run: runHunterAlphaV3RegressionTests },
+  { name: 'boardconvertRoundtrip', run: runBoardconvertRoundtripTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
