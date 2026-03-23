@@ -86,8 +86,8 @@ export async function runConfigAiBoardTests() {
     }
   });
 
-  test('board.animation.stepDurationMs is 50', () => {
-    assert.equal(CONFIG.board.animation.stepDurationMs, 50);
+  test('board.animation.stepDurationMs is 200', () => {
+    assert.equal(CONFIG.board.animation.stepDurationMs, 200);
   });
 
   test('board.animation.easeOut is true', () => {
