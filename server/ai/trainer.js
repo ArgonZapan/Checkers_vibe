@@ -131,11 +131,11 @@ function calcAdvance(prev, next, turn) {
   for (let i = 0; i < 64; i++) {
     const row = Math.floor(i / 8);
     if (isPawn(next[i], turn)) {
-      const adv = turn === 1 ? row / 7 : (7 - row) / 7;
+      const adv = turn === 1 ? (7 - row) / 7 : row / 7;
       totalAdvance += adv;
     }
     if (isPawn(prev[i], turn)) {
-      const adv = turn === 1 ? row / 7 : (7 - row) / 7;
+      const adv = turn === 1 ? (7 - row) / 7 : row / 7;
       prevTotalAdvance += adv;
     }
   }

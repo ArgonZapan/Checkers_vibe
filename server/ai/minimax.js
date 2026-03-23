@@ -250,8 +250,6 @@ function _extendCapture(board, cap, turn, result) {
   }
 
   if (!foundMore) {
-    // Check for promotion in multi-capture
-    const finalBoard = applyMove(board, cap, turn);
     result.push(cap);
   }
 }
