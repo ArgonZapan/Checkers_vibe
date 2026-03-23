@@ -176,6 +176,54 @@ export async function runWsMoveValidationTests() {
     assert.equal(result.valid, false);
   });
 
+  // ── Captures element validation (LEAK-010) ────────────────────────
+
+  test('accept captures with valid coord: [[3, 3]]', () => {
+    const result = validateMove({ from: [2, 2], to: [4, 4], captures: [[3, 3]] });
+    assert.equal(result.valid, true);
+  });
+
+  test('accept captures with multiple valid coords: [[3, 3], [5, 5]]', () => {
+    const result = validateMove({ from: [2, 2], to: [6, 6], captures: [[3, 3], [5, 5]] });
+    assert.equal(result.valid, true);
+  });
+
+  test('reject capture with out-of-range coord: [[8, 3]]', () => {
+    const result = validateMove({ from: [2, 2], to: [4, 4], captures: [[8, 3]] });
+    assert.equal(result.valid, false);
+    assert.ok(result.error.includes('capture at index 0'));
+  });
+
+  test('reject capture with negative coord: [[-1, 3]]', () => {
+    const result = validateMove({ from: [2, 2], to: [4, 4], captures: [[-1, 3]] });
+    assert.equal(result.valid, false);
+    assert.ok(result.error.includes('capture at index 0'));
+  });
+
+  test('reject capture with string element: ["not-coord"]', () => {
+    const result = validateMove({ from: [2, 2], to: [4, 4], captures: ['not-coord'] });
+    assert.equal(result.valid, false);
+    assert.ok(result.error.includes('capture at index 0'));
+  });
+
+  test('reject capture with number element: [42]', () => {
+    const result = validateMove({ from: [2, 2], to: [4, 4], captures: [42] });
+    assert.equal(result.valid, false);
+    assert.ok(result.error.includes('capture at index 0'));
+  });
+
+  test('reject second capture with invalid coord: [[3,3], [9,0]]', () => {
+    const result = validateMove({ from: [2, 2], to: [6, 6], captures: [[3, 3], [9, 0]] });
+    assert.equal(result.valid, false);
+    assert.ok(result.error.includes('capture at index 1'));
+  });
+
+  test('reject capture with single-element array: [[3]]', () => {
+    const result = validateMove({ from: [2, 2], to: [4, 4], captures: [[3]] });
+    assert.equal(result.valid, false);
+    assert.ok(result.error.includes('capture at index 0'));
+  });
+
   // ── Edge: floating point coords ───────────────────────────────────
 
   test('reject float coord: [3.5, 2]', () => {

@@ -233,6 +233,124 @@ export async function runWebsocketHandlersTests() {
     assert.ok(!validEvents.includes(bareParams), 'No bare "params" event — all are prefixed');
   });
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // gameMode auth check — setSpeed/setSpeedMode only in aivai mode
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /**
+   * Mirrors the auth check in server/index.js:
+   *   if (socket.gameMode !== 'aivai') { reject }
+   */
+  function isAllowedGameMode(gameMode) {
+    return gameMode === 'aivai';
+  }
+
+  test('gameMode auth: "aivai" is allowed', () => {
+    assert.ok(isAllowedGameMode('aivai'));
+  });
+
+  test('gameMode auth: "pvai" is rejected', () => {
+    assert.ok(!isAllowedGameMode('pvai'));
+  });
+
+  test('gameMode auth: "pvp" is rejected', () => {
+    assert.ok(!isAllowedGameMode('pvp'));
+  });
+
+  test('gameMode auth: undefined is rejected', () => {
+    assert.ok(!isAllowedGameMode(undefined));
+  });
+
+  test('gameMode auth: null is rejected', () => {
+    assert.ok(!isAllowedGameMode(null));
+  });
+
+  test('gameMode auth: empty string is rejected', () => {
+    assert.ok(!isAllowedGameMode(''));
+  });
+
+  test('gameMode auth: "AIVAI" (uppercase) is rejected', () => {
+    assert.ok(!isAllowedGameMode('AIVAI'));
+  });
+
+  test('gameMode auth: "aivai " (trailing space) is rejected', () => {
+    assert.ok(!isAllowedGameMode('aivai '));
+  });
+
+  // ── Combined: setSpeed validation + gameMode check ────────────────────
+
+  test('setSpeed + auth: valid speed in aivai mode → allowed', () => {
+    const speedResult = validateSetSpeed(500);
+    const modeAllowed = isAllowedGameMode('aivai');
+    assert.ok(speedResult.valid && modeAllowed);
+  });
+
+  test('setSpeed + auth: valid speed in pvai mode → rejected by auth', () => {
+    const speedResult = validateSetSpeed(500);
+    const modeAllowed = isAllowedGameMode('pvai');
+    assert.ok(speedResult.valid && !modeAllowed, 'speed valid but mode rejected');
+  });
+
+  test('setSpeed + auth: invalid speed in aivai mode → rejected by validation', () => {
+    const speedResult = validateSetSpeed(-1);
+    const modeAllowed = isAllowedGameMode('aivai');
+    assert.ok(!speedResult.valid && modeAllowed, 'speed rejected but mode allowed');
+  });
+
+  // ── setParams auth: same aivai-only restriction ──────────────────────
+
+  test('setParams auth: allowed in aivai mode', () => {
+    assert.ok(isAllowedGameMode('aivai'));
+  });
+
+  test('setParams auth: rejected in pvai mode', () => {
+    assert.ok(!isAllowedGameMode('pvai'));
+  });
+
+  // ── setParams whitelist: only allowed keys pass through ──────────────
+
+  const ALLOWED_PARAMS = new Set([
+    'layers', 'neurons', 'activation', 'lr', 'batchSize', 'dropout',
+    'minEpsilon', 'epsilonDecay', 'gamma', 'bufferSize', 'epochs',
+    'rewardCapture', 'rewardLosePiece', 'rewardPromotion', 'rewardWin', 'rewardLose',
+    'speedMode', 'aiMoveDelayMs',
+  ]);
+
+  function filterParams(input) {
+    const filtered = {};
+    for (const key of Object.keys(input)) {
+      if (ALLOWED_PARAMS.has(key)) filtered[key] = input[key];
+    }
+    return filtered;
+  }
+
+  test('setParams whitelist: allowed key "layers" passes', () => {
+    const result = filterParams({ layers: 3 });
+    assert.equal(result.layers, 3);
+  });
+
+  test('setParams whitelist: disallowed key "__proto__" is stripped', () => {
+    const result = filterParams({ __proto__: { admin: true } });
+    // __proto__ is special — check via hasOwnProperty instead of direct access
+    assert.ok(!Object.prototype.hasOwnProperty.call(result, '__proto__'));
+  });
+
+  test('setParams whitelist: disallowed key "constructor" is stripped', () => {
+    const result = filterParams({ constructor: 'evil' });
+    assert.ok(!Object.prototype.hasOwnProperty.call(result, 'constructor'));
+  });
+
+  test('setParams whitelist: disallowed key "admin" is stripped', () => {
+    const result = filterParams({ admin: true, layers: 2 });
+    assert.equal(result.admin, undefined);
+    assert.equal(result.layers, 2);
+  });
+
+  test('setParams whitelist: empty input returns empty object', () => {
+    const result = filterParams({});
+    assert.deepEqual(result, {});
+  });
+
   // ── Run ───────────────────────────────────────────────────────────────
 
   console.log('\n📋 WebSocket Handler Tests (setSpeed validation, params events)');

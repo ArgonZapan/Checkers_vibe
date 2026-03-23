@@ -17,6 +17,10 @@ import assert from 'node:assert/strict';
 // SECTION 1: trainer.js — _validateAndFallback edge cases
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Validate a move object — mirrors server/ai/trainer.js validateMove exactly.
+ * Handles both scalar 0-63 and [row,col] array formats (normalizes arrays to scalars).
+ */
 function validateMove(move) {
   if (!move || typeof move !== 'object') {
     return { valid: false, reason: 'move is null/undefined/not an object' };
@@ -24,18 +28,34 @@ function validateMove(move) {
   if (!('from' in move) || !('to' in move)) {
     return { valid: false, reason: 'move missing from/to fields' };
   }
-  const { from, to } = move;
+  let { from, to } = move;
+
+  // Normalize [row,col] arrays to scalar 0-63 (C++ engine uses array format)
+  if (Array.isArray(from)) {
+    if (from.length !== 2 || !Number.isInteger(from[0]) || !Number.isInteger(from[1])) {
+      return { valid: false, reason: `from array invalid: ${JSON.stringify(from)}` };
+    }
+    from = from[0] * 8 + from[1];
+  }
+  if (Array.isArray(to)) {
+    if (to.length !== 2 || !Number.isInteger(to[0]) || !Number.isInteger(to[1])) {
+      return { valid: false, reason: `to array invalid: ${JSON.stringify(to)}` };
+    }
+    to = to[0] * 8 + to[1];
+  }
+
+  // from/to should be numbers in range 0-63
   if (typeof from !== 'number' || typeof to !== 'number') {
-    return { valid: false, reason: `from/to not numbers` };
+    return { valid: false, reason: `from/to not numbers: from=${from} (${typeof from}), to=${to} (${typeof to})` };
   }
   if (!Number.isInteger(from) || !Number.isInteger(to)) {
-    return { valid: false, reason: `from/to not integers` };
+    return { valid: false, reason: `from/to not integers: from=${from}, to=${to}` };
   }
   if (from < 0 || from > 63 || to < 0 || to > 63) {
-    return { valid: false, reason: `from/to out of range 0-63` };
+    return { valid: false, reason: `from/to out of range 0-63: from=${from}, to=${to}` };
   }
   if (from === to) {
-    return { valid: false, reason: `from === to (no-op move)` };
+    return { valid: false, reason: `from === to === ${from} (no-op move)` };
   }
   return { valid: true, move };
 }
@@ -63,7 +83,12 @@ function randomLegalMove(legalMoves) {
   return legalMoves[Math.floor(Math.random() * legalMoves.length)];
 }
 
+/**
+ * _validateAndFallback — mirrors server/ai/trainer.js exactly.
+ * Uses validateMove (which now handles [row,col] arrays) then isMoveLegal.
+ */
 function validateAndFallback(chosenMove, legalMoves) {
+  // Resolve chosen move to a full move object
   let selectedMove;
   if (typeof chosenMove === 'number' || (chosenMove && typeof chosenMove.index === 'number')) {
     const idx = typeof chosenMove === 'number' ? chosenMove : chosenMove.index;
@@ -72,23 +97,17 @@ function validateAndFallback(chosenMove, legalMoves) {
     selectedMove = chosenMove;
   }
 
-  if (!selectedMove) return randomLegalMove(legalMoves);
-
-  // For array-coordinate moves, skip scalar validation, check in legal list directly
-  if (selectedMove && Array.isArray(selectedMove.from)) {
-    if (!isMoveLegal(selectedMove, legalMoves)) {
-      return randomLegalMove(legalMoves);
-    }
-    return selectedMove;
-  }
-
+  // Validate the selected move (handles both scalar and [row,col] formats)
   const validation = validateMove(selectedMove);
   if (!validation.valid) {
     return randomLegalMove(legalMoves);
   }
+
+  // Check if move is actually legal
   if (!isMoveLegal(selectedMove, legalMoves)) {
     return randomLegalMove(legalMoves);
   }
+
   return selectedMove;
 }
 
@@ -530,6 +549,92 @@ export async function runHunterCoverageGapsTests() {
     const move = { from: 9, to: 18, captures: [] };
     // captures.length === 0 → falsy → skip capture check → true
     assert.ok(isMoveLegal(move, legal));
+  });
+
+  // ── 8. validateMove: [row,col] array normalization (new in trainer.js) ──
+
+  test('validateMove: [row,col] array from/to normalizes to scalar', () => {
+    // [2,1] → 2*8+1=17, [3,2] → 3*8+2=26
+    const r = validateMove({ from: [2, 1], to: [3, 2] });
+    assert.equal(r.valid, true);
+  });
+
+  test('validateMove: [0,0] to [7,7] — corners valid', () => {
+    const r = validateMove({ from: [0, 0], to: [7, 7] });
+    assert.equal(r.valid, true);
+  });
+
+  test('validateMove: from=[2,1] to=[2,1] — same square rejected', () => {
+    const r = validateMove({ from: [2, 1], to: [2, 1] });
+    assert.equal(r.valid, false);
+    assert.ok(r.reason.includes('no-op'));
+  });
+
+  test('validateMove: from=[-1,0] — negative row rejected', () => {
+    const r = validateMove({ from: [-1, 0], to: [3, 3] });
+    assert.equal(r.valid, false);
+  });
+
+  test('validateMove: from=[8,0] — row > 7 rejected', () => {
+    const r = validateMove({ from: [8, 0], to: [3, 3] });
+    assert.equal(r.valid, false);
+  });
+
+  test('validateMove: from=[3.5, 2] — float in array rejected', () => {
+    const r = validateMove({ from: [3.5, 2], to: [4, 3] });
+    assert.equal(r.valid, false);
+    assert.ok(r.reason.includes('from array invalid'));
+  });
+
+  test('validateMove: from=[2] — single-element array rejected', () => {
+    const r = validateMove({ from: [2], to: [3, 3] });
+    assert.equal(r.valid, false);
+    assert.ok(r.reason.includes('from array invalid'));
+  });
+
+  test('validateMove: from=[2,3,4] — three-element array rejected', () => {
+    const r = validateMove({ from: [2, 3, 4], to: [3, 3] });
+    assert.equal(r.valid, false);
+  });
+
+  test('validateMove: mixed — scalar from, array to', () => {
+    // from=9 (scalar), to=[3,2] (array → 26)
+    const r = validateMove({ from: 9, to: [3, 2] });
+    assert.equal(r.valid, true);
+  });
+
+  test('validateMove: mixed — array from, scalar to', () => {
+    const r = validateMove({ from: [1, 1], to: 18 });
+    assert.equal(r.valid, true);
+  });
+
+  test('validateMove: from="hello" — string rejected', () => {
+    const r = validateMove({ from: 'hello', to: [3, 3] });
+    assert.equal(r.valid, false);
+    // "hello" is not an array, so it falls through to the "not numbers" check
+    assert.ok(r.reason.includes('from/to not numbers') || r.reason.includes('from array invalid'));
+  });
+
+  // ── 9. validateAndFallback with [row,col] arrays ───────────────────────
+
+  const arrayMovesLegal = [
+    { from: [2, 1], to: [3, 2], captures: [] },
+    { from: [2, 3], to: [3, 4], captures: [] },
+  ];
+
+  test('validateAndFallback: object with array from/to resolves correctly', () => {
+    const result = validateAndFallback({ from: [2, 1], to: [3, 2] }, arrayMovesLegal);
+    assert.ok(result !== null);
+    assert.deepEqual(result.from, [2, 1]);
+    assert.deepEqual(result.to, [3, 2]);
+  });
+
+  test('validateAndFallback: object with array from/to not in legal → fallback', () => {
+    const result = validateAndFallback({ from: [0, 0], to: [1, 1] }, arrayMovesLegal);
+    assert.ok(result !== null);
+    assert.ok(arrayMovesLegal.some(m =>
+      m.from[0] === result.from[0] && m.from[1] === result.from[1]
+    ));
   });
 
   // ── Run ────────────────────────────────────────────────────────────────

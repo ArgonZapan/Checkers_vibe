@@ -46,6 +46,15 @@ export function validateMove(data) {
     return { valid: false, error: 'Invalid "captures" — expected an array' };
   }
 
+  // Validate captures elements are valid coordinates (LEAK-010)
+  if (Array.isArray(captures)) {
+    for (let i = 0; i < captures.length; i++) {
+      if (!isValidCoord(captures[i])) {
+        return { valid: false, error: `Invalid capture at index ${i} — expected [row, col] with values 0-7` };
+      }
+    }
+  }
+
   return { valid: true };
 }
 
