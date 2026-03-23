@@ -659,10 +659,11 @@ io.on('connection', async (socket) => {
       if (newParams.blackStrategy != null && validStrategies.includes(newParams.blackStrategy)) {
         CONFIG.ai.strategy.black = newParams.blackStrategy;
       }
-      // Handle minimax depth
+      // Handle minimax depth — copy-on-write since strategies are deeply frozen
       if (newParams.minimaxDepth != null && typeof newParams.minimaxDepth === 'number' && Number.isFinite(newParams.minimaxDepth)) {
         if (CONFIG.ai.strategies.minimax) {
-          CONFIG.ai.strategies.minimax.depth = Math.max(1, Math.min(8, Math.round(newParams.minimaxDepth)));
+          const depth = Math.max(1, Math.min(8, Math.round(newParams.minimaxDepth)));
+          CONFIG.ai.strategies.minimax = Object.freeze({ ...CONFIG.ai.strategies.minimax, depth });
         }
       }
 
