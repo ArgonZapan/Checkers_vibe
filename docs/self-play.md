@@ -26,10 +26,24 @@ Node.js:
 
 ## Epsilon (eksploracja)
 
-- Osobny epsilon dla białych i czarnych
+- Osobny epsilon dla białych i czarnych (`epsilonWhite`, `epsilonBlack`)
 - Każdy gracz może mieć inną wartość
-- Decay: -0.001 po każdej grze (min 0.01)
+- Decay: -0.01 po każdej grze (min 0.01, z pliku `config.js`)
 - Użytkownik może zmienić ręcznie z UI
+
+## Kolejkowanie ruchów (Promise Queue)
+
+Każdy ruch przez WebSocket jest serializowany przez `_moveQueue`:
+```js
+socket._moveQueue = (socket._moveQueue || Promise.resolve())
+  .then(() => handleMove(socket, data))
+```
+To zapewnia, że ruchy są przetwarzane w kolejności, nawet przy opóźnionых odpowiedziach C++.
+
+## Sterowanie prędkością
+
+- `setSpeed(ms)` — ustawia opóźnienie między ruchami AI (0-10000ms, max 60000 z walidacją)
+- `setSpeedMode('fast'|'normal')` — tryb szybki/normalny, zapisany w `CONFIG.server.speedMode`
 
 ## Replay buffer
 

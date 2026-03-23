@@ -1,5 +1,12 @@
 # Silnik gry — Warcaby
 
+## Stałe silnika
+
+- `MAX_CAPTURES = 12` — max zbitych pionków (plansza 8x8)
+- `MAX_PATH = 13` — max pozycji w ścieżce (start + 12 captures)
+- `NO_COLOR = -1` — wartość oznaczająca brak koloru ( enum `Color { NO_COLOR = -1, WHITE = 0, BLACK = 1 }`)
+- `movesWithoutCapture_` — licznik pół-ruchów bez bicia (O(1) detekcja remisu). Gdy >= 40 (20 pełnych ruchów) → remis.
+
 ## Zasady
 
 Plansza 8×8, pionki na ciemnych polach. Każdy gracz zaczyna z 12 pionkami.
