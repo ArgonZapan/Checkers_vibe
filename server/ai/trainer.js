@@ -641,7 +641,9 @@ export class SelfPlay {
       // Get legal moves (already fetched in parallel with state above)
       const { moves: legalMoves } = await lmResInit.json();
 
-      // Issue #121: If no legal moves available, the game is over
+      // Safety net: if engine says game is not over but has no legal moves,
+      // treat as draw. This duplicates the gameOver block above intentionally —
+      // it catches the edge case where engine state and legal moves are out of sync. (#121)
       if (!legalMoves || legalMoves.length === 0) {
         console.warn('[SelfPlay] No legal moves available — game should be over');
         // Force game over as draw (engine state may not reflect this yet)
@@ -764,7 +766,7 @@ export class SelfPlay {
 
       const boardReact = boardFromCpp(newState.board);
 
-      const turnColor = newState.turn === 1 || newState.turn === 'white' ? 'white' : 'black';
+      const turnColor = newState.turn;
       this.io?.emit('state', {
         board: boardReact,
         turn: turnColor,
