@@ -1,6 +1,6 @@
 import { createModel, predict, train, saveModel, loadModel, boardToTensor } from './model.js';
 import { ReplayBuffer } from './buffer.js';
-import { writeFile, readFile, mkdir } from 'node:fs/promises';
+import { writeFile, readFile, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG } from '../../config.js';
@@ -367,7 +367,10 @@ export class SelfPlay {
         epsilonBlack: this.epsilonBlack,
         running: this.running,
       };
-      await writeFile(STATE_FILE, JSON.stringify(state, null, 2));
+      // Atomic write: temp file → rename (prevents corruption on crash)
+      const tmpFile = STATE_FILE + '.tmp';
+      await writeFile(tmpFile, JSON.stringify(state, null, 2));
+      await rename(tmpFile, STATE_FILE);
     } catch (err) {
       console.error('[SelfPlay] saveState error:', err.message);
     }
@@ -397,13 +400,22 @@ export class SelfPlay {
   // ── Internal game loop ───────────────────────────────────────────────────
   async _loop() {
     this.io?.emit('selfPlayStatus', { active: true, gameNumber: this.stats.gamesPlayed, stats: this.stats });
+    let consecutiveErrors = 0;
     while (this.running) {
       try {
         await this._playGame();
+        consecutiveErrors = 0;
         // Delay between rounds = 3x move delay
         if (CONFIG.server.aiMoveDelayMs > 0) await this._sleep(CONFIG.server.aiMoveDelayMs * 3);
       } catch (err) {
-        console.error('[SelfPlay] Game error:', err.message);
+        consecutiveErrors++;
+        console.error(`[SelfPlay] Game error (${consecutiveErrors}/5):`, err.message);
+        if (consecutiveErrors >= 5) {
+          console.error('[SelfPlay] Too many errors, stopping self-play');
+          this.running = false;
+          this.io?.emit('selfPlayStatus', { active: false, gameNumber: this.stats.gamesPlayed, stats: this.stats });
+          break;
+        }
         // Brief pause before retry
         await this._sleep(2000);
       }
@@ -425,16 +437,25 @@ export class SelfPlay {
     });
     const samples = [];
     let turn = 1; // 1 = white, -1 = black
+    let moveCount = 0;
+    const MAX_MOVES = 300; // safety limit to prevent infinite games
 
     // 2. Play game
     while (true) {
+      moveCount++;
       // Get game state (board, legal moves, gameOver, winner)
       const stateRes = await fetch(`${CPP_BASE}/api/game/state`);
       if (!stateRes.ok) throw new Error(`Game state failed: ${stateRes.status}`);
       const stateData = await stateRes.json();
       const boardArray = stateData.board;
-      const gameOver = stateData.gameOver;
-      const winner = stateData.winner;
+      let gameOver = stateData.gameOver;
+      let winner = stateData.winner;
+
+      // Safety: force draw if too many moves
+      if (moveCount >= MAX_MOVES && !gameOver) {
+        gameOver = true;
+        winner = 'draw';
+      }
 
       if (gameOver) {
         // Record result

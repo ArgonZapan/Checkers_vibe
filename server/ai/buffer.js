@@ -19,13 +19,16 @@ export class ReplayBuffer {
   sample(n) {
     if (this.count === 0) return [];
     const count = Math.min(n, this.count);
-    // Fisher-Yates shuffle on indices, take first `count`
-    const indices = Array.from({ length: this.count }, (_, i) => i);
-    for (let i = indices.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [indices[i], indices[j]] = [indices[j], indices[i]];
+    // Reservoir sampling — O(k) instead of O(n) Fisher-Yates
+    const result = [];
+    for (let i = 0; i < count; i++) {
+      result.push(this.buffer[i]);
     }
-    return indices.slice(0, count).map(i => this.buffer[i]);
+    for (let i = count; i < this.count; i++) {
+      const j = Math.floor(Math.random() * (i + 1));
+      if (j < count) result[j] = this.buffer[i];
+    }
+    return result;
   }
 
   size() {
