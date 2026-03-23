@@ -384,8 +384,8 @@ io.on('connection', async (socket) => {
       if (newParams.layers != null && (newParams.layers < 1 || newParams.layers > 5)) {
         errors.push(`layers=${newParams.layers} (zakres: 1-5)`);
       }
-      if (newParams.neurons != null && (newParams.neurons < 32 || newParams.neurons > 1024)) {
-        errors.push(`neurons=${newParams.neurons} (zakres: 32-1024)`);
+      if (newParams.neurons != null && (newParams.neurons < 32 || newParams.neurons > 512)) {
+        errors.push(`neurons=${newParams.neurons} (zakres: 32-512)`);
       }
       if (newParams.batchSize != null && (newParams.batchSize < 8 || newParams.batchSize > 256)) {
         errors.push(`batchSize=${newParams.batchSize} (zakres: 8-256)`);
