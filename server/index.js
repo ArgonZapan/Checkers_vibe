@@ -197,6 +197,68 @@ async function getGameState() {
   };
 }
 
+// ── Player move handler (extracted for serialization) ───────────────────────
+async function handleMove(socket, { from, to, captures }) {
+  // 1. Execute player's move via C++ (include captures for disambiguation)
+  const moveBody = { from, to };
+  if (captures && captures.length > 0) moveBody.captures = captures;
+  const moveResult = await cppFetch('/api/move', {
+    method: 'POST',
+    body: JSON.stringify(moveBody),
+  });
+
+  // 2. Get updated state after player move
+  let state = await getGameState();
+  const isPvAI = socket.gameMode === 'pvai';
+  const moveCaptures = moveResult.captures || captures || [];
+  // Player's move path for animation
+  const playerPath = moveResult.path || null;
+  const playerBoard = state.board;
+
+  // 3. If PvAI and game not over → first emit player's move, then AI makes its move
+  if (isPvAI && !state.gameOver) {
+    // Emit player's state first (with animation path)
+    const playerPayload = {
+      ...state,
+      lastMove: { from, to, captures: moveCaptures },
+      path: playerPath,
+    };
+    socket.emit('state', playerPayload);
+
+    // Wait for animation, then AI makes its move
+    const animStepMs = CONFIG.animationStepDurationMs;
+    const animDelay = (playerPath && playerPath.length > 2)
+      ? playerPath.length * animStepMs + CONFIG.moveDelayMs
+      : CONFIG.moveDelayMs;
+    await new Promise(r => setTimeout(r, animDelay));
+    await aiMove(state);
+    state = await getGameState();
+  }
+
+  // 4. Emit new state — in PvP broadcast to all, in PvAI emit to requesting client
+  const statePayload = {
+    ...state,
+    lastMove: state.lastMove || { from, to, captures: moveCaptures },
+  };
+  if (socket.gameMode === 'pvp') {
+    io.emit('state', statePayload);
+  } else {
+    socket.emit('state', statePayload);
+  }
+
+  // 5. If game over, emit gameOver event and resume self-play (only in aivai mode)
+  if (state.gameOver) {
+    io.emit('gameOver', {
+      winner: state.winner,
+      moves: 0,
+    });
+    // Only restart self-play for aivai mode, not after player games
+    if (socket.gameMode === 'aivai') {
+      setTimeout(() => trainer.start(), 3000);
+    }
+  }
+}
+
 io.on('connection', async (socket) => {
   console.log(`[WS] Client connected: ${socket.id}`);
   socket.gameMode = 'pvai'; // default mode
