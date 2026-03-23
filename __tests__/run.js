@@ -90,6 +90,7 @@ import { runHunterAlphaRateLimitCleanupTests } from './hunter-alpha-rate-limit-c
 import { runHunterAlphaSelfplayMethodsTests } from './hunter-alpha-selfplay-methods.test.js';
 import { runHunterAlphaProxyFilterTests } from './hunter-alpha-proxy-filter.test.js';
 import { runHunterSub003CoverageTests } from './hunter-sub-003-coverage.test.js';
+import { runCppFetchLogSanitizationTests } from './cppFetchLogSanitization.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -178,6 +179,7 @@ const suites = [
   { name: 'hunterAlphaSelfplayMethods', run: runHunterAlphaSelfplayMethodsTests },
   { name: 'hunterAlphaProxyFilter', run: runHunterAlphaProxyFilterTests },
   { name: 'hunterSub003Coverage', run: runHunterSub003CoverageTests },
+  { name: 'cppFetchLogSanitization', run: runCppFetchLogSanitizationTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
