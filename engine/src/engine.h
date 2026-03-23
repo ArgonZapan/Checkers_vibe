@@ -46,6 +46,7 @@ public:
 private:
     Board board_;
     std::vector<Move> history_;
+    int movesWithoutCapture_ = 0; // O(1) draw detection (#31)
 };
 
 } // namespace checkers

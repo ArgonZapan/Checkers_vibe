@@ -10,6 +10,7 @@ Engine::Engine() {
 void Engine::reset() {
     board_.reset();
     history_.clear();
+    movesWithoutCapture_ = 0;
 }
 
 const Board& Engine::getBoard() const {
@@ -43,6 +44,7 @@ bool Engine::makeMove(Move& move) {
     // Wykonaj
     board_.makeMove(move);
     history_.push_back(move);
+    if (move.captures.empty()) movesWithoutCapture_++; else movesWithoutCapture_ = 0;
 
     return true;
 }
@@ -50,6 +52,7 @@ bool Engine::makeMove(Move& move) {
 void Engine::makeMoveUnchecked(Move& move) {
     board_.makeMove(move);
     history_.push_back(move);
+    if (move.captures.empty()) movesWithoutCapture_++; else movesWithoutCapture_ = 0;
 }
 
 bool Engine::isLegal(const Move& move) const {
@@ -68,13 +71,8 @@ GameResult Engine::getResult() const {
         return (board_.currentTurn == WHITE) ? BLACK_WIN : WHITE_WIN;
     }
 
-    // Sprawdź remis: 20 ruchów bez bicia
-    int movesWithoutCapture = 0;
-    for (int i = history_.size() - 1; i >= 0; i--) {
-        if (history_[i].isCapture()) break;
-        movesWithoutCapture++;
-    }
-    if (movesWithoutCapture >= 40) { // 40 pół-ruchów = 20 pełnych ruchów
+    // Sprawdź remis: 20 ruchów bez bicia (O(1) zamiast O(n))
+    if (movesWithoutCapture_ >= 40) { // 40 pół-ruchów = 20 pełnych ruchów
         return DRAW;
     }
 
@@ -94,6 +92,13 @@ bool Engine::undoLastMove() {
 
     board_.undoMove(history_.back());
     history_.pop_back();
+
+    // Rebuild movesWithoutCapture_ from remaining history
+    movesWithoutCapture_ = 0;
+    for (int i = history_.size() - 1; i >= 0; i--) {
+        if (history_[i].isCapture()) break;
+        movesWithoutCapture_++;
+    }
 
     return true;
 }
