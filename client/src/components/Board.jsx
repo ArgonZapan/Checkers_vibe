@@ -421,6 +421,7 @@ function areEqual(prevProps, nextProps) {
   if (prevProps.legalMoves !== nextProps.legalMoves) return false;
   if (prevProps.lastMove !== nextProps.lastMove) return false;
   if (prevProps.path !== nextProps.path) return false;
+  if (prevProps.captures?.length !== nextProps.captures?.length) return false;
   if (prevProps.onCellClick !== nextProps.onCellClick) return false;
   return true;
 }
