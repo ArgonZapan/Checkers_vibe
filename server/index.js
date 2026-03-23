@@ -159,8 +159,22 @@ async function cppFetch(path, opts = {}) {
       signal: controller.signal,
       ...opts,
     });
-    if (!res.ok) throw new Error(`C++ ${path} → ${res.status}`);
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error(`[cppFetch] ${opts.method || 'GET'} ${path} → ${res.status}${body ? ': ' + body.slice(0, 200) : ''}`);
+      throw new Error(`C++ ${path} → ${res.status}`);
+    }
     return res.json();
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      console.error(`[cppFetch] Timeout after ${CPP_FETCH_TIMEOUT_MS}ms: ${opts.method || 'GET'} ${path}`);
+      throw new Error(`C++ engine timeout (${CPP_FETCH_TIMEOUT_MS}ms) — engine may be crashed`);
+    }
+    if (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
+      console.error(`[cppFetch] Connection failed: ${opts.method || 'GET'} ${path} — engine may be down`);
+      throw new Error(`C++ engine unreachable — ${err.code}`);
+    }
+    throw err;
   } finally {
     clearTimeout(timer);
   }

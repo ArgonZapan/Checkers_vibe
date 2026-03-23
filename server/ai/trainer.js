@@ -526,9 +526,9 @@ export class SelfPlay {
         if (CONFIG.moveDelayMs > 0) await this._sleep(CONFIG.moveDelayMs * 3);
       } catch (err) {
         consecutiveErrors++;
-        console.error(`[SelfPlay] Game error (${consecutiveErrors}/5):`, err.message);
-        if (consecutiveErrors >= 5) {
-          console.error('[SelfPlay] Too many errors, stopping self-play');
+        console.error(`[SelfPlay] Game error (${consecutiveErrors}/3):`, err.message);
+        if (consecutiveErrors >= 3) {
+          console.error('[SelfPlay] Too many errors (3), stopping self-play');
           this.running = false;
           this.io?.emit('selfPlayStatus', { active: false, gameNumber: this.stats.gamesPlayed, stats: this.stats });
           break;
