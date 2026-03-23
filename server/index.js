@@ -25,6 +25,7 @@ const io = new SocketIO(httpServer, {
 
 // ── Security Headers (LEAK-001) ─────────────────────────────────────────────
 app.use((_req, res, next) => {
+  res.removeHeader('X-Powered-By'); // SEC-001: defense-in-depth
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '0');
