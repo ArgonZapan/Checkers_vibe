@@ -36,8 +36,8 @@ function validateTrain(body) {
 
 function validateParams(body) {
   const { epsilon, networkSize, side = 'both' } = body || {};
-  if (epsilon != null && (typeof epsilon !== 'number' || epsilon < 0 || epsilon > 1)) {
-    return { valid: false, status: 400, error: 'epsilon must be 0-1' };
+  if (epsilon != null && (typeof epsilon !== 'number' || !Number.isFinite(epsilon) || epsilon < 0 || epsilon > 1)) {
+    return { valid: false, status: 400, error: 'epsilon must be a finite number 0-1' };
   }
   if (networkSize != null && !['small', 'medium', 'large'].includes(networkSize)) {
     return { valid: false, status: 400, error: 'networkSize must be small|medium|large' };

@@ -388,6 +388,11 @@ export class SelfPlay {
   }
 
   setParams(epsilon, networkSize, side) {
+    // Guard: reject NaN/Infinity epsilon to prevent corrupt training state
+    if (epsilon !== undefined && (typeof epsilon !== 'number' || !Number.isFinite(epsilon) || epsilon < 0 || epsilon > 1)) {
+      console.warn(`[Trainer] Ignoring invalid epsilon: ${epsilon}`);
+      epsilon = undefined; // treat as not-set
+    }
     if (side === 'white' || side === 'both') {
       if (epsilon !== undefined) this.epsilonWhite = epsilon;
       if (networkSize !== undefined) {
@@ -544,8 +549,8 @@ export class SelfPlay {
         this.stats.draws = state.stats.draws ?? 0;
         this.stats.lastLoss = state.stats.lastLoss ?? null;
       }
-      this.epsilonWhite = state.epsilonWhite ?? CONFIG.ai.defaultEpsilon;
-      this.epsilonBlack = state.epsilonBlack ?? CONFIG.ai.defaultEpsilon;
+      this.epsilonWhite = (typeof state.epsilonWhite === 'number' && Number.isFinite(state.epsilonWhite)) ? state.epsilonWhite : CONFIG.ai.defaultEpsilon;
+      this.epsilonBlack = (typeof state.epsilonBlack === 'number' && Number.isFinite(state.epsilonBlack)) ? state.epsilonBlack : CONFIG.ai.defaultEpsilon;
       this.stats.epsilonWhite = this.epsilonWhite;
       this.stats.epsilonBlack = this.epsilonBlack;
       console.log(`[SelfPlay] Loaded state: ${this.stats.gamesPlayed} games played, εW=${this.epsilonWhite}, εB=${this.epsilonBlack}`);

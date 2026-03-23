@@ -160,9 +160,9 @@ app.post('/api/ai/train', async (req, res) => {
 
 app.post('/api/ai/params', (req, res) => {
   const { epsilon, networkSize, side = 'both' } = req.body;
-  // Validate epsilon
-  if (epsilon != null && (typeof epsilon !== 'number' || epsilon < 0 || epsilon > 1)) {
-    return res.status(400).json({ error: 'epsilon must be 0-1' });
+  // Validate epsilon — reject NaN, Infinity, and out-of-range values
+  if (epsilon != null && (typeof epsilon !== 'number' || !Number.isFinite(epsilon) || epsilon < 0 || epsilon > 1)) {
+    return res.status(400).json({ error: 'epsilon must be a finite number 0-1' });
   }
   if (networkSize != null && !['small', 'medium', 'large'].includes(networkSize)) {
     return res.status(400).json({ error: 'networkSize must be small|medium|large' });

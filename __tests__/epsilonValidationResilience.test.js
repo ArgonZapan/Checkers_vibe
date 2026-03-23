@@ -2,7 +2,7 @@
  * epsilonValidationResilience.test.js — Resilience edge cases for epsilon validation.
  *
  * Covers the epsilon validation logic in server/index.js (line 164):
- *   if (epsilon != null && (typeof epsilon !== 'number' || epsilon < 0 || epsilon > 1))
+ *   if (epsilon != null && (typeof epsilon !== 'number' || !Number.isFinite(epsilon) || epsilon < 0 || epsilon > 1))
  * Tests special numeric values (NaN, Infinity, -Infinity), boundary values,
  * and type coercion edge cases.
  *
@@ -18,7 +18,7 @@ import assert from 'node:assert/strict';
  * Returns { valid: true } or { valid: false, error: string }.
  */
 function validateEpsilon(epsilon) {
-  if (epsilon != null && (typeof epsilon !== 'number' || epsilon < 0 || epsilon > 1)) {
+  if (epsilon != null && (typeof epsilon !== 'number' || !Number.isFinite(epsilon) || epsilon < 0 || epsilon > 1)) {
     return { valid: false, error: 'epsilon must be 0-1' };
   }
   return { valid: true };
@@ -38,15 +38,10 @@ export async function runEpsilonValidationResilienceTests() {
   // Special numeric values — resilience edge cases
   // ═══════════════════════════════════════════════════════════════════════
 
-  test('epsilon NaN → rejected (typeof NaN === "number" but NaN < 0 is false)', () => {
-    // NaN is typeof "number" but NaN < 0 and NaN > 1 are both false
-    // So NaN passes the range check — this is a bug!
+  test('epsilon NaN → rejected (typeof NaN === "number" but !Number.isFinite catches it)', () => {
+    // NaN is typeof "number" but Number.isFinite(NaN) === false
     const result = validateEpsilon(NaN);
-    // NOTE: The current implementation lets NaN through because:
-    // typeof NaN === 'number' → true, NaN < 0 → false, NaN > 1 → false
-    // So the OR chain: false || false || false → false → valid
-    // This test documents the actual behavior (NaN is accepted — potential bug)
-    assert.equal(result.valid, true, 'NaN passes current validation (documented behavior)');
+    assert.equal(result.valid, false, 'NaN must be rejected by Number.isFinite check');
   });
 
   test('epsilon Infinity → rejected', () => {
