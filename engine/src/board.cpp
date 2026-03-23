@@ -109,12 +109,11 @@ void Board::makeMove(Move& move) {
 
     // Record pre-move state for undo
     move.wasKing = isKing;
-    move.numCapturedKings = 0;
+    move.capturedKingsMask = 0;
     for (int i = 0; i < move.numCaptures; i++) {
         Bitboard capMask = squareToMask(move.captures[i].row, move.captures[i].col);
         bool capWasKing = (whiteKings | blackKings) & capMask;
-        move.capturedKings[i] = capWasKing;
-        move.numCapturedKings++;
+        if (capWasKing) move.setCapturedKing(i);
     }
 
     // Przesuń pionek
@@ -184,7 +183,7 @@ void Board::undoMove(const Move& move) {
     for (int i = 0; i < move.numCaptures; i++) {
         const auto& cap = move.captures[i];
         Bitboard capMask = squareToMask(cap.row, cap.col);
-        bool wasKing = (i < move.numCapturedKings) ? move.capturedKings[i] : false;
+        bool wasKing = move.capturedKing(i);
 
         if (isWhite) {
             // Biały bił — przywróć czarnego
