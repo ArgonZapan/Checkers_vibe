@@ -134,16 +134,25 @@ std::vector<Move> MoveGenerator::generateKingMoves(const Board& board, int row, 
     for (auto& d : ALL_DIRS) {
         int nr = row + d[0];
         int nc = col + d[1];
+        int pathIdx = 0;
         while (Board::inBounds(nr, nc) && board.isEmpty(nr, nc)) {
             Move m;
             m.from = Square(row, col);
             m.to = Square(nr, nc);
-            m.path[0] = Square(row, col);
-            m.path[1] = Square(nr, nc);
-            m.numPath = 2;
+            // Build full path: start + all intermediate squares up to current
+            int idx = 0;
+            m.path[idx++] = Square(row, col);
+            int pr = row, pc = col;
+            for (int step = 0; step <= pathIdx; step++) {
+                pr += d[0];
+                pc += d[1];
+                m.path[idx++] = Square(pr, pc);
+            }
+            m.numPath = idx;
             moves.push_back(m);
             nr += d[0];
             nc += d[1];
+            pathIdx++;
         }
     }
 
