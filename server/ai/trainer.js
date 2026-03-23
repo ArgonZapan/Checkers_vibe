@@ -193,8 +193,23 @@ function validateMove(move) {
   if (!('from' in move) || !('to' in move)) {
     return { valid: false, reason: 'move missing from/to fields' };
   }
-  const { from, to } = move;
-  // from/to should be numbers in range 0-31 (standard checkers board) or 0-63
+  let { from, to } = move;
+
+  // Normalize [row,col] arrays to scalar 0-63 (C++ engine uses array format)
+  if (Array.isArray(from)) {
+    if (from.length !== 2 || !Number.isInteger(from[0]) || !Number.isInteger(from[1])) {
+      return { valid: false, reason: `from array invalid: ${JSON.stringify(from)}` };
+    }
+    from = from[0] * 8 + from[1];
+  }
+  if (Array.isArray(to)) {
+    if (to.length !== 2 || !Number.isInteger(to[0]) || !Number.isInteger(to[1])) {
+      return { valid: false, reason: `to array invalid: ${JSON.stringify(to)}` };
+    }
+    to = to[0] * 8 + to[1];
+  }
+
+  // from/to should be numbers in range 0-63
   if (typeof from !== 'number' || typeof to !== 'number') {
     return { valid: false, reason: `from/to not numbers: from=${from} (${typeof from}), to=${to} (${typeof to})` };
   }
