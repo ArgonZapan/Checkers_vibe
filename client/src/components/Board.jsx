@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { CONFIG } from '../../../config.js';
 
 const CELL_SIZE = CONFIG.board.cellSize;
