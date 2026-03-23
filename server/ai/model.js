@@ -190,6 +190,28 @@ export function buildInputArray(boardArray, turn) {
   return input;
 }
 
+// ── Canonical Policy Index ──────────────────────────────────────────────────
+// Compute canonical policy index (0-47) from move geometry.
+// 32 dark squares × 4 directions (NE, NW, SE, SW) = 128 max, but
+// only forward directions are valid for pawns → 48 effective slots.
+// fromSquare: 0-63 board index, toSquare: 0-63 board index
+const DIRECTION_MAP = { '-1,1': 0, '-1,-1': 1, '1,1': 2, '1,-1': 3 };
+
+export function computePolicyIndex(fromSquare, toSquare) {
+  const fromRow = Math.floor(fromSquare / 8);
+  const fromCol = fromSquare % 8;
+  // Dark square index: 0-31 (only dark squares are playable in checkers)
+  const darkFrom = Math.floor((fromRow * 8 + fromCol) / 2);
+  const toRow = Math.floor(toSquare / 8);
+  const toCol = toSquare % 8;
+  const dr = toRow - fromRow;
+  const dc = toCol - fromCol;
+  const dirKey = `${Math.sign(dr)},${Math.sign(dc)}`;
+  const dirIdx = DIRECTION_MAP[dirKey];
+  if (dirIdx === undefined) return 0; // fallback for invalid direction
+  return darkFrom * 4 + dirIdx;
+}
+
 // ── Predict ─────────────────────────────────────────────────────────────────
 export async function predict(model, boardArray, legalMoves, turn = 1) {
   const tensor = boardToTensor(boardArray, turn);
@@ -200,11 +222,10 @@ export async function predict(model, boardArray, legalMoves, turn = 1) {
     const policy = await policyTensor.data();
     const value = (await valueTensor.data())[0];
 
-    // Mask illegal moves
+    // Mask illegal moves — use canonical policyIndex, not array index
     const legalIndices = legalMoves.map(m => {
       if (typeof m === 'number') return m;
-      // Convert from move object to index if needed
-      return m.index ?? m;
+      return m.policyIndex ?? m.index ?? m;
     });
 
     if (legalIndices.length === 0) {
@@ -240,9 +261,11 @@ export async function predict(model, boardArray, legalMoves, turn = 1) {
     }
 
     // Return the full move object from legalMoves, not just the policy index.
-    // bestIdx is a policy vector index (0-47), not an index into legalMoves.
-    const selectedMove = legalMoves.find(m => (typeof m === 'number' ? m : m.index ?? m) === bestIdx)
-      || legalMoves[0];
+    // bestIdx is a canonical policy vector index (0-47), not an array index.
+    const selectedMove = legalMoves.find(m => {
+      const idx = typeof m === 'number' ? m : (m.policyIndex ?? m.index ?? m);
+      return idx === bestIdx;
+    }) || legalMoves[0];
 
     return {
       move: selectedMove,
@@ -308,9 +331,10 @@ export async function train(model, batch, epochs = 5) {
     const { board, legalMoves, chosenMove, result, turn = 1 } = sample;
     boards.push(Array.from(buildInputArray(board, turn)));
 
-    // Policy target: one-hot on chosen move
+    // Policy target: one-hot on chosen move (use canonical policyIndex)
     const policyTarget = new Float32Array(48).fill(0);
-    const moveIdx = typeof chosenMove === 'number' ? chosenMove : chosenMove.index ?? chosenMove;
+    const moveIdx = typeof chosenMove === 'number' ? chosenMove
+      : (chosenMove.policyIndex ?? chosenMove.index ?? chosenMove);
     if (moveIdx >= 0 && moveIdx < 48) {
       policyTarget[moveIdx] = 1;
     }

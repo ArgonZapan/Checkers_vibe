@@ -56,7 +56,7 @@ export function validateMove(data) {
  * @returns {{ valid: boolean, clamped?: number, error?: string }}
  */
 export function validateSetSpeed(ms) {
-  if (typeof ms !== 'number' || ms < 0 || ms > 60000 || Number.isNaN(ms)) {
+  if (typeof ms !== 'number' || ms < 0 || ms > 10000 || Number.isNaN(ms)) {
     return { valid: false, error: 'Invalid speed value' };
   }
   const clamped = Math.max(0, Math.min(ms, 10000));

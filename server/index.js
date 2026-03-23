@@ -4,8 +4,8 @@ import { createServer } from 'node:http';
 import { Server as SocketIO } from 'socket.io';
 import { setupProxy } from './proxy.js';
 import { SelfPlay } from './ai/trainer.js';
-import { predict, createModel } from './ai/model.js';
-import { saveModel, loadModel } from './ai/model.js';
+import { predict, createModel, train } from './ai/model.js';
+import { saveModel, loadModel, computePolicyIndex } from './ai/model.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG } from '../config.js';
@@ -432,8 +432,8 @@ io.on('connection', async (socket) => {
 
   // ── Speed control ──────────────────────────────────────────────────────
   socket.on('setSpeed', (ms) => {
-    // Validate: must be a number 0-60000, not NaN
-    if (typeof ms !== 'number' || ms < 0 || ms > 60000 || Number.isNaN(ms)) {
+    // Validate: must be a number 0-10000, not NaN
+    if (typeof ms !== 'number' || ms < 0 || ms > 10000 || Number.isNaN(ms)) {
       socket.emit('error', { message: 'Invalid speed value' });
       return;
     }
@@ -481,7 +481,11 @@ async function aiMove(currentState) {
 
     // Assign index to each legal move (C++ engine doesn't provide it)
     // Use array position as index — model policy maps to these indices
-    const movesWithIndex = legalMoves.map((m, i) => ({ ...m, index: i }));
+    const movesWithIndex = legalMoves.map((m, i) => ({
+      ...m,
+      index: i,
+      policyIndex: computePolicyIndex(m.from, m.to),
+    }));
 
     // Predict best move (direct call instead of HTTP self-call)
     const turn = colorToTurn(currentState.turn);

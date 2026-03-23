@@ -53,7 +53,7 @@ export async function runWsSetSpeedTests() {
     assert.equal(r.valid, false);
   });
 
-  // ── Values > 60000 (rejected) ─────────────────────────────────────
+  // ── Values > 10000 (rejected) ─────────────────────────────────────
 
   test('reject 60001', () => {
     const r = validateSetSpeed(60001);
@@ -70,25 +70,21 @@ export async function runWsSetSpeedTests() {
     assert.equal(r.valid, false);
   });
 
-  // ── Clamping: values > 10000 but <= 60000 are accepted and clamped ─
-  // The handler accepts up to 60000 but clamps to 10000.
+  // ── Values > 10000 are rejected (not clamped) ────────────────────
 
-  test('accept 10001 — clamped to 10000', () => {
+  test('reject 10001', () => {
     const r = validateSetSpeed(10001);
-    assert.equal(r.valid, true);
-    assert.equal(r.clamped, 10000);
+    assert.equal(r.valid, false);
   });
 
-  test('accept 50000 — clamped to 10000', () => {
+  test('reject 50000', () => {
     const r = validateSetSpeed(50000);
-    assert.equal(r.valid, true);
-    assert.equal(r.clamped, 10000);
+    assert.equal(r.valid, false);
   });
 
-  test('accept 60000 — clamped to 10000', () => {
+  test('reject 60000', () => {
     const r = validateSetSpeed(60000);
-    assert.equal(r.valid, true);
-    assert.equal(r.clamped, 10000);
+    assert.equal(r.valid, false);
   });
 
   // ── String input ──────────────────────────────────────────────────

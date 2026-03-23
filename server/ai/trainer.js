@@ -1,4 +1,4 @@
-import { createModel, predict, train, saveModel, loadModel, boardToTensor } from './model.js';
+import { createModel, predict, train, saveModel, loadModel, boardToTensor, computePolicyIndex } from './model.js';
 import { ReplayBuffer } from './buffer.js';
 import { writeFile, readFile, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
@@ -673,7 +673,11 @@ export class SelfPlay {
         break;
       }
 
-      const movesWithIndex = legalMoves.map((m, i) => ({ ...m, index: i }));
+      const movesWithIndex = legalMoves.map((m, i) => ({
+        ...m,
+        index: i,
+        policyIndex: computePolicyIndex(m.from, m.to),
+      }));
 
       // Choose model based on turn
       const model = turn === 1 ? this.modelWhite : this.modelBlack;
