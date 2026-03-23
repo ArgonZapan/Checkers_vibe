@@ -138,14 +138,13 @@ export async function runBoardConvertAdditionalTests() {
     assert.deepEqual(result, [0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
-  test('boardFromCpp: flat array with exactly 8 elements → 1 row', () => {
+  test('boardFromCpp: flat array with exactly 8 elements → returns empty board (not 64)', () => {
+    // Flat arrays with length !== 64 are invalid — graceful default is empty board
     const flat = [1, 0, 3, 0, 1, 0, 3, 0];
     const board = boardFromCpp(flat);
     assert.equal(board.length, 8);
     assert.equal(board[0].length, 8);
-    assert.deepEqual(board[0][0], { color: 'white', king: false });
-    assert.equal(board[0][1], null);
-    assert.deepEqual(board[0][2], { color: 'black', king: false });
+    assert.ok(board.every(row => row.every(cell => cell === null)));
   });
 
   test('boardToCpp: round-trip with value 5 (unknown) through boardFromCpp', () => {

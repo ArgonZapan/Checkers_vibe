@@ -40,11 +40,12 @@ export async function runBoardConvertEdgeTests() {
     assert.deepEqual(board[0][0], { color: 'white', king: false });
   });
 
-  test('boardFromCpp: single-element flat [1] produces 8x8 with first row=[1]', () => {
-    // Not a real use case (requires 64 elements for flat), but function handles it
+  test('boardFromCpp: single-element flat [1] returns empty 8x8 (not 64 elements)', () => {
+    // Flat arrays with length !== 64 are invalid — graceful default is empty board
     const board = boardFromCpp([1]);
     assert.equal(board.length, 8);
-    assert.equal(board[0].length, 1); // only 1 element in first row
+    assert.equal(board[0].length, 8);
+    assert.ok(board.every(row => row.every(cell => cell === null)));
   });
 
   // ── boardToCpp single element ────────────────────────────────────────

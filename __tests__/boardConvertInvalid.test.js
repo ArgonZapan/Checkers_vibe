@@ -179,12 +179,13 @@ export async function runBoardConvertInvalidTests() {
 
   // ── Extreme flat array ───────────────────────────────────────────────
 
-  test('boardFromCpp: flat array with 128 elements → maps first 64 as 8 rows', () => {
+  test('boardFromCpp: flat array with 128 elements → returns empty board (not 64)', () => {
+    // Flat arrays with length !== 64 are invalid — graceful default is empty board
     const flat = new Array(128).fill(0);
-    flat[0] = 2; // white king at [0][0]
+    flat[0] = 2;
     const board = boardFromCpp(flat);
     assert.equal(board.length, 8);
-    assert.deepEqual(board[0][0], { color: 'white', king: true });
+    assert.ok(board.every(row => row.every(cell => cell === null)));
   });
 
   // ── Run ──────────────────────────────────────────────────────────────
