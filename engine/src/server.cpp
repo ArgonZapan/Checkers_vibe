@@ -294,14 +294,14 @@ void registerRoutes(httplib::Server& svr) {
             Board b = arrayToBoard(boardArr, turn);
             engine.getBoard() = b;
             res.set_content(gameStateJson(engine).dump(), "application/json");
-        } catch (json::parse_error& e) {
-            json err; err["error"] = std::string("invalid json: ") + e.what();
+        } catch (json::parse_error&) {
+            json err; err["error"] = "invalid json in request";
             res.status = 400; res.set_content(err.dump(), "application/json");
-        } catch (json::type_error& e) {
-            json err; err["error"] = std::string("invalid type in request: ") + e.what();
+        } catch (json::type_error&) {
+            json err; err["error"] = "invalid type in request";
             res.status = 400; res.set_content(err.dump(), "application/json");
-        } catch (std::exception& e) {
-            json err; err["error"] = e.what();
+        } catch (std::exception&) {
+            json err; err["error"] = "internal error";
             res.status = 500; res.set_content(err.dump(), "application/json");
         } catch (...) {
             json err; err["error"] = "internal error";

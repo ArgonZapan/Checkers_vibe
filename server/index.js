@@ -382,7 +382,6 @@ io.on('connection', async (socket) => {
     blackNetworkSize: trainer.networkSizeBlack,
     speedMode: CONFIG.server.speedMode,
     aiMoveDelayMs: CONFIG.server.aiMoveDelayMs,
-    _config: CONFIG.ai,  // default config snapshot for UI reference
   });
   if (trainer.stats.lastLoss != null) {
     socket.emit('loss', { loss: trainer.stats.lastLoss });
