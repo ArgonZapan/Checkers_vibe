@@ -15,6 +15,9 @@ public:
     // Sprawdź czy gracz ma dostępne ruchy
     static bool hasMoves(const Board& board, Color color);
 
+    // Sprawdź czy gracz ma dostępny ruch (szybkie — zatrzymuje się po pierwszym)
+    static bool hasAnyMove(const Board& board, Color color);
+
     // Kierunki ruchu (publiczne dla helpera)
     static constexpr int WHITE_DIRS[2][2] = {{1, -1}, {1, 1}};
     static constexpr int BLACK_DIRS[2][2] = {{-1, -1}, {-1, 1}};

@@ -202,7 +202,7 @@ void registerRoutes(httplib::Server& svr) {
                 res.set_content(err.dump(), "application/json");
                 return;
             }
-            engine.makeMove(chosen);
+            engine.makeMoveUnchecked(chosen);
             // Return game state with captures and path from the executed move
             json response = gameStateJson(engine);
             json caps = json::array();

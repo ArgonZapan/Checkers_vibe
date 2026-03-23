@@ -22,8 +22,11 @@ public:
     std::vector<Move> getLegalMoves() const;
     std::vector<Move> getLegalMoves(Color color) const;
 
-    // Wykonaj ruch
+    // Wykonaj ruch (sprawdza legalność)
     bool makeMove(Move& move);
+
+    // Wykonaj ruch BEZ sprawdzania legalności (używać tylko po weryfikacji)
+    void makeMoveUnchecked(Move& move);
 
     // Sprawdź czy ruch jest legalny
     bool isLegal(const Move& move) const;

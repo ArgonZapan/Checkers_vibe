@@ -47,6 +47,11 @@ bool Engine::makeMove(Move& move) {
     return true;
 }
 
+void Engine::makeMoveUnchecked(Move& move) {
+    board_.makeMove(move);
+    history_.push_back(move);
+}
+
 bool Engine::isLegal(const Move& move) const {
     auto legalMoves = getLegalMoves();
     for (auto& m : legalMoves) {
@@ -58,7 +63,7 @@ bool Engine::isLegal(const Move& move) const {
 }
 
 GameResult Engine::getResult() const {
-    if (!MoveGenerator::hasMoves(board_, board_.currentTurn)) {
+    if (!MoveGenerator::hasAnyMove(board_, board_.currentTurn)) {
         // Obecny gracz nie ma ruchów — przegrywa
         return (board_.currentTurn == WHITE) ? BLACK_WIN : WHITE_WIN;
     }

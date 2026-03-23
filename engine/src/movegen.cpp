@@ -63,6 +63,45 @@ bool MoveGenerator::hasMoves(const Board& board, Color color) {
     return !generateAll(board, color).empty();
 }
 
+bool MoveGenerator::hasAnyMove(const Board& board, Color color) {
+    // 1. Captures are mandatory — if any exist, there's a move
+    auto captures = generateCaptures(board, color);
+    if (!captures.empty()) return true;
+
+    // 2. Check if any piece has at least one regular move
+    Bitboard myPieces = board.pieces(color);
+    Bitboard pawns = (color == WHITE) ? board.whitePieces : board.blackPieces;
+    Bitboard kings = (color == WHITE) ? board.whiteKings : board.blackKings;
+
+    for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
+            if (!(myPieces & squareToMask(row, col))) continue;
+            if (pawns & squareToMask(row, col)) {
+                // Check one pawn move
+                auto& dirs = (color == WHITE) ? WHITE_DIRS : BLACK_DIRS;
+                for (auto& d : dirs) {
+                    int nr = row + d[0];
+                    int nc = col + d[1];
+                    if (Board::inBounds(nr, nc) && board.isEmpty(nr, nc)) {
+                        return true;
+                    }
+                }
+            } else {
+                // Check one king move
+                for (auto& d : ALL_DIRS) {
+                    int nr = row + d[0];
+                    int nc = col + d[1];
+                    while (Board::inBounds(nr, nc) && board.isEmpty(nr, nc)) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
 std::vector<Move> MoveGenerator::generatePawnMoves(const Board& board, int row, int col, Color color) {
     std::vector<Move> moves;
     auto& dirs = (color == WHITE) ? WHITE_DIRS : BLACK_DIRS;
