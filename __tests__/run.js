@@ -13,6 +13,9 @@ import { runTrainerPolicyFixTests } from './trainerPolicyFix.test.js';
 import { runTrainerLogicTests } from './trainerLogic.test.js';
 import { runBoardSetLookupTests } from './boardSetLookup.test.js';
 import { runBoardConvertInvalidTests } from './boardConvertInvalid.test.js';
+import { runPredictMaskingTests } from './predictMasking.test.js';
+import { runWebsocketHandlersTests } from './websocketHandlers.test.js';
+import { runTrainerPlayGameTests } from './trainerPlayGame.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -24,6 +27,9 @@ const suites = [
   { name: 'trainerLogic',        run: runTrainerLogicTests },
   { name: 'boardSetLookup',      run: runBoardSetLookupTests },
   { name: 'boardConvertInvalid', run: runBoardConvertInvalidTests },
+  { name: 'predictMasking',      run: runPredictMaskingTests },
+  { name: 'websocketHandlers',   run: runWebsocketHandlersTests },
+  { name: 'trainerPlayGame',     run: runTrainerPlayGameTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
