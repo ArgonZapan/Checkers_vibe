@@ -272,10 +272,14 @@ export async function predict(model, boardArray, legalMoves, turn = 1) {
     const selectedMove = legalMoves.find(m => {
       const idx = typeof m === 'number' ? m : (m.policyIndex ?? m.index ?? m);
       return idx === bestIdx;
-    }) || legalMoves[0];
+    });
+    if (!selectedMove) {
+      console.warn(`[predict] bestIdx=${bestIdx} not found in legalMoves (indices: ${legalMoves.map(m => m.policyIndex ?? m.index ?? m).join(', ')}), falling back to legalMoves[0]`);
+    }
+    const finalMove = selectedMove || legalMoves[0];
 
     return {
-      move: selectedMove,
+      move: finalMove,
       probabilities: normalizedProbs,
       value
     };
