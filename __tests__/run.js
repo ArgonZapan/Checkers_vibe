@@ -71,6 +71,7 @@ import { runCspHeaderContentTests } from './cspHeaderContent.test.js';
 import { runPredictPolicyIndexTests } from './predictPolicyIndex.test.js';
 import { runBoardRoundTripTests } from './boardRoundTrip.test.js';
 import { runAutoSaveRaceConditionTests } from './autoSaveRaceCondition.test.js';
+import { runSecurityFixesTests } from './securityFixes.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -140,6 +141,7 @@ const suites = [
   { name: 'predictPolicyIndex', run: runPredictPolicyIndexTests },
   { name: 'boardRoundTrip', run: runBoardRoundTripTests },
   { name: 'autoSaveRaceCondition', run: runAutoSaveRaceConditionTests },
+  { name: 'securityFixes', run: runSecurityFixesTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
