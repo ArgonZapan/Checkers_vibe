@@ -37,6 +37,7 @@ export function setupProxy(app) {
             _proxyReq.setHeader('Content-Type', 'application/json');
             _proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
             _proxyReq.write(bodyData);
+            _proxyReq.end();
           }
         }
       }
