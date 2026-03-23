@@ -16,6 +16,9 @@ import { runBoardConvertInvalidTests } from './boardConvertInvalid.test.js';
 import { runPredictMaskingTests } from './predictMasking.test.js';
 import { runWebsocketHandlersTests } from './websocketHandlers.test.js';
 import { runTrainerPlayGameTests } from './trainerPlayGame.test.js';
+import { runPolicyIndexTests } from './policyIndex.test.js';
+import { runTrainImportTests } from './trainImport.test.js';
+import { runBoardAreEqualTests } from './boardAreEqual.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -30,6 +33,9 @@ const suites = [
   { name: 'predictMasking',      run: runPredictMaskingTests },
   { name: 'websocketHandlers',   run: runWebsocketHandlersTests },
   { name: 'trainerPlayGame',     run: runTrainerPlayGameTests },
+  { name: 'policyIndex',         run: runPolicyIndexTests },
+  { name: 'trainImport',         run: runTrainImportTests },
+  { name: 'boardAreEqual',       run: runBoardAreEqualTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
