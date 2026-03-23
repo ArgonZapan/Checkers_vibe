@@ -217,7 +217,16 @@ app.post('/api/ai/params', (req, res) => {
 
 app.post('/api/ai/reset', async (_req, res) => {
   try {
-    await trainer.resetModel();
+    // BUG-008: Acquire lock so resetModel waits for any in-progress save
+    let release;
+    try {
+      release = await acquireLock();
+    } catch (_) { return res.status(503).json({ error: 'Reset locked' }); }
+    try {
+      await trainer.resetModel();
+    } finally {
+      release();
+    }
     // Reset C++ game state
     await cppFetch('/api/game/reset', { method: 'POST', body: '{}' }).catch(() => {});
     io.emit('selfPlayStatus', { active: false, gameNumber: 0, stats: trainer.stats });
@@ -310,26 +319,39 @@ async function cppFetch(path, opts = {}) {
 
 // Helper: get full game state from C++ engine and return client-friendly format
 async function getGameState() {
-  const [state, { moves: legalMoves }] = await Promise.all([
-    cppFetch('/api/game/state'),
-    cppFetch('/api/legal-moves'),
-  ]);
-  const board = boardFromCpp(state.board);
-  // Convert legal moves to client format
-  const moves = (legalMoves || []).map(m => ({
-    from: m.from,
-    to: m.to,
-    captures: m.captures || [],
-    index: m.index,
-  }));
-  return {
-    board,
-    turn: turnToColor(state.turn ?? state.currentTurn ?? 1),
-    legalMoves: moves,
-    gameOver: state.gameOver ?? false,
-    winner: state.winner != null ? turnToColor(state.winner) : null,
-    lastMove: state.lastMove || null,
-  };
+  try {
+    const [state, { moves: legalMoves }] = await Promise.all([
+      cppFetch('/api/game/state'),
+      cppFetch('/api/legal-moves'),
+    ]);
+    const board = boardFromCpp(state.board);
+    // Convert legal moves to client format
+    const moves = (legalMoves || []).map(m => ({
+      from: m.from,
+      to: m.to,
+      captures: m.captures || [],
+      index: m.index,
+    }));
+    return {
+      board,
+      turn: turnToColor(state.turn ?? state.currentTurn ?? 1),
+      legalMoves: moves,
+      gameOver: state.gameOver ?? false,
+      winner: state.winner != null ? turnToColor(state.winner) : null,
+      lastMove: state.lastMove || null,
+    };
+  } catch (err) {
+    console.error('[getGameState] Error fetching game state:', err.message);
+    return {
+      board: Array(64).fill(0),
+      turn: 'white',
+      legalMoves: [],
+      gameOver: true,
+      winner: null,
+      lastMove: null,
+      error: err.message,
+    };
+  }
 }
 
 // ── Player move handler (extracted for serialization) ───────────────────────
@@ -729,7 +751,19 @@ io.on('connection', async (socket) => {
   socket.on('reset', async () => {
     try {
       console.log(`[WS] reset from ${socket.id}`);
-      await trainer.resetModel();
+      // BUG-008: Acquire lock so resetModel waits for any in-progress save
+      let release;
+      try {
+        release = await acquireLock();
+      } catch (_) {
+        socket.emit('error', { message: 'Reset locked — save in progress' });
+        return;
+      }
+      try {
+        await trainer.resetModel();
+      } finally {
+        release();
+      }
       // Reset C++ game state
       await cppFetch('/api/game/reset', { method: 'POST', body: '{}' }).catch(() => {});
       // Broadcast reset status to all clients
@@ -832,14 +866,30 @@ async function aiMove(currentState) {
 
 // ── Auto-save timers ────────────────────────────────────────────────────────
 // Single coherent save schedule: state every 30s, buffer every 2min, model every 5min
+// BUG-008: Promise-based locking to prevent resetModel and auto-save from racing
 let _saving = false;
+let _saveLock = Promise.resolve();
 let _lastBufferSave = 0;
 let _lastModelSave = 0;
 
+// Helper: acquire exclusive lock. Returns a release() function.
+// If another operation is in progress, waits for it to finish first.
+function acquireLock() {
+  let release;
+  const prev = _saveLock;
+  _saveLock = new Promise(resolve => { release = resolve; });
+  return prev.then(() => release);
+}
+
 const _autoSaveInterval = setInterval(async () => {
   if (_saving) return;
+  // Acquire lock — waits for any in-progress reset
+  let release;
+  try {
+    release = await acquireLock();
+  } catch (_) { return; }
   // Skip save if nothing changed since last save (#102)
-  if (!trainer.dirty) return;
+  if (!trainer.dirty) { release(); return; }
   try {
     _saving = true;
     // Snapshot dirty flag BEFORE async save — if dirty is set again during save,
@@ -866,6 +916,7 @@ const _autoSaveInterval = setInterval(async () => {
     console.error('[AutoSave] Save error:', err.message);
   } finally {
     _saving = false;
+    release();
   }
 }, CONFIG.server.autoSaveMs);
 

@@ -3,7 +3,7 @@
  *
  * Tests that predict() correctly:
  * - Uses policy indices (not array positions) for move selection
- * - Handles 1, 5, and all 48 legal moves
+ * - Handles 1, 5, and all 128 legal moves
  * - Returns null/fallback gracefully when legalMoves=[] or invalid
  * - Applies softmax over legal move policy indices only
  *
@@ -16,7 +16,7 @@ import assert from 'node:assert/strict';
 
 /**
  * Create a mock model that returns a deterministic policy vector.
- * policyArr: Float32Array(48) or number[48] — raw logits
+ * policyArr: Float32Array(128) or number[128] — raw logits
  * value: scalar value output (default 0.5)
  */
 function mockModel(policyArr, value = 0.5) {
@@ -45,7 +45,7 @@ async function predict(model, boardArray, legalMoves, turn = 1) {
   // Mask illegal moves
   const legalIndices = legalMoves.map(m => {
     if (typeof m === 'number') return m;
-    return m.index ?? m;
+    return m.policyIndex ?? m.index ?? m;
   });
 
   if (legalIndices.length === 0) {
@@ -75,14 +75,15 @@ async function predict(model, boardArray, legalMoves, turn = 1) {
   let bestIdx = legalIndices[0];
   let bestProb = -Infinity;
   for (const idx of legalIndices) {
-    if (normalizedProbs[idx] > bestProb) {
-      bestProb = normalizedProbs[idx];
+    const val = maskedPolicy[idx] || 0;
+    if (val > bestProb) {
+      bestProb = val;
       bestIdx = idx;
     }
   }
 
-  // Find the move with matching index
-  const selectedMove = legalMoves.find(m => (typeof m === 'number' ? m : m.index ?? m) === bestIdx)
+  // Find the move with matching policyIndex (or index as fallback)
+  const selectedMove = legalMoves.find(m => (typeof m === 'number' ? m : m.policyIndex ?? m.index ?? m) === bestIdx)
     || legalMoves[0];
 
   return {
@@ -105,18 +106,18 @@ export async function runPredictMaskingTests() {
   // ── 1 legal move ──────────────────────────────────────────────────────
 
   test('predict with 1 legal move: always selects it', async () => {
-    // Policy has 48 entries; only index 25 is legal
-    const policy = new Float32Array(48).fill(-10);
+    // Policy has 128 entries; only index 25 is legal
+    const policy = new Float32Array(128).fill(-10);
     policy[25] = 10; // high logit at index 25
 
     const model = mockModel(policy, 0.8);
-    const legalMoves = [{ from: 12, to: 16, captures: [], index: 25 }];
+    const legalMoves = [{ from: 12, to: 16, captures: [], policyIndex: 25 }];
 
     const result = await predict(model, null, legalMoves, 1);
 
     assert.equal(result.move.from, 12, 'Selected move has correct from');
     assert.equal(result.move.to, 16, 'Selected move has correct to');
-    assert.equal(result.move.index, 25, 'Selected move has correct index');
+    assert.equal(result.move.policyIndex, 25, 'Selected move has correct policyIndex');
     assert.ok(Math.abs(result.value - 0.8) < 0.001, 'Value returned correctly');
     // Probabilities: only one legal move, so prob should be 1.0
     assert.ok(Math.abs(result.probabilities[25] - 1.0) < 0.001, 'Single move has probability 1.0');
@@ -127,7 +128,7 @@ export async function runPredictMaskingTests() {
   test('predict with 5 legal moves: selects highest policy index', async () => {
     // Legal moves at indices 3, 7, 15, 30, 42
     // Set policy so index 15 has the highest value
-    const policy = new Float32Array(48).fill(0);
+    const policy = new Float32Array(128).fill(0);
     policy[3] = 1;
     policy[7] = 2;
     policy[15] = 10; // highest
@@ -136,16 +137,16 @@ export async function runPredictMaskingTests() {
 
     const model = mockModel(policy, 0.3);
     const legalMoves = [
-      { from: 0, to: 4, captures: [], index: 3 },
-      { from: 1, to: 5, captures: [], index: 7 },
-      { from: 8, to: 12, captures: [], index: 15 },
-      { from: 20, to: 24, captures: [], index: 30 },
-      { from: 35, to: 42, captures: [], index: 42 },
+      { from: 0, to: 4, captures: [], policyIndex: 3 },
+      { from: 1, to: 5, captures: [], policyIndex: 7 },
+      { from: 8, to: 12, captures: [], policyIndex: 15 },
+      { from: 20, to: 24, captures: [], policyIndex: 30 },
+      { from: 35, to: 42, captures: [], policyIndex: 42 },
     ];
 
     const result = await predict(model, null, legalMoves, 1);
 
-    assert.equal(result.move.index, 15, 'Selects move with highest policy logit');
+    assert.equal(result.move.policyIndex, 15, 'Selects move with highest policy logit');
     assert.equal(result.move.from, 8, 'Correct from for selected move');
     assert.equal(result.move.to, 12, 'Correct to for selected move');
 
@@ -156,15 +157,15 @@ export async function runPredictMaskingTests() {
 
     // Verify all legal indices are in probabilities
     for (const m of legalMoves) {
-      assert.ok(m.index in result.probabilities, `Index ${m.index} has probability`);
+      assert.ok(m.policyIndex in result.probabilities, `Index ${m.policyIndex} has probability`);
     }
   });
 
   test('predict with 5 legal moves: uses policy index not array position', async () => {
-    // This is the critical test: policy[40] is high, but it's the 3rd move in the array
-    // The bug would be using array position (2) instead of policy index (40)
-    const policy = new Float32Array(48).fill(0);
-    policy[40] = 100; // very high at index 40
+    // This is the critical test: policy[100] is high, but it's the 3rd move in the array
+    // The bug would be using array position (2) instead of policy index (100)
+    const policy = new Float32Array(128).fill(0);
+    policy[100] = 100; // very high at index 100
     policy[5] = 1;
     policy[10] = 2;
     policy[20] = 3;
@@ -172,70 +173,70 @@ export async function runPredictMaskingTests() {
 
     const model = mockModel(policy, 0);
     const legalMoves = [
-      { from: 0, to: 4, captures: [], index: 5 },
-      { from: 8, to: 12, captures: [], index: 10 },
-      { from: 16, to: 20, captures: [], index: 20 },  // array position 2
-      { from: 24, to: 28, captures: [], index: 30 },
-      { from: 36, to: 40, captures: [], index: 40 },  // policy index 40, array position 4
+      { from: 0, to: 4, captures: [], policyIndex: 5 },
+      { from: 8, to: 12, captures: [], policyIndex: 10 },
+      { from: 16, to: 20, captures: [], policyIndex: 20 },  // array position 2
+      { from: 24, to: 28, captures: [], policyIndex: 30 },
+      { from: 36, to: 40, captures: [], policyIndex: 100 }, // policy index 100, array position 4
     ];
 
     const result = await predict(model, null, legalMoves, 1);
 
-    // Must select the move at policy index 40, NOT array position 40 (which doesn't exist)
-    assert.equal(result.move.index, 40, 'Uses policy index 40, not array position');
+    // Must select the move at policy index 100, NOT array position 100 (which doesn't exist)
+    assert.equal(result.move.policyIndex, 100, 'Uses policy index 100, not array position');
     assert.equal(result.move.from, 36, 'Correct move selected by policy index');
   });
 
-  // ── All 48 moves ──────────────────────────────────────────────────────
+  // ── All 128 moves ──────────────────────────────────────────────────────
 
-  test('predict with all 48 moves: selects correct one by policy index', async () => {
-    // Create 48 legal moves, each with index = i
+  test('predict with all 128 moves: selects correct one by policy index', async () => {
+    // Create 128 legal moves, each with policyIndex = i
     const legalMoves = [];
-    for (let i = 0; i < 48; i++) {
-      legalMoves.push({ from: i, to: i + 1, captures: [], index: i });
+    for (let i = 0; i < 128; i++) {
+      legalMoves.push({ from: i, to: i + 1, captures: [], policyIndex: i });
     }
 
-    // Set policy so index 47 is highest
-    const policy = new Float32Array(48).fill(0);
-    for (let i = 0; i < 48; i++) policy[i] = i; // increasing
-    policy[47] = 100;
+    // Set policy so index 127 is highest
+    const policy = new Float32Array(128).fill(0);
+    for (let i = 0; i < 128; i++) policy[i] = i * 0.01; // low increasing values
+    policy[127] = 100; // dominant
 
     const model = mockModel(policy, -0.5);
     const result = await predict(model, null, legalMoves, 1);
 
-    assert.equal(result.move.index, 47, 'Selects index 47 (highest policy)');
-    assert.equal(result.move.from, 47, 'Correct from');
+    assert.equal(result.move.policyIndex, 127, 'Selects policyIndex 127 (highest policy)');
+    assert.equal(result.move.from, 127, 'Correct from');
     assert.ok(Math.abs(result.value - (-0.5)) < 0.001, 'Value correct');
 
-    // All 48 probabilities present
-    assert.equal(Object.keys(result.probabilities).length, 48, 'All 48 moves have probabilities');
+    // All 128 probabilities present
+    assert.equal(Object.keys(result.probabilities).length, 128, 'All 128 moves have probabilities');
 
     // Sum to 1
     const sum = Object.values(result.probabilities).reduce((a, b) => a + b, 0);
     assert.ok(Math.abs(sum - 1.0) < 0.001, 'Probabilities sum to 1');
   });
 
-  test('predict with all 48 moves: even low policy indices work', async () => {
+  test('predict with all 128 moves: even low policy indices work', async () => {
     const legalMoves = [];
-    for (let i = 0; i < 48; i++) {
-      legalMoves.push({ from: i, to: i + 1, captures: [], index: i });
+    for (let i = 0; i < 128; i++) {
+      legalMoves.push({ from: i, to: i + 1, captures: [], policyIndex: i });
     }
 
     // Index 0 is highest
-    const policy = new Float32Array(48).fill(0);
+    const policy = new Float32Array(128).fill(0);
     policy[0] = 50;
 
     const model = mockModel(policy, 1.0);
     const result = await predict(model, null, legalMoves, 1);
 
-    assert.equal(result.move.index, 0, 'Selects index 0 (highest)');
+    assert.equal(result.move.policyIndex, 0, 'Selects policyIndex 0 (highest)');
     assert.equal(result.move.from, 0, 'Correct from');
   });
 
   // ── Empty / invalid legalMoves ─────────────────────────────────────────
 
   test('predict with empty legalMoves: returns null move gracefully', async () => {
-    const policy = new Float32Array(48).fill(1);
+    const policy = new Float32Array(128).fill(1);
     const model = mockModel(policy, 0.5);
 
     const result = await predict(model, null, [], 1);
@@ -247,7 +248,7 @@ export async function runPredictMaskingTests() {
 
   test('predict with numeric legalMoves (not objects)', async () => {
     // Some code paths pass legalMoves as plain numbers (policy indices)
-    const policy = new Float32Array(48).fill(0);
+    const policy = new Float32Array(128).fill(0);
     policy[10] = 5;
     policy[20] = 8; // highest
     policy[30] = 3;
@@ -262,7 +263,7 @@ export async function runPredictMaskingTests() {
   });
 
   test('predict: probability distribution is valid (non-negative, sums to 1)', async () => {
-    const policy = new Float32Array(48).fill(0);
+    const policy = new Float32Array(128).fill(0);
     policy[5] = 10;
     policy[15] = 5;
     policy[25] = 1;
@@ -270,10 +271,10 @@ export async function runPredictMaskingTests() {
 
     const model = mockModel(policy, 0);
     const legalMoves = [
-      { from: 0, to: 4, captures: [], index: 5 },
-      { from: 8, to: 12, captures: [], index: 15 },
-      { from: 16, to: 20, captures: [], index: 25 },
-      { from: 24, to: 28, captures: [], index: 35 },
+      { from: 0, to: 4, captures: [], policyIndex: 5 },
+      { from: 8, to: 12, captures: [], policyIndex: 15 },
+      { from: 16, to: 20, captures: [], policyIndex: 25 },
+      { from: 24, to: 28, captures: [], policyIndex: 35 },
     ];
 
     const result = await predict(model, null, legalMoves, 1);
@@ -288,21 +289,21 @@ export async function runPredictMaskingTests() {
   });
 
   test('predict: softmax reduces to argmax with extreme logits', async () => {
-    const policy = new Float32Array(48).fill(0);
+    const policy = new Float32Array(128).fill(0);
     policy[3] = 1000; // extremely high
     policy[7] = 0;
     policy[11] = -1000;
 
     const model = mockModel(policy, 0);
     const legalMoves = [
-      { from: 0, to: 4, captures: [], index: 3 },
-      { from: 1, to: 5, captures: [], index: 7 },
-      { from: 2, to: 6, captures: [], index: 11 },
+      { from: 0, to: 4, captures: [], policyIndex: 3 },
+      { from: 1, to: 5, captures: [], policyIndex: 7 },
+      { from: 2, to: 6, captures: [], policyIndex: 11 },
     ];
 
     const result = await predict(model, null, legalMoves, 1);
 
-    assert.equal(result.move.index, 3, 'Extreme logit dominates selection');
+    assert.equal(result.move.policyIndex, 3, 'Extreme logit dominates selection');
     assert.ok(result.probabilities[3] > 0.999, 'Probability near 1.0 for dominant logit');
   });
 

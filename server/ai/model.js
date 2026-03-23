@@ -276,15 +276,24 @@ export async function predict(model, boardArray, legalMoves, turn = 1) {
     }
 
     // Return the full move object from legalMoves, not just the policy index.
-    // bestIdx is a canonical policy vector index (0-47), not an array index.
-    const selectedMove = legalMoves.find(m => {
+    // bestIdx is a canonical policy vector index (0-127), not an array index.
+    // BUG-001: Multiple moves can share the same policyIndex (e.g., king moving 1 vs 3
+    // squares in same direction). Collect all matches and randomly sample among them.
+    const matchingMoves = legalMoves.filter(m => {
       const idx = typeof m === 'number' ? m : (m.policyIndex ?? m.index ?? m);
       return idx === bestIdx;
     });
-    if (!selectedMove) {
+    let selectedMove;
+    if (matchingMoves.length === 0) {
       console.warn(`[predict] bestIdx=${bestIdx} not found in legalMoves (indices: ${legalMoves.map(m => m.policyIndex ?? m.index ?? m).join(', ')}), falling back to legalMoves[0]`);
+      selectedMove = legalMoves[0];
+    } else if (matchingMoves.length === 1) {
+      selectedMove = matchingMoves[0];
+    } else {
+      // Uniform random sample among moves sharing the same policyIndex
+      selectedMove = matchingMoves[Math.floor(Math.random() * matchingMoves.length)];
     }
-    const finalMove = selectedMove || legalMoves[0];
+    const finalMove = selectedMove;
 
     return {
       move: finalMove,
