@@ -688,9 +688,18 @@ void test_draw_detection() {
         bool moved = false;
         for (auto& m : moves) {
             if (!m.isCapture()) {
-                assert(e.makeMove(m));
+                bool ok = e.makeMove(m);
+                assert(ok);
                 halfMoves++;
                 moved = true;
+                if (halfMoves <= 5 || halfMoves % 10 == 0) {
+                    std::cout << "\n  [DBG] halfMoves=" << halfMoves
+                              << " counter=" << e.getMovesWithoutCapture()
+                              << " isGameOver=" << e.isGameOver()
+                              << " result=" << e.getResult()
+                              << " move=(" << m.from.row << "," << m.from.col
+                              << ")->(" << m.to.row << "," << m.to.col << ")" << std::endl;
+                }
                 break;
             }
         }
