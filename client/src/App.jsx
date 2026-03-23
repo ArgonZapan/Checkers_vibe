@@ -233,7 +233,7 @@ export default function App() {
     s.on('error', (data) => {
       console.warn('[Server error]', data?.message || data);
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-      setToast(data?.message || 'Błąd serwera');
+      setToast({ message: data?.message || 'Błąd serwera', type: 'error' });
       toastTimerRef.current = setTimeout(() => setToast(null), 5000);
     });
 
@@ -328,13 +328,16 @@ export default function App() {
 
   const handleParamsChange = useCallback((newParams) => {
     setParams((prev) => ({ ...prev, ...newParams }));
-    socketRef.current?.emit('setParams', newParams);
+    // Only emit to server in aivai mode — server rejects changes otherwise
+    if (modeRef.current === 'aivai') {
+      socketRef.current?.emit('setParams', newParams);
+    }
   }, []);
 
   // Toast helper
   const showToast = useCallback((msg, duration = 3000) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToast(msg);
+    setToast({ message: msg, type: 'success' });
     toastTimerRef.current = setTimeout(() => setToast(null), duration);
   }, []);
 
@@ -469,7 +472,7 @@ export default function App() {
             onResetModelParams={handleResetModelParams}
           />
           {toast && (
-            <div className="toast-notification" role="alert" aria-live="assertive">{toast}</div>
+            <div className={`toast-notification ${toast.type === 'error' ? 'toast-error' : ''}`} role="alert" aria-live="assertive">{toast.message || toast}</div>
           )}
         </div>
       </div>

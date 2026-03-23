@@ -104,6 +104,11 @@ button {
 
 button:disabled { opacity: 0.4; cursor: not-allowed; }
 
+button:focus-visible, select:focus-visible, input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .btn-primary {
   background: var(--accent);
   color: #fff;
@@ -295,6 +300,8 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .move-white { color: var(--white-piece); }
 .move-black { color: var(--text-dim); }
 .move-capture { color: var(--red); }
+.move-last { background: var(--bg-card); border-radius: 4px; }
+.move-king { color: var(--yellow); }
 
 /* Params */
 .param-group {
@@ -414,6 +421,9 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   z-index: 9999;
   animation: toast-in 0.3s ease-out;
 }
+.toast-error {
+  background: var(--red);
+}
 @keyframes toast-in {
   from { opacity: 0; transform: translateX(-50%) translateY(20px); }
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -423,6 +433,18 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 @media (max-width: 768px) {
   .game-layout { flex-direction: column; align-items: center; }
   .game-side { width: 100%; max-width: 100%; }
+  .menu-buttons { width: 100%; padding: 0 1rem; }
+  .menu-buttons button { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .app { padding: 0.5rem; }
+  .app-header h1 { font-size: 1.4rem; }
+  .controls-buttons { gap: 0.25rem; }
+  .controls-buttons button { font-size: 0.75rem; padding: 0.3rem 0.5rem; }
+  .params-tabs { flex-wrap: nowrap; }
+  .params-tab { font-size: 0.7rem; padding: 0.3rem; }
+  .stat-value { font-size: 0.95rem; }
 }
 
 /* Scrollbar */
