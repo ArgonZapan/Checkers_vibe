@@ -20,22 +20,22 @@ export async function runBoardConvertTests() {
   });
 
   test('1 = white pawn', () => {
-    const board = boardFromCpp([[1]]);
+    const board = boardFromCpp([[1,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]]);
     assert.deepEqual(board[0][0], { color: 'white', king: false });
   });
 
   test('2 = white king', () => {
-    const board = boardFromCpp([[2]]);
+    const board = boardFromCpp([[2,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]]);
     assert.deepEqual(board[0][0], { color: 'white', king: true });
   });
 
   test('3 = black pawn', () => {
-    const board = boardFromCpp([[3]]);
+    const board = boardFromCpp([[3,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]]);
     assert.deepEqual(board[0][0], { color: 'black', king: false });
   });
 
   test('4 = black king', () => {
-    const board = boardFromCpp([[4]]);
+    const board = boardFromCpp([[4,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]]);
     assert.deepEqual(board[0][0], { color: 'black', king: true });
   });
 

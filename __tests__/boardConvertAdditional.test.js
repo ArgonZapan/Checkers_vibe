@@ -103,30 +103,24 @@ export async function runBoardConvertAdditionalTests() {
   // boardFromCpp: value 3 = black pawn (explicit check)
   // ═══════════════════════════════════════════════════════════════════════
 
-  test('boardFromCpp: value 3 → { color: "black", king: false }', () => {
-    const board = boardFromCpp([[3]]);
-    assert.equal(board[0][0].color, 'black');
-    assert.equal(board[0][0].king, false);
+  test('boardFromCpp: value 3 in valid 8x8 board → { color: "black", king: false }', () => {
+    const board = boardFromCpp([[3,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]]);
+    assert.deepEqual(board[0][0], { color: "black", king: false });
   });
 
-  test('boardFromCpp: value 5 → { color: "black", king: false } (unknown maps as black pawn)', () => {
-    const board = boardFromCpp([[5]]);
-    // val !== 0, val !== 1, val !== 2 → not white → black
-    // val !== 2, val !== 4 → not king → pawn
-    assert.equal(board[0][0].color, 'black');
-    assert.equal(board[0][0].king, false);
+  test('boardFromCpp: value 5 → null (out of range 0-4)', () => {
+    const board = boardFromCpp([[5,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]]);
+    assert.equal(board[0][0], null);
   });
 
-  test('boardFromCpp: value 10 → { color: "black", king: false }', () => {
-    const board = boardFromCpp([[10]]);
-    assert.equal(board[0][0].color, 'black');
-    assert.equal(board[0][0].king, false);
+  test('boardFromCpp: value 10 → null (out of range)', () => {
+    const board = boardFromCpp([[10,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]]);
+    assert.equal(board[0][0], null);
   });
 
-  test('boardFromCpp: value 100 → { color: "black", king: false }', () => {
-    const board = boardFromCpp([[100]]);
-    assert.equal(board[0][0].color, 'black');
-    assert.equal(board[0][0].king, false);
+  test('boardFromCpp: value 100 → null (out of range)', () => {
+    const board = boardFromCpp([[100,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]]);
+    assert.equal(board[0][0], null);
   });
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -147,13 +141,12 @@ export async function runBoardConvertAdditionalTests() {
     assert.ok(board.every(row => row.every(cell => cell === null)));
   });
 
-  test('boardToCpp: round-trip with value 5 (unknown) through boardFromCpp', () => {
-    // value 5 → boardFromCpp → {black, pawn} → boardToCpp → 3 (not 5!)
-    const original = [[5]];
+  test('boardToCpp: round-trip with value 3 through boardFromCpp', () => {
+    // value 3 in 8x8 board → boardFromCpp → {black, pawn} → boardToCpp → 3
+    const original = [[3,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]];
     const react = boardFromCpp(original);
     const back = boardToCpp(react);
-    // 5 is unknown, maps to black pawn (3) — NOT identity
-    assert.deepEqual(back, [3]);
+    assert.equal(back[0], 3);
   });
 
   test('boardToCpp: object with color=null → returns 0 (not "white" or "black")', () => {

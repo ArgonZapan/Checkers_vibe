@@ -66,31 +66,24 @@ export async function runBoardConvertInvalidTests() {
 
   // ── Wrong dimensions ─────────────────────────────────────────────────
 
-  test('boardFromCpp: 7x7 board (wrong size) → returns 7 rows', () => {
+  test('boardFromCpp: 7x7 board (wrong size) → returns empty 8x8 (strict shape)', () => {
     const small = Array.from({ length: 7 }, () => new Array(7).fill(0));
     const board = boardFromCpp(small);
-    assert.equal(board.length, 7);
-    assert.equal(board[0].length, 7);
+    assert.equal(board.length, 8);
+    assert.ok(board.every(row => row.every(cell => cell === null)));
   });
 
-  test('boardFromCpp: 4x4 board → returns 4 rows', () => {
-    const tiny = Array.from({ length: 4 }, () => new Array(4).fill(1));
-    const board = boardFromCpp(tiny);
-    assert.equal(board.length, 4);
-    board.forEach(row => {
-      row.forEach(cell => {
-        assert.deepEqual(cell, { color: 'white', king: false });
-      });
-    });
+  test('boardFromCpp: 4x4 board → returns empty 8x8 (strict shape)', () => {
+    const small = Array.from({ length: 4 }, () => new Array(4).fill(0));
+    const board = boardFromCpp(small);
+    assert.equal(board.length, 8);
+    assert.ok(board.every(row => row.every(cell => cell === null)));
   });
 
-  test('boardFromCpp: jagged rows (different lengths)', () => {
-    const jagged = [[0, 1], [3, 0, 2], [1]];
-    const board = boardFromCpp(jagged);
-    assert.equal(board.length, 3);
-    assert.equal(board[0].length, 2);
-    assert.equal(board[1].length, 3);
-    assert.equal(board[2].length, 1);
+  test('boardFromCpp: jagged rows (different lengths) → returns empty 8x8', () => {
+    const board = boardFromCpp([[0, 0, 0, 0, 0, 0, 0, 0], [0, 0]]);
+    assert.equal(board.length, 8);
+    assert.ok(board.every(row => row.every(cell => cell === null)));
   });
 
   // ── Capture scenarios (piece removal) ────────────────────────────────

@@ -17,27 +17,22 @@ export async function runBoardConvertEdgeTests() {
 
   // ── Unknown values (out of 0-4 range) ────────────────────────────────
 
-  test('boardFromCpp: value 5 (unknown) → treated as black king (val>=3 → black)', () => {
-    // The function maps: val===1 || val===2 → white, else → black
-    // val===5: not 0, not white → black, val===5 not king (2 or 4) → pawn
-    // Actually: isWhite = val===1 || val===2, isKing = val===2 || val===4
-    // val=5: isWhite=false, isKing=false → {color:'black', king:false}
+  test('boardFromCpp: value 5 (unknown) → returns null (strict 0-4 validation)', () => {
     const board = boardFromCpp([[5]]);
-    assert.deepEqual(board[0][0], { color: 'black', king: false });
+    assert.equal(board[0][0], null);
   });
 
-  test('boardFromCpp: value -1 (negative) → treated as black pawn', () => {
+  test('boardFromCpp: value -1 (negative) → returns null (strict validation)', () => {
     const board = boardFromCpp([[-1]]);
-    assert.deepEqual(board[0][0], { color: 'black', king: false });
+    assert.equal(board[0][0], null);
   });
 
   // ── Single element ───────────────────────────────────────────────────
 
-  test('boardFromCpp: single-element 2D [[1]]', () => {
+  test('boardFromCpp: single-element 2D [[1]] → returns empty board (not 8x8)', () => {
     const board = boardFromCpp([[1]]);
-    assert.equal(board.length, 1);
-    assert.equal(board[0].length, 1);
-    assert.deepEqual(board[0][0], { color: 'white', king: false });
+    assert.equal(board.length, 8);
+    assert.ok(board.every(row => row.every(cell => cell === null)));
   });
 
   test('boardFromCpp: single-element flat [1] returns empty 8x8 (not 64 elements)', () => {
@@ -62,11 +57,12 @@ export async function runBoardConvertEdgeTests() {
 
   // ── Round-trip with promotion-like values ────────────────────────────
 
-  test('round-trip: all 5 piece types (0-4) in one row', () => {
-    const row = [0, 1, 2, 3, 4, 0, 0, 0];
-    const react = boardFromCpp([row]);
+  test('round-trip: all valid piece types (0-4) in one row', () => {
+    const row = [[0, 1, 2, 3, 4, 0, 0, 0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]];
+    const react = boardFromCpp(row);
     const back = boardToCpp(react);
-    assert.deepEqual(back, row);
+    // boardToCpp returns flat 64 array
+    assert.deepEqual(back.slice(0, 8), [0, 1, 2, 3, 4, 0, 0, 0]);
   });
 
   // ── Flat array with all 64 positions ─────────────────────────────────

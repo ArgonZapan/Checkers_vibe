@@ -273,6 +273,9 @@ export class SelfPlay {
     // Timing
     this.roundTimes = []; // last 10 round times in ms
     this.totalTimeMs = 0; // cumulative training time
+
+    // Auto-save dirty flag (#102)
+    this.dirty = false;
   }
 
   async init() {

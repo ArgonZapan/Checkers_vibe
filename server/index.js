@@ -61,15 +61,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-// Periodic cleanup of expired rate-limit entries to prevent memory leak
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, entry] of _rateLimitMap) {
-    if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-      _rateLimitMap.delete(ip);
-    }
-  }
-}, RATE_LIMIT_WINDOW_MS);
 
 // ── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }));
