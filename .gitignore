@@ -9,6 +9,9 @@ models/
 # Data (replay buffer)
 data/
 
+# Backups
+backups/
+
 # Node
 node_modules/
 dist/
