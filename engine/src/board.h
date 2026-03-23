@@ -22,6 +22,9 @@ struct Square {
 
 // Ruch
 struct Move {
+    static constexpr int MAX_CAPTURES = 12; // max zbitych pionków (plansza 8x8)
+    static constexpr int MAX_PATH = 13;     // max pozycji w ścieżce (start + 12 captures)
+
     Square from;
     Square to;
     std::vector<Square> captures; // zbite pionki (puste = zwykły ruch)
