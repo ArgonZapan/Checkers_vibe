@@ -72,6 +72,9 @@ app.post('/api/ai/train', async (req, res) => {
     if (batch.length === 0) {
       return res.status(400).json({ error: 'Empty batch' });
     }
+    if (batch.length > 10000) {
+      return res.status(400).json({ error: 'Batch too large — max 10000 samples' });
+    }
     // Filter batch by turn — each model should only train on its own samples
     const batchWhite = batch.filter(s => s.turn === 1);
     const batchBlack = batch.filter(s => s.turn === -1);
@@ -124,6 +127,9 @@ app.post('/api/ai/reset', async (_req, res) => {
 
 app.post('/api/ai/restart', async (req, res) => {
   const { side = 'both' } = req.body;
+  if (!['white', 'black', 'both'].includes(side)) {
+    return res.status(400).json({ error: 'side must be white|black|both' });
+  }
   await trainer.restart(side);
   res.json({ ok: true });
 });
@@ -308,7 +314,8 @@ io.on('connection', async (socket) => {
 
   // ── Start game ─────────────────────────────────────────────────────────
   socket.on('startGame', async ({ mode }) => {
-    socket.gameMode = mode || 'pvai';
+    const validModes = ['pvai', 'pvp', 'aivai'];
+    socket.gameMode = validModes.includes(mode) ? mode : 'pvai';
     // Stop self-play when starting a player game (C++ handles one game at a time)
     if (trainer.running && socket.gameMode !== 'aivai') {
       trainer.stop();
@@ -330,6 +337,13 @@ io.on('connection', async (socket) => {
 
   // ── Get legal moves for a piece ────────────────────────────────────────
   socket.on('getLegalMoves', async ({ from }) => {
+    // Validate from coordinate
+    if (!Array.isArray(from) || from.length !== 2
+      || !Number.isInteger(from[0]) || !Number.isInteger(from[1])
+      || from[0] < 0 || from[0] > 7 || from[1] < 0 || from[1] > 7) {
+      socket.emit('error', { message: 'Invalid "from" coordinate — expected [row, col] with values 0-7' });
+      return;
+    }
     try {
       const state = await getGameState();
       const filtered = state.legalMoves.filter(
