@@ -25,6 +25,11 @@ import { runColorTurnConversionTests } from './colorTurnConversion.test.js';
 import { runWsHandlerLogicTests } from './wsHandlerLogic.test.js';
 import { runModelValidationTests } from './modelValidation.test.js';
 import { runTrainerArrayMovesTests } from './trainerArrayMoves.test.js';
+import { runBufferTests } from './buffer.test.js';
+import { runAutoSaveLogicTests } from './autoSaveLogic.test.js';
+import { runApiEndpointValidationTests } from './apiEndpointValidation.test.js';
+import { runWsConnectionLifecycleTests } from './wsConnectionLifecycle.test.js';
+import { runProxyLogicTests } from './proxyLogic.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -48,6 +53,11 @@ const suites = [
   { name: 'wsHandlerLogic',      run: runWsHandlerLogicTests },
   { name: 'modelValidation',     run: runModelValidationTests },
   { name: 'trainerArrayMoves',   run: runTrainerArrayMovesTests },
+  { name: 'buffer',              run: runBufferTests },
+  { name: 'autoSaveLogic',       run: runAutoSaveLogicTests },
+  { name: 'apiEndpointValidation', run: runApiEndpointValidationTests },
+  { name: 'wsConnectionLifecycle', run: runWsConnectionLifecycleTests },
+  { name: 'proxyLogic',          run: runProxyLogicTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
