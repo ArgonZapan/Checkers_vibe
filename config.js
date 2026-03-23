@@ -18,7 +18,7 @@ export const CONFIG = {
       kingBlack: '#ddd',
     },
     animation: {
-      stepDurationMs: 50,
+      stepDurationMs: 200,
       easeOut: true,
     },
   },

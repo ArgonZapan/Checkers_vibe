@@ -119,11 +119,11 @@ function Board({
   useEffect(() => {
     const prev = prevBoardRef.current;
 
-    // Save old board for multi-capture animation reference (deep copy)
-    if (prev) {
-      animPrevBoardRef.current = prev.map(row => row.map(cell => cell ? { ...cell } : null));
+    // First render — no animation, just save state
+    if (!prev) {
+      prevBoardRef.current = board.map((row) => [...row]);
+      return;
     }
-    prevBoardRef.current = board.map((row) => [...row]);
 
     // Cancel any in-flight animation
     if (rafIdRef.current != null) {
@@ -133,7 +133,10 @@ function Board({
     }
 
     // Skip animation during multi-capture or if already animating
-    if (!prev || animFlagRef.current || animStep >= 0) return;
+    if (animFlagRef.current || animStep >= 0) {
+      prevBoardRef.current = board.map((row) => [...row]);
+      return;
+    }
 
     // Only animate if board actually changed
     const boardChanged = prev.some((row, r) => row.some((cell, c) => {
@@ -143,7 +146,14 @@ function Board({
       if (!old || !cur) return true;
       return old.color !== cur.color || old.king !== cur.king;
     }));
-    if (!boardChanged) return;
+
+    // Save old board for multi-capture animation reference (deep copy)
+    animPrevBoardRef.current = prev.map(row => row.map(cell => cell ? { ...cell } : null));
+
+    if (!boardChanged) {
+      prevBoardRef.current = board.map((row) => [...row]);
+      return;
+    }
 
     // Find empty cells (pieces left or were captured) and new pieces
     const empties = [];
@@ -175,6 +185,9 @@ function Board({
         }
       }
     }
+
+    // Update prevBoardRef AFTER using prev for animation
+    prevBoardRef.current = board.map((row) => [...row]);
 
     if (Object.keys(animOffsets).length > 0) {
       animFromRef.current = { ...animOffsets };

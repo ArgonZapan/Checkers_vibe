@@ -51,6 +51,7 @@ import { runSelfPlayStateTests } from './selfPlayState.test.js';
 import { runProxyPathRewriteTests } from './proxyPathRewrite.test.js';
 import { runTrainerHelpersDeepTests } from './trainerHelpersDeep.test.js';
 import { runBoardConvertOversizedTests } from './boardConvertOversized.test.js';
+import { runKingMultiCaptureAndUndoTests } from './kingMultiCaptureAndUndo.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -100,6 +101,7 @@ const suites = [
   { name: 'proxyPathRewrite',    run: runProxyPathRewriteTests },
   { name: 'trainerHelpersDeep',  run: runTrainerHelpersDeepTests },
   { name: 'boardConvertOversized', run: runBoardConvertOversizedTests },
+  { name: 'kingMultiCaptureAndUndo', run: runKingMultiCaptureAndUndoTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
