@@ -442,9 +442,13 @@ export class SelfPlay {
     // 2. Play game
     while (true) {
       moveCount++;
-      // Get game state (board, legal moves, gameOver, winner)
-      const stateRes = await fetch(`${CPP_BASE}/api/game/state`);
+      // Get game state and legal moves in parallel
+      const [stateRes, lmResInit] = await Promise.all([
+        fetch(`${CPP_BASE}/api/game/state`),
+        fetch(`${CPP_BASE}/api/legal-moves`),
+      ]);
       if (!stateRes.ok) throw new Error(`Game state failed: ${stateRes.status}`);
+      if (!lmResInit.ok) throw new Error(`Legal moves failed: ${lmResInit.status}`);
       const stateData = await stateRes.json();
       const boardArray = stateData.board;
       let gameOver = stateData.gameOver;
@@ -483,7 +487,7 @@ export class SelfPlay {
         // Add to buffer
         for (const s of samples) this.buffer.add(s);
 
-        this.io?.emit('gameOver', { winner: winner || 'draw', moves: samples.length });
+        this.io?.emit('gameOver', { winner: winner || 'draw', moves: samples.length, source: 'selfPlay' });
 
         // Track round time
         const roundTime = Date.now() - roundStart;
@@ -509,10 +513,8 @@ export class SelfPlay {
       // Delay between AI moves (so humans can see the game)
       if (CONFIG.moveDelayMs > 0) await this._sleep(CONFIG.moveDelayMs);
 
-      // Get legal moves
-      const lmRes = await fetch(`${CPP_BASE}/api/legal-moves`);
-      if (!lmRes.ok) throw new Error(`Legal moves failed: ${lmRes.status}`);
-      const { moves: legalMoves } = await lmRes.json();
+      // Get legal moves (already fetched in parallel with state above)
+      const { moves: legalMoves } = await lmResInit.json();
       const movesWithIndex = legalMoves.map((m, i) => ({ ...m, index: i }));
 
       // Choose model based on turn
@@ -560,11 +562,8 @@ export class SelfPlay {
       });
       if (!moveRes.ok) throw new Error(`Move failed: ${moveRes.status}`);
 
-      // Emit state after move so React can update the board
-      const newStateRes = await fetch(`${CPP_BASE}/api/game/state`);
-      const newState = await newStateRes.json();
-      const lmRes2 = await fetch(`${CPP_BASE}/api/legal-moves`);
-      const { moves: newLegalMoves } = await lmRes2.json();
+      // /api/move already returns full game state — no need for extra /api/game/state call
+      const newState = await moveRes.json();
 
       // Calculate shaped intermediate reward for the sample we just pushed
       const nextBoardFlat = flattenBoard(newState.board);
@@ -592,6 +591,7 @@ export class SelfPlay {
         legalMoves: [],
         gameOver: newState.gameOver ?? false,
         winner: newState.winner || null,
+        source: 'selfPlay',
       });
 
       turn = -turn;

@@ -54,7 +54,6 @@ app.post('/api/ai/predict', async (req, res) => {
     const model = turn === 1 ? trainer.modelWhite : trainer.modelBlack;
     if (!model) return res.status(503).json({ error: 'Model not initialized' });
 
-    const { predict } = await import('./ai/model.js');
     const result = await predict(model, board, legalMoves, turn);
     res.json(result);
   } catch (err) {
@@ -65,7 +64,6 @@ app.post('/api/ai/predict', async (req, res) => {
 
 app.post('/api/ai/train', async (req, res) => {
   try {
-    const { train } = await import('./ai/model.js');
     const batch = req.body.batch || [];
     if (batch.length === 0) {
       return res.status(400).json({ error: 'Empty batch' });
@@ -162,8 +160,10 @@ async function cppFetch(path, opts = {}) {
 
 // Helper: get full game state from C++ engine and return client-friendly format
 async function getGameState() {
-  const state = await cppFetch('/api/game/state');
-  const { moves: legalMoves } = await cppFetch('/api/legal-moves');
+  const [state, { moves: legalMoves }] = await Promise.all([
+    cppFetch('/api/game/state'),
+    cppFetch('/api/legal-moves'),
+  ]);
   // Normalize board to 2D array
   let board2D = state.board;
   if (Array.isArray(state.board) && !Array.isArray(state.board[0])) {
