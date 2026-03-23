@@ -23,6 +23,7 @@ function Board({
   winner,
   path,
   captures = [],
+  onReset,
 }) {
   const prevBoardRef = useRef(null);
   const animPrevBoardRef = useRef(null); // stable copy for multi-capture animation
@@ -411,7 +412,9 @@ function Board({
             <h2 className={winner === 'draw' ? 'winner-draw-text' : winner === 'white' ? 'winner-white-text' : 'winner-black-text'}>
               {winner === 'draw' ? '🤝 Remis' : winner === 'white' ? '⚪ Białe wygrywają!' : '⚫ Czarne wygrywają!'}
             </h2>
-            <p>Kliknij Reset aby zagrać ponownie</p>
+            <button className="btn-primary" onClick={onReset} style={{ marginTop: '1rem' }}>
+              🔄 Nowa gra
+            </button>
           </div>
         </div>
       )}

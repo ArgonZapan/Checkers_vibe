@@ -415,6 +415,7 @@ export default function App() {
             winner={winner}
             path={movePath}
             captures={lastMove?.captures}
+            onReset={handleReset}
           />
           <GameControls
             mode={mode}
