@@ -78,6 +78,7 @@ import { runCspCompletenessTests } from './cspCompleteness.test.js';
 import { runWsHandlerInputGapsTests } from './wsHandlerInputGaps.test.js';
 import { runRateLimitSecurityTests } from './rateLimitSecurity.test.js';
 import { runHunterSecurityFixesTests } from './hunter-security-fixes.test.js';
+import { runIssues140to143RegressionTests } from './issues140to143-regression.test.js';
 import { runProxyErrorScenariosTests } from './proxyErrorScenarios.test.js';
 import { runDisconnectCleanupAndModeSwitchTests } from './disconnectCleanupAndModeSwitch.test.js';
 import { runClientComponentLogicTests } from './clientComponentLogic.test.js';
@@ -176,6 +177,7 @@ const suites = [
   { name: 'wsHandlerInputGaps', run: runWsHandlerInputGapsTests },
   { name: 'rateLimitSecurity', run: runRateLimitSecurityTests },
   { name: 'hunterSecurityFixes', run: runHunterSecurityFixesTests },
+  { name: 'issues140to143Regression', run: runIssues140to143RegressionTests },
   { name: 'proxyErrorScenarios', run: runProxyErrorScenariosTests },
   { name: 'disconnectCleanupAndModeSwitch', run: runDisconnectCleanupAndModeSwitchTests },
   { name: 'clientComponentLogic', run: runClientComponentLogicTests },
