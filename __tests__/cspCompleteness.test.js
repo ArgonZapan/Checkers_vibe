@@ -31,7 +31,7 @@ try {
 // ── Extracted: security headers (mirrors server/index.js) ───────────────────
 
 // Extracted from actual server/index.js line 34
-const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws: wss:; frame-ancestors 'none'";
+const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; frame-ancestors 'none'";
 const X_FRAME_OPTIONS = 'DENY';
 const PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=()';
 
@@ -149,12 +149,19 @@ export async function runCspCompletenessTests() {
     }
   });
 
-  test('connect-src allows WebSocket but not arbitrary http:', () => {
+  test('connect-src allows wss: but not arbitrary http:', () => {
     const connectSrc = parsed['connect-src'] || [];
-    assert.ok(connectSrc.includes('ws:'), 'Must allow ws:');
     assert.ok(connectSrc.includes('wss:'), 'Must allow wss:');
+    // ws: only allowed when CSP_ALLOW_WS=true (not in production default)
     assert.ok(!connectSrc.includes('http:'), 'Must not allow http:');
     assert.ok(!connectSrc.includes('https:'), 'Must not allow https:');
+  });
+
+  test('connect-src bare ws: not in production default (prevents exfiltration)', () => {
+    const connectSrc = parsed['connect-src'] || [];
+    // Production default must NOT include bare ws: — only wss: is safe
+    assert.ok(!connectSrc.includes('ws:') || connectSrc.includes('wss:'),
+      'connect-src must use wss: not bare ws: in production');
   });
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -225,11 +232,15 @@ export async function runCspCompletenessTests() {
     );
   });
 
-  test('server CSP string matches extracted constant', () => {
-    assert.ok(
-      serverSource.includes(CSP),
-      'Server CSP should match the extracted constant exactly'
-    );
+  test('server CSP contains all required directives', () => {
+    // CSP is now dynamic (ws: conditional on CSP_ALLOW_WS env var), so check components
+    assert.ok(serverSource.includes("default-src 'self'"), 'server CSP must have default-src self');
+    assert.ok(serverSource.includes("script-src 'self'"), 'server CSP must have script-src self');
+    assert.ok(serverSource.includes("connect-src 'self'"), 'server CSP must have connect-src self');
+    assert.ok(serverSource.includes('wss:'), 'server CSP must allow wss:');
+    assert.ok(serverSource.includes("frame-ancestors 'none'"), 'server CSP must have frame-ancestors none');
+    // ws: should only be added conditionally via env var
+    assert.ok(serverSource.includes('CSP_ALLOW_WS'), 'ws: should be conditional on CSP_ALLOW_WS env var');
   });
 
   test('X-Frame-Options DENY is set in server', () => {

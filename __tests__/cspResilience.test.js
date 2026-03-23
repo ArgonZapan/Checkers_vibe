@@ -3,7 +3,7 @@
  *
  * Covers the CSP header set in server/index.js (line 32):
  *   "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
- *    img-src 'self' data:; font-src 'self'; connect-src 'self' ws: wss:;
+ *    img-src 'self' data:; font-src 'self'; connect-src 'self' wss:;
  *    frame-ancestors 'none'"
  *
  * Validates security properties of the CSP string.
@@ -15,7 +15,7 @@ import assert from 'node:assert/strict';
 
 // ── Extracted: CSP header value (mirrors server/index.js:32) ───────────────
 
-const CSP_HEADER = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws: wss:; frame-ancestors 'none'";
+const CSP_HEADER = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; frame-ancestors 'none'";
 
 /**
  * Parse a CSP string into a map of directive → values[].
@@ -79,10 +79,10 @@ export async function runCSPResilienceTests() {
       "script-src should not contain 'unsafe-inline'");
   });
 
-  test('connect-src allows ws: and wss:', () => {
+  test('connect-src allows wss: (production default)', () => {
     const connectSrc = parsed['connect-src'] || [];
-    assert.ok(connectSrc.includes('ws:'), "connect-src should include ws:");
     assert.ok(connectSrc.includes('wss:'), "connect-src should include wss:");
+    assert.ok(!connectSrc.includes('ws:'), "production CSP should not include bare ws:");
   });
 
   test('frame-ancestors is set to none', () => {

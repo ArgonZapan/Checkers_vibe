@@ -18,7 +18,7 @@ import assert from 'node:assert/strict';
 
 // ── Extracted: CSP from server/index.js ─────────────────────────────────────
 
-const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws: wss:; frame-ancestors 'none'";
+const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; frame-ancestors 'none'";
 
 /**
  * Parse CSP string into directive map.
@@ -91,10 +91,14 @@ export async function runCspHeadersTests() {
     assert.deepEqual(parsed['font-src'], ["'self'"]);
   });
 
-  test('CSP: connect-src allows ws: and wss:', () => {
-    assert.ok(hasCSPDirective(CSP, 'connect-src', 'ws:'));
+  test('CSP: connect-src allows wss:', () => {
     assert.ok(hasCSPDirective(CSP, 'connect-src', 'wss:'));
     assert.ok(hasCSPDirective(CSP, 'connect-src', "'self'"));
+  });
+
+  test('CSP: connect-src does NOT allow bare ws: (production default)', () => {
+    assert.ok(!hasCSPDirective(CSP, 'connect-src', 'ws:'),
+      'Production CSP must not include bare ws: — only wss:');
   });
 
   test('CSP: frame-ancestors is none (prevents clickjacking)', () => {
@@ -112,7 +116,7 @@ export async function runCspHeadersTests() {
     }
   });
 
-  test('CSP: no http: scheme (only https: and ws:)', () => {
+  test('CSP: no http: scheme (only https: and wss:)', () => {
     const parsed = parseCSP(CSP);
     for (const [dir, values] of Object.entries(parsed)) {
       assert.ok(!values.includes('http:'), `${dir} should not allow http:`);

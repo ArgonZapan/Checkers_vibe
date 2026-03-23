@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { CONFIG } from '../../../config.js';
+import { BOARD_CONFIG } from '../../boardConfig.js';
+const CONFIG = { board: BOARD_CONFIG };
 
 const CELL_SIZE = CONFIG.board.cellSize;
 const BOARD_SIZE = CELL_SIZE * 8;
