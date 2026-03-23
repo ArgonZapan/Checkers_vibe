@@ -231,12 +231,8 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
 
             if (!(oppPieces & midMask) || (board.allPieces() & endMask)) continue;
 
-            Square cap(mr, mc);
-            bool already = false;
-            for (auto& c : captures) {
-                if (c == cap) { already = true; break; }
-            }
-            if (already) continue;
+            // Sprawdź czy nie zbity już — bitboard check zamiast linear search
+            if (capturedMask & midMask) continue;
 
             // Save state for rollback
             Bitboard savedOpp, savedOppKings, savedMyPieces, savedMyKings;
@@ -278,10 +274,12 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
                 becameKing = true;
             }
 
-            captures.push_back(cap);
+            captures.push_back(Square{mr, mc});
             path.push_back(Square{nr, nc});
+            capturedMask |= midMask;
             foundAny = true;
-            multiCapture(board, origR, origC, nr, nc, color, becameKing, captures, result, path);
+            multiCapture(board, origR, origC, nr, nc, color, becameKing, captures, result, path, capturedMask);
+            capturedMask &= ~midMask;
             path.pop_back();
             captures.pop_back();
 

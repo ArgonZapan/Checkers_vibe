@@ -207,11 +207,134 @@ function Board({
   }
   prevBoardRef.current = board.map((row) => [...row]);
 
-  const cells = [];
-  const pieces = [];
+  // Memoize cells + pieces to avoid re-computing SVG elements when nothing changed (#52)
+  const { cells, pieces } = useMemo(() => {
+    const _cells = [];
+    const _pieces = [];
 
-  // Determine board to display: animBoard during multi-capture, normal board otherwise
-  const displayBoard = (animStep >= 0 && animBoard) ? animBoard : board;
+    // Determine board to display: animBoard during multi-capture, normal board otherwise
+    const displayBoard = (animStep >= 0 && animBoard) ? animBoard : board;
+
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const x = col * CELL_SIZE;
+        const y = row * CELL_SIZE;
+        const isDark = (row + col) % 2 === 1;
+        const isSelected = selected && selected[0] === row && selected[1] === col;
+        const isLastMoveFrom = lastMove && lastMove.from[0] === row && lastMove.from[1] === col;
+        const isLastMoveTo = lastMove && lastMove.to[0] === row && lastMove.to[1] === col;
+        const isValidMove = legalMoves.some((m) => m.to[0] === row && m.to[1] === col);
+
+        let fillColor = isDark ? DARK_COLOR : LIGHT_COLOR;
+        let overlay = null;
+
+        if (isLastMoveFrom || isLastMoveTo) {
+          overlay = HIGHLIGHT_COLOR;
+        }
+        if (isSelected) {
+          overlay = SELECTED_COLOR;
+        }
+        if (isValidMove && !displayBoard[row][col]) {
+          overlay = VALID_MOVE_COLOR;
+        }
+
+        _cells.push(
+          <rect
+            key={`cell-${row}-${col}`}
+            x={x}
+            y={y}
+            width={CELL_SIZE}
+            height={CELL_SIZE}
+            fill={fillColor}
+            onClick={() => onCellClick(row, col)}
+            style={{ cursor: isDark ? 'pointer' : 'default' }}
+            pointerEvents="visible"
+          />
+        );
+
+        if (overlay) {
+          _cells.push(
+            <rect
+              key={`overlay-${row}-${col}`}
+              x={x}
+              y={y}
+              width={CELL_SIZE}
+              height={CELL_SIZE}
+              fill={overlay}
+              pointerEvents="none"
+            />
+          );
+        }
+
+        // Green dot for valid empty target cells
+        if (isValidMove && !displayBoard[row][col]) {
+          _cells.push(
+            <circle
+              key={`valid-dot-${row}-${col}`}
+              cx={x + CELL_SIZE / 2}
+              cy={y + CELL_SIZE / 2}
+              r={CELL_SIZE * 0.18}
+              fill={VALID_MOVE_DOT_COLOR}
+              pointerEvents="none"
+            />
+          );
+        }
+
+        const piece = displayBoard[row][col];
+        if (piece) {
+          const px = x + CELL_SIZE / 2;
+          const py = y + CELL_SIZE / 2;
+          const radius = CELL_SIZE * 0.38;
+          const isWhite = piece.color === 'white';
+          const pieceKey = `piece-${row}-${col}`;
+          const animOffset = animFromRef.current[pieceKey];
+          // SVG attribute transform (consistent across viewport sizes)
+          const pieceTransform = animOffset
+            ? `translate(${animOffset.x}, ${animOffset.y})`
+            : undefined;
+
+          _pieces.push(
+            <g key={pieceKey} onClick={() => onCellClick(row, col)} transform={pieceTransform} style={{ cursor: 'pointer' }}>
+              <circle
+                cx={px}
+                cy={py}
+                r={radius}
+                fill={isWhite ? CONFIG.board.colors.white : CONFIG.board.colors.black}
+                stroke={isWhite ? CONFIG.board.colors.whiteStroke : CONFIG.board.colors.blackStroke}
+                strokeWidth="2"
+                pointerEvents="visible"
+              />
+              {piece.king && (
+                <text
+                  x={px}
+                  y={py}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize="20"
+                  fill={isWhite ? CONFIG.board.colors.kingWhite : CONFIG.board.colors.kingBlack}
+                  pointerEvents="none"
+                >
+                  👑
+                </text>
+              )}
+              {isValidMove && (
+                <circle
+                  cx={px}
+                  cy={py}
+                  r={radius + 3}
+                  fill="none"
+                  stroke="#00ff00"
+                  strokeWidth="3"
+                  pointerEvents="none"
+                />
+              )}
+            </g>
+          );
+        }
+      }
+    }
+    return { cells: _cells, pieces: _pieces };
+  }, [board, selected, legalMoves, lastMove, animStep, animBoard, onCellClick]);
 
   // Moving piece info for multi-capture animation overlay
   const movingPieceInfo = (animStep >= 0 && animBoard && path) ? (() => {
@@ -221,125 +344,6 @@ function Board({
     if (!mp) return null;
     return { piece: mp, row: path[animStep][0], col: path[animStep][1] };
   })() : null;
-
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const x = col * CELL_SIZE;
-      const y = row * CELL_SIZE;
-      const isDark = (row + col) % 2 === 1;
-      const isSelected = selected && selected[0] === row && selected[1] === col;
-      const isLastMoveFrom = lastMove && lastMove.from[0] === row && lastMove.from[1] === col;
-      const isLastMoveTo = lastMove && lastMove.to[0] === row && lastMove.to[1] === col;
-      const isValidMove = legalMoves.some((m) => m.to[0] === row && m.to[1] === col);
-
-      let fillColor = isDark ? DARK_COLOR : LIGHT_COLOR;
-      let overlay = null;
-
-      if (isLastMoveFrom || isLastMoveTo) {
-        overlay = HIGHLIGHT_COLOR;
-      }
-      if (isSelected) {
-        overlay = SELECTED_COLOR;
-      }
-      if (isValidMove && !displayBoard[row][col]) {
-        overlay = VALID_MOVE_COLOR;
-      }
-
-      cells.push(
-        <rect
-          key={`cell-${row}-${col}`}
-          x={x}
-          y={y}
-          width={CELL_SIZE}
-          height={CELL_SIZE}
-          fill={fillColor}
-          onClick={() => onCellClick(row, col)}
-          style={{ cursor: isDark ? 'pointer' : 'default' }}
-          pointerEvents="visible"
-        />
-      );
-
-      if (overlay) {
-        cells.push(
-          <rect
-            key={`overlay-${row}-${col}`}
-            x={x}
-            y={y}
-            width={CELL_SIZE}
-            height={CELL_SIZE}
-            fill={overlay}
-            pointerEvents="none"
-          />
-        );
-      }
-
-      // Green dot for valid empty target cells
-      if (isValidMove && !displayBoard[row][col]) {
-        cells.push(
-          <circle
-            key={`valid-dot-${row}-${col}`}
-            cx={x + CELL_SIZE / 2}
-            cy={y + CELL_SIZE / 2}
-            r={CELL_SIZE * 0.18}
-            fill={VALID_MOVE_DOT_COLOR}
-            pointerEvents="none"
-          />
-        );
-      }
-
-      const piece = displayBoard[row][col];
-      if (piece) {
-        const px = x + CELL_SIZE / 2;
-        const py = y + CELL_SIZE / 2;
-        const radius = CELL_SIZE * 0.38;
-        const isWhite = piece.color === 'white';
-        const pieceKey = `piece-${row}-${col}`;
-        const animOffset = animFromRef.current[pieceKey];
-        // SVG attribute transform (consistent across viewport sizes)
-        const pieceTransform = animOffset
-          ? `translate(${animOffset.x}, ${animOffset.y})`
-          : undefined;
-
-        pieces.push(
-          <g key={pieceKey} onClick={() => onCellClick(row, col)} transform={pieceTransform} style={{ cursor: 'pointer' }}>
-            <circle
-              cx={px}
-              cy={py}
-              r={radius}
-              fill={isWhite ? CONFIG.board.colors.white : CONFIG.board.colors.black}
-              stroke={isWhite ? CONFIG.board.colors.whiteStroke : CONFIG.board.colors.blackStroke}
-              strokeWidth="2"
-              pointerEvents="visible"
-            />
-            {piece.king && (
-              <text
-                x={px}
-                y={py}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fontSize="20"
-                fill={isWhite ? CONFIG.board.colors.kingWhite : CONFIG.board.colors.kingBlack}
-                pointerEvents="none"
-              >
-                👑
-              </text>
-            )}
-            {isValidMove && (
-              <circle
-                cx={px}
-                cy={py}
-                r={radius + 3}
-                fill="none"
-                stroke="#00ff00"
-                strokeWidth="3"
-                pointerEvents="none"
-              />
-            )}
-          </g>
-        );
-      }
-    }
-  }
 
   return (
     <div className="board-container" style={{ position: 'relative' }}>
