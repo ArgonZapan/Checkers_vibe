@@ -16,25 +16,20 @@ import assert from 'node:assert/strict';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Current epsilon validation (mirrors server/index.js line 164):
- *   if (epsilon != null && (typeof epsilon !== 'number' || epsilon < 0 || epsilon > 1))
+ * Current epsilon validation (mirrors FIXED server/index.js line 164):
+ *   if (epsilon != null && (typeof epsilon !== 'number' || !Number.isFinite(epsilon) || epsilon < 0 || epsilon > 1))
  *
- * BUG: NaN passes validation because:
- *   typeof NaN === 'number'  → true
- *   NaN < 0  → false (IEEE 754)
- *   NaN > 1  → false (IEEE 754)
- *   So: true && (false || false || false) → condition is false → NaN accepted
+ * FIXED: NaN is now rejected because !Number.isFinite(NaN) → true
  */
 function validateEpsilonCurrent(epsilon) {
-  if (epsilon != null && (typeof epsilon !== 'number' || epsilon < 0 || epsilon > 1)) {
+  if (epsilon != null && (typeof epsilon !== 'number' || !Number.isFinite(epsilon) || epsilon < 0 || epsilon > 1)) {
     return { valid: false, error: 'epsilon must be 0-1' };
   }
   return { valid: true };
 }
 
 /**
- * Proposed fix — use Number.isFinite for strict numeric validation:
- *   if (epsilon != null && (!Number.isFinite(epsilon) || epsilon < 0 || epsilon > 1))
+ * Proposed fix (same as current after bug fix) — uses Number.isFinite:
  */
 function validateEpsilonFixed(epsilon) {
   if (epsilon != null && (!Number.isFinite(epsilon) || epsilon < 0 || epsilon > 1)) {
@@ -105,10 +100,10 @@ export async function runResilienceHunterSubAlpha003Tests() {
   // EPSILON: NaN regression (expected to fail — bug still present)
   // ─────────────────────────────────────────────────────────────────────────
 
-  test('NaN epsilon must be REJECTED (bug: current code accepts NaN)', () => {
+  test('NaN epsilon must be REJECTED (fixed: Number.isFinite rejects NaN)', () => {
     const result = validateEpsilonCurrent(NaN);
     assert.equal(result.valid, false, 'NaN should be rejected as invalid epsilon');
-  }, { expectedFail: true });
+  });
 
   test('NaN epsilon REJECTED with Number.isFinite fix', () => {
     const result = validateEpsilonFixed(NaN);
