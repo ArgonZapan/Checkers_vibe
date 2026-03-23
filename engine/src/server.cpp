@@ -20,11 +20,21 @@ static int pieceToInt(PieceType pt, Color c) {
 }
 
 static json boardToArray(const Board& b) {
+    int grid[8][8] = {};
+    Bitboard bb;
+    bb = b.whitePieces;
+    while (bb) { int bit = __builtin_ctzll(bb); grid[bit / 8][bit % 8] = 1; bb &= bb - 1; }
+    bb = b.whiteKings;
+    while (bb) { int bit = __builtin_ctzll(bb); grid[bit / 8][bit % 8] = 2; bb &= bb - 1; }
+    bb = b.blackPieces;
+    while (bb) { int bit = __builtin_ctzll(bb); grid[bit / 8][bit % 8] = 3; bb &= bb - 1; }
+    bb = b.blackKings;
+    while (bb) { int bit = __builtin_ctzll(bb); grid[bit / 8][bit % 8] = 4; bb &= bb - 1; }
     json arr = json::array();
     for (int row = 0; row < 8; ++row) {
         json rowArr = json::array();
         for (int col = 0; col < 8; ++col) {
-            rowArr.push_back(pieceToInt(b.getPiece(row, col), b.getColor(row, col)));
+            rowArr.push_back(grid[row][col]);
         }
         arr.push_back(rowArr);
     }
