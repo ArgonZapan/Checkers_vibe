@@ -23,7 +23,7 @@ const io = new SocketIO(httpServer, {
 });
 
 // ── Middleware ───────────────────────────────────────────────────────────────
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 // Serve React build (after `npm run build` in client/)
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
@@ -51,6 +51,9 @@ app.post('/api/ai/predict', async (req, res) => {
     const { board, legalMoves, turn = 1 } = req.body;
     if (!board || !legalMoves) {
       return res.status(400).json({ error: 'Missing board or legalMoves' });
+    }
+    if (!Array.isArray(board) || board.length !== 64) {
+      return res.status(400).json({ error: 'board must be an array of 64 elements' });
     }
     const model = turn === 1 ? trainer.modelWhite : trainer.modelBlack;
     if (!model) return res.status(503).json({ error: 'Model not initialized' });
@@ -102,7 +105,7 @@ app.post('/api/ai/reset', async (_req, res) => {
     io.emit('selfPlayStatus', { active: false, gameNumber: 0, stats: trainer.stats });
     res.json({ ok: true, stats: trainer.getStatus().stats });
   } catch (err) {
-    console.error('[AI] Reset error:', err);
+    console.error('[AI] Reset error:', err.message);
     res.status(500).json({ error: 'Reset failed' });
   }
 });
@@ -428,7 +431,13 @@ io.on('connection', async (socket) => {
       trainer.stats.draws = 0;
       trainer.stats.lastLoss = null;
       // 7. Broadcast updated params
-      io.emit('paramsUpdate', { modelParams: { ...trainer.modelParams } });
+      io.emit('paramsUpdate', {
+        modelParams: { ...trainer.modelParams },
+        epsilonWhite: trainer.epsilonWhite,
+        epsilonBlack: trainer.epsilonBlack,
+        speedMode: CONFIG.server.speedMode,
+        aiMoveDelayMs: CONFIG.server.aiMoveDelayMs,
+      });
       io.emit('selfPlayStatus', { active: false, gameNumber: 0, stats: trainer.stats });
       // 8. Restart if was running
       if (wasRunning) {
@@ -451,6 +460,7 @@ io.on('connection', async (socket) => {
     const clamped = Math.max(0, Math.min(ms, 10000));
     CONFIG.server.aiMoveDelayMs = clamped;
     if (clamped > 0) CONFIG.server.normalModeDelayMs = clamped;
+    io.emit('speedUpdate', { aiMoveDelayMs: clamped });
     console.log(`[WS] Speed set to ${clamped}ms`);
   });
 
@@ -458,6 +468,7 @@ io.on('connection', async (socket) => {
   socket.on('setSpeedMode', (mode) => {
     if (mode === 'fast' || mode === 'normal') {
       CONFIG.server.speedMode = mode;
+      io.emit('speedUpdate', { speedMode: mode });
       console.log(`[WS] Speed mode set to: ${mode}`);
     }
   });

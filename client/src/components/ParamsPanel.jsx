@@ -128,7 +128,6 @@ function SideTab({
             <option value="tanh">Tanh</option>
             <option value="sigmoid">Sigmoid</option>
             <option value="leaky_relu">Leaky ReLU</option>
-            <option value="elu">ELU</option>
           </select>
         </div>
         <Slider

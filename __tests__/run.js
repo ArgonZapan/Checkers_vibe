@@ -34,6 +34,9 @@ import { runIssues132to134Tests } from './issues132to134.test.js';
 import { runIssue129Tests } from './issue129.test.js';
 import { runIssue130Tests } from './issue130.test.js';
 import { runIssue131Tests } from './issue131.test.js';
+import { runBoardConvertAdditionalTests } from './boardConvertAdditional.test.js';
+import { runSetSpeedModeValidationTests } from './setSpeedModeValidation.test.js';
+import { runAiMovePredictionTests } from './aiMovePrediction.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -66,6 +69,9 @@ const suites = [
   { name: 'issue129',            run: runIssue129Tests },
   { name: 'issue130',            run: runIssue130Tests },
   { name: 'issue131',            run: runIssue131Tests },
+  { name: 'boardConvertAdditional', run: runBoardConvertAdditionalTests },
+  { name: 'setSpeedModeValidation', run: runSetSpeedModeValidationTests },
+  { name: 'aiMovePrediction',    run: runAiMovePredictionTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
