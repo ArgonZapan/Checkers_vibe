@@ -222,10 +222,20 @@ void registerRoutes(httplib::Server& svr) {
             for (auto& s : chosen.path) pathArr.push_back(json::array({s.row, s.col}));
             response["path"] = pathArr;
             res.set_content(response.dump(), "application/json");
-        } catch (...) {
+        } catch (json::parse_error& e) {
             json err;
-            err["error"] = "invalid json";
+            err["error"] = std::string("invalid json: ") + e.what();
             res.status = 400;
+            res.set_content(err.dump(), "application/json");
+        } catch (json::type_error& e) {
+            json err;
+            err["error"] = std::string("invalid type in request: ") + e.what();
+            res.status = 400;
+            res.set_content(err.dump(), "application/json");
+        } catch (std::exception& e) {
+            json err;
+            err["error"] = e.what();
+            res.status = 500;
             res.set_content(err.dump(), "application/json");
         }
     });
