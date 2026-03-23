@@ -279,9 +279,10 @@ io.on('connection', async (socket) => {
         socket.emit('state', playerPayload);
 
         // Wait for animation, then AI makes its move
+        const animStepMs = CONFIG.animationStepDurationMs;
         const animDelay = (playerPath && playerPath.length > 2)
-          ? playerPath.length * CONFIG.board.animation.stepDurationMs + CONFIG.server.aiMoveDelayMs
-          : CONFIG.server.aiMoveDelayMs;
+          ? playerPath.length * animStepMs + CONFIG.moveDelayMs
+          : CONFIG.moveDelayMs;
         await new Promise(r => setTimeout(r, animDelay));
         await aiMove(state);
         state = await getGameState();
@@ -374,7 +375,17 @@ io.on('connection', async (socket) => {
   // ── Speed control ──────────────────────────────────────────────────────
   socket.on('setSpeed', (ms) => {
     CONFIG.server.aiMoveDelayMs = ms;
+    // Also update normalModeDelayMs so the getter stays consistent
+    if (ms > 0) CONFIG.server.normalModeDelayMs = ms;
     console.log(`[WS] Speed set to ${ms}ms`);
+  });
+
+  // ── Speed mode control ────────────────────────────────────────────────
+  socket.on('setSpeedMode', (mode) => {
+    if (mode === 'fast' || mode === 'normal') {
+      CONFIG.server.speedMode = mode;
+      console.log(`[WS] Speed mode set to: ${mode}`);
+    }
   });
 
   // ── Full reset (model + stats + buffer + game) ─────────────────────────

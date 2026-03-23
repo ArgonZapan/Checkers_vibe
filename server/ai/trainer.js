@@ -175,7 +175,6 @@ export class SelfPlay {
 
     // Parameters per side
     this.epsilonWhite = CONFIG.ai.defaultEpsilon;
-    this.epsilonBlack = CONFIG.ai.defaultEpsilon;
     this.networkSizeWhite = 'small';
     this.networkSizeBlack = 'small';
 
@@ -204,7 +203,6 @@ export class SelfPlay {
       draws: 0,
       lastLoss: null,
       epsilonWhite: this.epsilonWhite,
-      epsilonBlack: this.epsilonBlack
     };
 
     // Timing
@@ -240,14 +238,12 @@ export class SelfPlay {
       }
     }
     if (side === 'black' || side === 'both') {
-      if (epsilon !== undefined) this.epsilonBlack = epsilon;
       if (networkSize !== undefined) {
         this.networkSizeBlack = networkSize;
         this.modelBlack = createModel({ ...this.modelParams });
       }
     }
     this.stats.epsilonWhite = this.epsilonWhite;
-    this.stats.epsilonBlack = this.epsilonBlack;
   }
 
   async resetModel() {
@@ -266,9 +262,7 @@ export class SelfPlay {
 
     // 4. Reset epsilon
     this.epsilonWhite = CONFIG.ai.defaultEpsilon;
-    this.epsilonBlack = CONFIG.ai.defaultEpsilon;
     this.stats.epsilonWhite = CONFIG.ai.defaultEpsilon;
-    this.stats.epsilonBlack = CONFIG.ai.defaultEpsilon;
 
     // 5. Create fresh models
     this.modelWhite = createModel({ ...this.modelParams });
@@ -316,7 +310,6 @@ export class SelfPlay {
       this.stats.draws = 0;
       this.stats.lastLoss = null;
       this.epsilonWhite = CONFIG.ai.defaultEpsilon;
-      this.epsilonBlack = CONFIG.ai.defaultEpsilon;
     }
     this.io?.emit('modelRestart', { side });
     console.log(`[SelfPlay] Model restarted (${side})`);
@@ -406,7 +399,7 @@ export class SelfPlay {
         await this._playGame();
         consecutiveErrors = 0;
         // Delay between rounds = 3x move delay
-        if (CONFIG.server.aiMoveDelayMs > 0) await this._sleep(CONFIG.server.aiMoveDelayMs * 3);
+        if (CONFIG.moveDelayMs > 0) await this._sleep(CONFIG.moveDelayMs * 3);
       } catch (err) {
         consecutiveErrors++;
         console.error(`[SelfPlay] Game error (${consecutiveErrors}/5):`, err.message);
@@ -508,7 +501,7 @@ export class SelfPlay {
       }
 
       // Delay between AI moves (so humans can see the game)
-      if (CONFIG.server.aiMoveDelayMs > 0) await this._sleep(CONFIG.server.aiMoveDelayMs);
+      if (CONFIG.moveDelayMs > 0) await this._sleep(CONFIG.moveDelayMs);
 
       // Get legal moves
       const lmRes = await fetch(`${CPP_BASE}/api/legal-moves`);
@@ -598,7 +591,7 @@ export class SelfPlay {
       turn = -turn;
 
       // Small delay so clients can observe the move
-      if (CONFIG.server.aiMoveDelayMs > 0) await this._sleep(CONFIG.server.aiMoveDelayMs);
+      if (CONFIG.moveDelayMs > 0) await this._sleep(CONFIG.moveDelayMs);
     }
 
     // Train once per round — 2048 samples, 1 epoch

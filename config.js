@@ -30,6 +30,23 @@ export const CONFIG = {
     fetchTimeoutMs: 5000,
     aiMoveDelayMs: 0, // 0 = minimal (10ms enforced)
     autoSaveMs: 30000,
+
+    // Speed mode: "fast" = no delay/animation, "normal" = delay with half-delay animation
+    speedMode: 'normal',       // "fast" | "normal"
+    normalModeDelayMs: 500,    // X value for normal mode — animation = X/2
+  },
+
+  // === SPEED HELPERS ===
+  // Returns effective move delay in ms based on speedMode
+  get moveDelayMs() {
+    const s = this.server;
+    if (s.speedMode === 'fast') return 0;
+    return s.aiMoveDelayMs > 0 ? s.aiMoveDelayMs : s.normalModeDelayMs;
+  },
+  // Returns effective animation duration per step in ms based on speedMode
+  get animationStepDurationMs() {
+    if (this.server.speedMode === 'fast') return 0;
+    return Math.floor(this.moveDelayMs / 2);
   },
 
   // === AI/TRAINER ===
