@@ -247,6 +247,28 @@ export default function App() {
       toastTimerRef.current = setTimeout(() => setToast(null), 5000);
     });
 
+    // Speed update broadcast — sync speed display across tabs/clients
+    s.on('speedUpdate', (data) => {
+      if (data.aiMoveDelayMs !== undefined) {
+        setSpeed(data.aiMoveDelayMs);
+      }
+      if (data.speedMode !== undefined) {
+        setParams(prev => ({ ...prev, speedMode: data.speedMode }));
+      }
+    });
+
+    // Model restart — clear client state after full reset
+    s.on('modelRestart', () => {
+      setBoard(EMPTY_BOARD());
+      setTurn('white');
+      setGameOver(false);
+      setWinner(null);
+      setLastMove(null);
+      setSelected(null);
+      setLegalMoves([]);
+      setMoveHistory([]);
+    });
+
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       s.disconnect();

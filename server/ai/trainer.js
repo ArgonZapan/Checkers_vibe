@@ -191,7 +191,7 @@ function calculateReward(prevBoardFlat, nextBoardFlat, turn, side = 'white') {
 
   // 5. Advance (bonus for pawns moving toward promotion)
   const advanceReward = calcAdvance(prevBoardFlat, nextBoardFlat, turn);
-  reward += advanceReward * (weights.advance || 0);
+  reward += advanceReward * (strat.rewardAdvance ?? weights.advance ?? 0);
 
   return Math.max(-1, Math.min(1, Math.round(reward * 1000) / 1000));
 }
@@ -621,6 +621,7 @@ export class SelfPlay {
       this.stats.epsilonWhite = this.epsilonWhite;
       this.stats.epsilonBlack = this.epsilonBlack;
       console.log(`[SelfPlay] Loaded state: ${this.stats.gamesPlayed} games played, εW=${this.epsilonWhite}, εB=${this.epsilonBlack}`);
+      this.dirty = true; // loaded state should be persisted on next save cycle
     } catch (err) {
       console.log('[SelfPlay] No previous state found, starting fresh');
     }
