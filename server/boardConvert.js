@@ -32,6 +32,17 @@ export function boardFromCpp(cppBoard) {
       board2D.push(cppBoard.slice(r * 8, r * 8 + 8));
     }
   }
+  // Validate 2D array has 8 rows with 8 columns each
+  if (board2D.length !== 8) {
+    console.warn('[boardFromCpp] 2D array has', board2D.length, 'rows, expected 8, returning empty board');
+    return Array.from({ length: 8 }, () => Array(8).fill(null));
+  }
+  for (let r = 0; r < 8; r++) {
+    if (!Array.isArray(board2D[r]) || board2D[r].length !== 8) {
+      console.warn('[boardFromCpp] Row', r, 'has length', board2D[r]?.length, 'expected 8, returning empty board');
+      return Array.from({ length: 8 }, () => Array(8).fill(null));
+    }
+  }
   return board2D.map(row => row.map(val => {
     if (typeof val !== 'number' || val === 0) return null;
     if (val < 1 || val > 4) return null; // guard against unexpected values
