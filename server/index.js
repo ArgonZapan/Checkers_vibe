@@ -381,8 +381,8 @@ io.on('connection', async (socket) => {
 
       // Validate params ranges
       const errors = [];
-      if (newParams.layers != null && (newParams.layers < 1 || newParams.layers > 8)) {
-        errors.push(`layers=${newParams.layers} (zakres: 1-8)`);
+      if (newParams.layers != null && (newParams.layers < 1 || newParams.layers > 5)) {
+        errors.push(`layers=${newParams.layers} (zakres: 1-5)`);
       }
       if (newParams.neurons != null && (newParams.neurons < 32 || newParams.neurons > 1024)) {
         errors.push(`neurons=${newParams.neurons} (zakres: 32-1024)`);
