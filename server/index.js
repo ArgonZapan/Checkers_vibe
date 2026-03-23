@@ -518,7 +518,11 @@ async function aiMove(currentState) {
     // (prediction.move IS the selected legal move object, not an index)
     let selectedMove = prediction.move;
     // Safety: validate the predicted move is actually in legalMoves
-    if (!selectedMove || !legalMoves.some(m => m.from === selectedMove.from && m.to === selectedMove.to)) {
+    // Compare array elements (C++ returns from/to as [row,col] arrays)
+    if (!selectedMove || !legalMoves.some(m =>
+      m.from[0] === selectedMove.from?.[0] && m.from[1] === selectedMove.from?.[1] &&
+      m.to[0] === selectedMove.to?.[0] && m.to[1] === selectedMove.to?.[1]
+    )) {
       console.warn('[AI] Predicted move not in legal moves, falling back to random');
       selectedMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
     }
