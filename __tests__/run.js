@@ -60,6 +60,10 @@ import { runSetParamsWhitelistTests } from './setParamsWhitelist.test.js';
 import { runMoveSerializationTests } from './moveSerialization.test.js';
 import { runProxyBodyReplayTests } from './proxyBodyReplay.test.js';
 import { runCspHeadersTests } from './cspHeaders.test.js';
+import { runRaceConditionTests } from './raceCondition.test.js';
+import { runMoveQueueResilienceTests } from './moveQueueResilience.test.js';
+import { runBoardToCppValidationTests } from './boardToCppValidation.test.js';
+import { runLegalMovesMemoizationTests } from './legalMovesMemoization.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -118,6 +122,10 @@ const suites = [
   { name: 'moveSerialization',     run: runMoveSerializationTests },
   { name: 'proxyBodyReplay',       run: runProxyBodyReplayTests },
   { name: 'cspHeaders',            run: runCspHeadersTests },
+  { name: 'raceCondition',         run: runRaceConditionTests },
+  { name: 'moveQueueResilience',   run: runMoveQueueResilienceTests },
+  { name: 'boardToCppValidation',  run: runBoardToCppValidationTests },
+  { name: 'legalMovesMemoization', run: runLegalMovesMemoizationTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
