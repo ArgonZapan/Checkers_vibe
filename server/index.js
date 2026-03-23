@@ -19,7 +19,6 @@ const BUFFER_FILE = path.join(__dirname, '..', 'data', 'buffer.json');
 const app = express();
 app.set('trust proxy', false); // SEC: prevent IP spoofing via X-Forwarded-For
 app.disable('X-Powered-By'); // SEC-001: prevent framework disclosure
-app.set('trust proxy', false); // SEC-002: prevent X-Forwarded-For spoofing (no proxy in front)
 const httpServer = createServer(app);
 const io = new SocketIO(httpServer, {
   cors: { origin: CONFIG.server.corsOrigin || 'http://localhost:3000' }
@@ -114,6 +113,33 @@ app.post('/api/ai/predict', async (req, res) => {
         return res.status(400).json({ error: `Invalid board element at index ${i}: expected integer 0-4` });
       }
     }
+    if (!Array.isArray(legalMoves)) {
+      return res.status(400).json({ error: 'legalMoves must be an array' });
+    }
+    // Validate each legal move has valid from/to coordinates
+    for (let i = 0; i < legalMoves.length; i++) {
+      const m = legalMoves[i];
+      if (!m || typeof m !== 'object') {
+        return res.status(400).json({ error: `Invalid move at index ${i}: expected object` });
+      }
+      const isValidCoord = (c) => Array.isArray(c) && c.length === 2 && Number.isInteger(c[0]) && Number.isInteger(c[1]) && c[0] >= 0 && c[0] <= 7 && c[1] >= 0 && c[1] <= 7;
+      if (!isValidCoord(m.from)) {
+        return res.status(400).json({ error: `Invalid move at index ${i}: bad "from" coordinate` });
+      }
+      if (!isValidCoord(m.to)) {
+        return res.status(400).json({ error: `Invalid move at index ${i}: bad "to" coordinate` });
+      }
+      if (m.captures != null) {
+        if (!Array.isArray(m.captures)) {
+          return res.status(400).json({ error: `Invalid move at index ${i}: captures must be an array` });
+        }
+        for (let j = 0; j < m.captures.length; j++) {
+          if (!isValidCoord(m.captures[j])) {
+            return res.status(400).json({ error: `Invalid move at index ${i}: bad capture at ${j}` });
+          }
+        }
+      }
+    }
     const model = turn === 1 ? trainer.modelWhite : trainer.modelBlack;
     if (!model) return res.status(503).json({ error: 'Model not initialized' });
 
@@ -142,6 +168,12 @@ app.post('/api/ai/train', async (req, res) => {
       }
       if (!Array.isArray(s.board) || s.board.length !== 64) {
         return res.status(400).json({ error: `Invalid sample at index ${i}: board must be an array of 64 elements` });
+      }
+      // Validate board element values — prevent NaN/string corruption in training
+      for (let j = 0; j < s.board.length; j++) {
+        if (typeof s.board[j] !== 'number' || !Number.isInteger(s.board[j]) || s.board[j] < 0 || s.board[j] > 4) {
+          return res.status(400).json({ error: `Invalid sample at index ${i}: board[${j}] must be integer 0-4` });
+        }
       }
       if (s.turn !== 1 && s.turn !== -1) {
         return res.status(400).json({ error: `Invalid sample at index ${i}: turn must be 1 or -1` });
@@ -394,6 +426,8 @@ io.on('connection', async (socket) => {
     // Stop self-play when starting a player game (C++ handles one game at a time)
     if (trainer.running && socket.gameMode !== 'aivai') {
       trainer.stop();
+      // Invalidate any in-flight self-play game to prevent C++ state conflict
+      trainer.paramsVersion++;
     }
     try {
       await cppFetch('/api/game/start', { method: 'POST', body: '{}' });

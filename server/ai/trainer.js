@@ -222,6 +222,19 @@ function validateMove(move) {
   if (from === to) {
     return { valid: false, reason: `from === to === ${from} (no-op move)` };
   }
+  // Validate captures array if present
+  if (move.captures != null) {
+    if (!Array.isArray(move.captures)) {
+      return { valid: false, reason: `captures is not an array: ${typeof move.captures}` };
+    }
+    for (let i = 0; i < move.captures.length; i++) {
+      const c = move.captures[i];
+      if (!Array.isArray(c) || c.length !== 2 || !Number.isInteger(c[0]) || !Number.isInteger(c[1])
+        || c[0] < 0 || c[0] > 7 || c[1] < 0 || c[1] > 7) {
+        return { valid: false, reason: `invalid capture at index ${i}: ${JSON.stringify(c)}` };
+      }
+    }
+  }
   return { valid: true, move };
 }
 

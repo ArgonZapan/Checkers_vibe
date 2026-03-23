@@ -236,7 +236,10 @@ export async function predict(model, boardArray, legalMoves, turn = 1) {
     });
 
     if (legalIndices.length === 0) {
-      return { move: 0, probabilities: {}, value: 0 };
+      tensor.dispose();
+      if (policyTensor) policyTensor.dispose();
+      if (valueTensor) valueTensor.dispose();
+      return { move: null, probabilities: {}, value: 0 };
     }
 
     let maskedPolicy = Array.from(policy);
