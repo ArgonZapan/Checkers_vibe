@@ -242,7 +242,7 @@ export async function train(model, batch, epochs = 5) {
       }
 
       const nextTensor = tf.tensor2d(nextBoards);
-      const [, nextValues] = model.predict(nextTensor);
+      const [, nextValues] = model.predictOnBatch(nextTensor);
       const nextVals = await nextValues.data();
       nextTensor.dispose();
       nextValues.dispose();

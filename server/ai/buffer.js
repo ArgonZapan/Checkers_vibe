@@ -18,15 +18,16 @@ export class ReplayBuffer {
 
   sample(n) {
     if (this.count === 0) return [];
-    const count = Math.min(n, this.count);
-    // Reservoir sampling — O(k) instead of O(n) Fisher-Yates
+    const k = Math.min(n, this.count);
+    const start = this.count < this.maxSize ? 0 : this.head;
+    // Classic reservoir sampling
     const result = [];
-    for (let i = 0; i < count; i++) {
-      result.push(this.buffer[i]);
+    for (let i = 0; i < k; i++) {
+      result.push(this.buffer[(start + i) % this.maxSize]);
     }
-    for (let i = count; i < this.count; i++) {
+    for (let i = k; i < this.count; i++) {
       const j = Math.floor(Math.random() * (i + 1));
-      if (j < count) result[j] = this.buffer[i];
+      if (j < k) result[j] = this.buffer[(start + i) % this.maxSize];
     }
     return result;
   }

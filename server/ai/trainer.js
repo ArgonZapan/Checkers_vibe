@@ -175,6 +175,7 @@ export class SelfPlay {
 
     // Parameters per side
     this.epsilonWhite = CONFIG.ai.defaultEpsilon;
+    this.epsilonBlack = CONFIG.ai.defaultEpsilon;
     this.networkSizeWhite = 'small';
     this.networkSizeBlack = 'small';
 
@@ -229,18 +230,23 @@ export class SelfPlay {
     console.log('[SelfPlay] Model params updated:', this.modelParams);
   }
 
+  _replaceModel(old, ...createArgs) {
+    if (old) { try { old.dispose(); } catch {} }
+    return createModel(...createArgs);
+  }
+
   setParams(epsilon, networkSize, side) {
     if (side === 'white' || side === 'both') {
       if (epsilon !== undefined) this.epsilonWhite = epsilon;
       if (networkSize !== undefined) {
         this.networkSizeWhite = networkSize;
-        this.modelWhite = createModel({ ...this.modelParams });
+        this.modelWhite = this._replaceModel(this.modelWhite, { ...this.modelParams });
       }
     }
     if (side === 'black' || side === 'both') {
       if (networkSize !== undefined) {
         this.networkSizeBlack = networkSize;
-        this.modelBlack = createModel({ ...this.modelParams });
+        this.modelBlack = this._replaceModel(this.modelBlack, { ...this.modelParams });
       }
     }
     this.stats.epsilonWhite = this.epsilonWhite;
@@ -265,8 +271,8 @@ export class SelfPlay {
     this.stats.epsilonWhite = CONFIG.ai.defaultEpsilon;
 
     // 5. Create fresh models
-    this.modelWhite = createModel({ ...this.modelParams });
-    this.modelBlack = createModel({ ...this.modelParams });
+    this.modelWhite = this._replaceModel(this.modelWhite, { ...this.modelParams });
+    this.modelBlack = this._replaceModel(this.modelBlack, { ...this.modelParams });
 
     // 6. Save reset state
     await this.saveState();
@@ -297,11 +303,11 @@ export class SelfPlay {
 
   async restart(side) {
     if (side === 'white' || side === 'both') {
-      this.modelWhite = createModel({ ...this.modelParams });
+      this.modelWhite = this._replaceModel(this.modelWhite, { ...this.modelParams });
       this.stats.whiteWins = 0;
     }
     if (side === 'black' || side === 'both') {
-      this.modelBlack = createModel({ ...this.modelParams });
+      this.modelBlack = this._replaceModel(this.modelBlack, { ...this.modelParams });
       this.stats.blackWins = 0;
     }
     if (side === 'both') {
