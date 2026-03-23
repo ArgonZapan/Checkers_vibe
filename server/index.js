@@ -17,6 +17,7 @@ const MODEL_DIR = path.join(__dirname, '..', 'data', 'model');
 const BUFFER_FILE = path.join(__dirname, '..', 'data', 'buffer.json');
 
 const app = express();
+app.set('trust proxy', false); // SEC: prevent IP spoofing via X-Forwarded-For
 app.disable('X-Powered-By'); // SEC-001: prevent framework disclosure
 const httpServer = createServer(app);
 const io = new SocketIO(httpServer, {
