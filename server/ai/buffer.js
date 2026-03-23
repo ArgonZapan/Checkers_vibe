@@ -59,6 +59,13 @@ export class ReplayBuffer {
     try {
       const data = await readFile(filePath, 'utf-8');
       const arr = JSON.parse(data);
+      if (!Array.isArray(arr)) {
+        console.warn(`[Buffer] Loaded data is not an array (${typeof arr}), starting fresh`);
+        this.buffer = new Array(this.maxSize);
+        this.head = 0;
+        this.count = 0;
+        return;
+      }
       this.buffer = new Array(this.maxSize);
       this.head = 0;
       this.count = 0;

@@ -29,7 +29,7 @@ app.use((_req, res, next) => {
   res.setHeader('X-XSS-Protection', '0');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws: wss:; frame-ancestors 'none'");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws: wss:; frame-ancestors 'none'");
   next();
 });
 
@@ -137,8 +137,8 @@ app.post('/api/ai/train', async (req, res) => {
       if (!s || typeof s !== 'object') {
         return res.status(400).json({ error: `Invalid sample at index ${i}: expected object` });
       }
-      if (!Array.isArray(s.board)) {
-        return res.status(400).json({ error: `Invalid sample at index ${i}: missing board array` });
+      if (!Array.isArray(s.board) || s.board.length !== 64) {
+        return res.status(400).json({ error: `Invalid sample at index ${i}: board must be an array of 64 elements` });
       }
       if (s.turn !== 1 && s.turn !== -1) {
         return res.status(400).json({ error: `Invalid sample at index ${i}: turn must be 1 or -1` });
@@ -533,18 +533,25 @@ io.on('connection', async (socket) => {
         return;
       }
 
-      // Validate params ranges
+      // Validate params ranges (NaN passes all comparisons, so check isFinite first)
       const errors = [];
-      if (newParams.layers != null && (newParams.layers < 1 || newParams.layers > 5)) {
+      const numericKeys = ['layers', 'neurons', 'batchSize', 'dropout', 'lr', 'gamma', 'epochs', 'bufferSize',
+        'minEpsilon', 'epsilonDecay', 'rewardCapture', 'rewardLosePiece', 'rewardPromotion', 'rewardWin', 'rewardLose'];
+      for (const key of numericKeys) {
+        if (newParams[key] != null && (typeof newParams[key] !== 'number' || !Number.isFinite(newParams[key]))) {
+          errors.push(`${key}=${newParams[key]} (expected finite number)`);
+        }
+      }
+      if (newParams.layers != null && Number.isFinite(newParams.layers) && (newParams.layers < 1 || newParams.layers > 5)) {
         errors.push(`layers=${newParams.layers} (zakres: 1-5)`);
       }
-      if (newParams.neurons != null && (newParams.neurons < 32 || newParams.neurons > 512)) {
+      if (newParams.neurons != null && Number.isFinite(newParams.neurons) && (newParams.neurons < 32 || newParams.neurons > 512)) {
         errors.push(`neurons=${newParams.neurons} (zakres: 32-512)`);
       }
-      if (newParams.batchSize != null && (newParams.batchSize < 8 || newParams.batchSize > 256)) {
+      if (newParams.batchSize != null && Number.isFinite(newParams.batchSize) && (newParams.batchSize < 8 || newParams.batchSize > 256)) {
         errors.push(`batchSize=${newParams.batchSize} (zakres: 8-256)`);
       }
-      if (newParams.dropout != null && (newParams.dropout < 0 || newParams.dropout > 0.5)) {
+      if (newParams.dropout != null && Number.isFinite(newParams.dropout) && (newParams.dropout < 0 || newParams.dropout > 0.5)) {
         errors.push(`dropout=${newParams.dropout} (zakres: 0-0.5)`);
       }
       if (errors.length > 0) {
@@ -562,7 +569,7 @@ io.on('connection', async (socket) => {
           CONFIG.server.speedMode = newParams.speedMode;
         }
       }
-      if (newParams.aiMoveDelayMs != null && typeof newParams.aiMoveDelayMs === 'number') {
+      if (newParams.aiMoveDelayMs != null && typeof newParams.aiMoveDelayMs === 'number' && Number.isFinite(newParams.aiMoveDelayMs)) {
         const clamped = Math.max(0, Math.min(newParams.aiMoveDelayMs, 10000));
         CONFIG.server.aiMoveDelayMs = clamped;
         if (clamped > 0) CONFIG.server.normalModeDelayMs = clamped;
