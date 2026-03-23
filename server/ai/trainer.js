@@ -174,7 +174,22 @@ async function cppFetch(url, opts = {}) {
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     const res = await fetch(url, { ...opts, signal: controller.signal });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error(`[Trainer cppFetch] ${opts.method || 'GET'} ${url} → ${res.status}${body ? ': ' + body.slice(0, 200) : ''}`);
+      throw new Error(`C++ engine error: ${opts.method || 'GET'} ${url} → ${res.status}`);
+    }
     return res;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      console.error(`[Trainer cppFetch] Timeout after ${FETCH_TIMEOUT_MS}ms: ${opts.method || 'GET'} ${url}`);
+      throw new Error(`C++ engine timeout (${FETCH_TIMEOUT_MS}ms) — engine may be crashed`);
+    }
+    if (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
+      console.error(`[Trainer cppFetch] Connection failed: ${opts.method || 'GET'} ${url} — ${err.code}`);
+      throw new Error(`C++ engine unreachable — ${err.code}`);
+    }
+    throw err;
   } finally {
     clearTimeout(timer);
   }

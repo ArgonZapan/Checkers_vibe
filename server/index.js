@@ -32,7 +32,9 @@ app.use((_req, res, next) => {
   res.setHeader('X-XSS-Protection', '0');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws: wss:; frame-ancestors 'none'");
+  // SEC: bare `ws:` scheme allows unencrypted WS to any origin — only allow in local dev (CSP_ALLOW_WS=true)
+  const wsDirectives = process.env.CSP_ALLOW_WS === 'true' ? 'ws: wss:' : 'wss:';
+  res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' ${wsDirectives}; frame-ancestors 'none'`);
   next();
 });
 
@@ -43,7 +45,7 @@ const RATE_LIMIT_MAX = 120; // 120 req/min per IP
 const RATE_LIMIT_MAX_ENTRIES = 10_000;
 
 // Periodic cleanup of expired rate limit entries to prevent unbounded memory growth
-setInterval(() => {
+const _rateLimitCleanupInterval = setInterval(() => {
   const now = Date.now();
   for (const [ip, entry] of _rateLimitMap) {
     if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
@@ -804,7 +806,7 @@ let _saving = false;
 let _lastBufferSave = 0;
 let _lastModelSave = 0;
 
-setInterval(async () => {
+const _autoSaveInterval = setInterval(async () => {
   if (_saving) return;
   // Skip save if nothing changed since last save (#102)
   if (!trainer.dirty) return;
@@ -866,3 +868,12 @@ main().catch(err => {
   console.error('[Server] Fatal error:', err);
   process.exit(1);
 });
+
+// Graceful shutdown: clear intervals so process can exit cleanly
+function shutdown() {
+  clearInterval(_rateLimitCleanupInterval);
+  clearInterval(_autoSaveInterval);
+  httpServer.close(() => process.exit(0));
+}
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
