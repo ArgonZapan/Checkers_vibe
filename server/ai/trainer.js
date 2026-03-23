@@ -206,8 +206,9 @@ async function cppFetch(url, opts = {}) {
   try {
     const res = await fetch(url, { ...opts, signal: controller.signal });
     if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      console.error(`[Trainer cppFetch] ${opts.method || 'GET'} ${url} → ${res.status}${body ? ': ' + body.slice(0, 200) : ''}`);
+      // Don't log response body — could leak internal C++ errors/paths
+      await res.text().catch(() => '');
+      console.error(`[Trainer cppFetch] ${opts.method || 'GET'} ${url} → ${res.status}`);
       throw new Error(`C++ engine error: ${opts.method || 'GET'} ${url} → ${res.status}`);
     }
     return res;

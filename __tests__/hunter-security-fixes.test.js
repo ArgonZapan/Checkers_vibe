@@ -134,7 +134,7 @@ function parseCSP(csp) {
 }
 
 // Actual CSP from server/index.js line 34
-const ACTUAL_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; frame-ancestors 'none'";
+const ACTUAL_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
 
 // ═══════════════════════════════════════════════════════════════════════
 // TEST RUNNER

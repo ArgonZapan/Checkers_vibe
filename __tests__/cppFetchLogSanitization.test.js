@@ -42,20 +42,19 @@ export async function runCppFetchLogSanitizationTests() {
     tests.push({ name, fn });
   }
 
-  // ── 1. Response body logging is capped at 200 chars ──────────────────────
+  // ── 1. Response body is NOT logged at all ──────────────────────────────
 
-  test('cppFetch in index.js caps logged body at 200 chars', () => {
-    // Pattern: body.slice(0, 200)
+  test('cppFetch in index.js does NOT log response body', () => {
     assert.ok(
-      serverSource.includes('body.slice(0, 200)'),
-      'index.js cppFetch should slice body to 200 chars max'
+      !serverSource.includes('body.slice(0, 200)'),
+      'index.js cppFetch should not log response body at all'
     );
   });
 
-  test('cppFetch in trainer.js caps logged body at 200 chars', () => {
+  test('cppFetch in trainer.js does NOT log response body', () => {
     assert.ok(
-      trainerSource.includes('body.slice(0, 200)'),
-      'trainer.js cppFetch should slice body to 200 chars max'
+      !trainerSource.includes('body.slice(0, 200)'),
+      'trainer.js cppFetch should not log response body at all'
     );
   });
 

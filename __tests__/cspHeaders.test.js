@@ -18,7 +18,7 @@ import assert from 'node:assert/strict';
 
 // ── Extracted: CSP from server/index.js ─────────────────────────────────────
 
-const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; frame-ancestors 'none'";
+const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
 
 /**
  * Parse CSP string into directive map.
@@ -54,9 +54,9 @@ export async function runCspHeadersTests() {
   // CSP parsing
   // ═══════════════════════════════════════════════════════════════════════
 
-  test('CSP parses into 7 directives', () => {
+  test('CSP parses into 9 directives', () => {
     const parsed = parseCSP(CSP);
-    assert.equal(Object.keys(parsed).length, 7);
+    assert.equal(Object.keys(parsed).length, 9);
   });
 
   test('CSP: default-src is self', () => {
@@ -76,8 +76,9 @@ export async function runCspHeadersTests() {
     assert.ok(!hasCSPDirective(CSP, 'script-src', "'unsafe-inline'"));
   });
 
-  test('CSP: style-src allows unsafe-inline (for React inline styles)', () => {
-    assert.ok(hasCSPDirective(CSP, 'style-src', "'unsafe-inline'"));
+  test('CSP: style-src is self only (no unsafe-inline)', () => {
+    assert.ok(!hasCSPDirective(CSP, 'style-src', "'unsafe-inline'"),
+      'style-src should NOT allow unsafe-inline — use CSS files instead');
     assert.ok(hasCSPDirective(CSP, 'style-src', "'self'"));
   });
 

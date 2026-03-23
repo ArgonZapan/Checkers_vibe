@@ -15,7 +15,7 @@ import assert from 'node:assert/strict';
 
 // ── Extracted: CSP header value (mirrors server/index.js:32) ───────────────
 
-const CSP_HEADER = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; frame-ancestors 'none'";
+const CSP_HEADER = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
 
 /**
  * Parse a CSP string into a map of directive → values[].

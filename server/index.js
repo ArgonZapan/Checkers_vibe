@@ -34,7 +34,7 @@ app.use((_req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   // SEC: bare `ws:` scheme allows unencrypted WS to any origin — only allow in local dev (CSP_ALLOW_WS=true)
   const wsDirectives = process.env.CSP_ALLOW_WS === 'true' ? 'ws: wss:' : 'wss:';
-  res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' ${wsDirectives}; frame-ancestors 'none'`);
+  res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' ${wsDirectives}; object-src 'none'; base-uri 'self'; frame-ancestors 'none'`);
   next();
 });
 
@@ -284,8 +284,9 @@ async function cppFetch(path, opts = {}) {
       ...opts,
     });
     if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      console.error(`[cppFetch] ${opts.method || 'GET'} ${path} → ${res.status}${body ? ': ' + body.slice(0, 200) : ''}`);
+      // Don't log response body — could leak internal C++ errors/paths
+      await res.text().catch(() => '');
+      console.error(`[cppFetch] ${opts.method || 'GET'} ${path} → ${res.status}`);
       throw new Error(`C++ ${path} → ${res.status}`);
     }
     return res.json();
@@ -891,7 +892,7 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('[Server] Fatal error:', err);
+  console.error('[Server] Fatal error:', err.message);
   process.exit(1);
 });
 

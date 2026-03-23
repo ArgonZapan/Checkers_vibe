@@ -60,12 +60,12 @@ function isResponseOk(status) {
 
 /**
  * Formats an error log message for non-OK responses.
- * Mirrors: `[cppFetch] ${method} ${path} → ${status}${body ? ': ' + body.slice(0, 200) : ''}`
+ * Mirrors: `[cppFetch] ${method} ${path} → ${status}`
+ * (response body is no longer logged to prevent leaking internal details)
  */
-function formatErrorLog(method, path, status, body) {
+function formatErrorLog(method, path, status) {
   const m = method || 'GET';
-  const truncated = body ? ': ' + body.slice(0, 200) : '';
-  return `[cppFetch] ${m} ${path} → ${status}${truncated}`;
+  return `[cppFetch] ${m} ${path} → ${status}`;
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -213,9 +213,9 @@ export async function runCppFetchLogicTests() {
   // Error log formatting
   // ═══════════════════════════════════════════════════════════════════════
 
-  test('error log with body', () => {
+  test('error log does NOT include body (sanitized)', () => {
     const log = formatErrorLog('POST', '/api/move', 500, 'Internal Server Error');
-    assert.equal(log, '[cppFetch] POST /api/move → 500: Internal Server Error');
+    assert.equal(log, '[cppFetch] POST /api/move → 500');
   });
 
   test('error log without body', () => {
@@ -225,28 +225,26 @@ export async function runCppFetchLogicTests() {
 
   test('error log with null method defaults to GET', () => {
     const log = formatErrorLog(null, '/api/test', 503, 'Service Unavailable');
-    assert.equal(log, '[cppFetch] GET /api/test → 503: Service Unavailable');
+    assert.equal(log, '[cppFetch] GET /api/test → 503');
   });
 
-  test('error log truncates body to 200 chars', () => {
+  test('error log never includes body regardless of length', () => {
     const longBody = 'x'.repeat(500);
     const log = formatErrorLog('POST', '/api/move', 500, longBody);
-    // ': ' + 200 chars = 202 chars after the arrow
-    const bodyPart = log.split('→ 500')[1];
-    assert.equal(bodyPart.length, 2 + 200); // ': ' + 200 chars
+    assert.ok(!log.includes('x'), 'log should not contain any body content');
+    assert.equal(log, '[cppFetch] POST /api/move → 500');
   });
 
-  test('error log with exactly 200 char body → no truncation', () => {
+  test('error log with short body → still excluded', () => {
     const body = 'x'.repeat(200);
     const log = formatErrorLog('POST', '/api/test', 500, body);
-    assert.ok(log.endsWith(': ' + body));
+    assert.ok(!log.includes('x'), 'log should not contain body content');
   });
 
-  test('error log with 201 char body → truncated to 200', () => {
+  test('error log with 201 char body → excluded', () => {
     const body = 'x'.repeat(201);
     const log = formatErrorLog('POST', '/api/test', 500, body);
-    const bodyPart = log.split('→ 500')[1];
-    assert.equal(bodyPart, ': ' + 'x'.repeat(200));
+    assert.equal(log, '[cppFetch] POST /api/test → 500');
   });
 
   // ── Run ───────────────────────────────────────────────────────────────

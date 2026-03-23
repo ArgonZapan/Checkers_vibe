@@ -31,7 +31,7 @@ try {
 // ── Extracted: security headers (mirrors server/index.js) ───────────────────
 
 // Extracted from actual server/index.js line 34
-const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; frame-ancestors 'none'";
+const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
 const X_FRAME_OPTIONS = 'DENY';
 const PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=()';
 
@@ -85,15 +85,15 @@ export async function runCspCompletenessTests() {
   // Resource-type directive completeness
   // ═══════════════════════════════════════════════════════════════════════
 
-  test('CSP has all 7 expected directives', () => {
+  test('CSP has all 9 expected directives', () => {
     const expected = [
       'default-src', 'script-src', 'style-src', 'img-src',
-      'font-src', 'connect-src', 'frame-ancestors'
+      'font-src', 'connect-src', 'object-src', 'base-uri', 'frame-ancestors'
     ];
     for (const dir of expected) {
       assert.ok(parsed[dir], `Missing directive: ${dir}`);
     }
-    assert.equal(Object.keys(parsed).length, 7, 'Should have exactly 7 directives');
+    assert.equal(Object.keys(parsed).length, 9, 'Should have exactly 9 directives');
   });
 
   test('missing media-src falls back to default-src (self only)', () => {
@@ -102,9 +102,14 @@ export async function runCspCompletenessTests() {
     assert.ok(parsed['default-src'].includes("'self'"));
   });
 
-  test('missing object-src falls back to default-src (self only)', () => {
-    assert.equal(parsed['object-src'], undefined);
-    assert.ok(parsed['default-src'].includes("'self'"));
+  test('object-src is explicitly set to none (blocks plugins)', () => {
+    assert.ok(parsed["object-src"]?.includes("'none'"),
+      "object-src must be 'none' to block plugin-based attacks");
+  });
+
+  test('base-uri is explicitly set to self (prevents base URL injection)', () => {
+    assert.ok(parsed["base-uri"]?.includes("'self'"),
+      "base-uri must be 'self' to prevent <base> tag injection");
   });
 
   test('missing worker-src falls back to default-src (self only)', () => {
