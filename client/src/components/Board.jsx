@@ -361,6 +361,8 @@ function Board({
         width={BOARD_SIZE}
         height={BOARD_SIZE}
         viewBox={`0 0 ${BOARD_SIZE} ${BOARD_SIZE}`}
+        role="img"
+        aria-label={`Checkers board, ${turn}'s turn${gameOver ? ', game over' : ''}`}
       >
         {cells}
         {pieces}

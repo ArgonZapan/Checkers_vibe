@@ -270,6 +270,7 @@ export default function App() {
     setSelected(null);
     setLegalMoves([]);
     setMovePath(null);
+    setMoveHistory([]);
     socketRef.current?.emit('reset');
   }, []);
 

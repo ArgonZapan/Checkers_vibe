@@ -178,6 +178,8 @@ export default function Dashboard({
           ref={canvasRef}
           className="loss-chart"
           height={100}
+          role="img"
+          aria-label={`Loss chart: ${lossHistory.length} data points`}
         />
       </div>
 
