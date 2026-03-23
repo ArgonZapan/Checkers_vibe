@@ -8,8 +8,7 @@
  *
  * Also tests event name consistency for params/setParams.
  *
- * NOTE: The existing wsValidation.js has a bug — it uses ms > 60000 instead of ms > 10000.
- * These tests mirror the ACTUAL server behavior (ms > 10000 = reject).
+ * NOTE: Both wsValidation.js and server/index.js use ms > 10000 as the limit.
  */
 
 import assert from 'node:assert/strict';

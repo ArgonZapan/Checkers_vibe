@@ -37,6 +37,8 @@ import { runIssue131Tests } from './issue131.test.js';
 import { runBoardConvertAdditionalTests } from './boardConvertAdditional.test.js';
 import { runSetSpeedModeValidationTests } from './setSpeedModeValidation.test.js';
 import { runAiMovePredictionTests } from './aiMovePrediction.test.js';
+import { runCppFetchLogicTests } from './cppFetchLogic.test.js';
+import { runResetHandlerLogicTests } from './resetHandlerLogic.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -72,6 +74,8 @@ const suites = [
   { name: 'boardConvertAdditional', run: runBoardConvertAdditionalTests },
   { name: 'setSpeedModeValidation', run: runSetSpeedModeValidationTests },
   { name: 'aiMovePrediction',    run: runAiMovePredictionTests },
+  { name: 'cppFetchLogic',       run: runCppFetchLogicTests },
+  { name: 'resetHandlerLogic',   run: runResetHandlerLogicTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
