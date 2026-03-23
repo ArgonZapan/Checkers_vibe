@@ -29,6 +29,7 @@ export default function Board({
   const animOffsetsRef = useRef({});
   const animFromRef = useRef({});
   const animFlagRef = useRef(false);
+  const rafIdRef = useRef(null);
   const [, forceUpdate] = useState(0);
 
   // Multi-capture step animation state
@@ -113,6 +114,16 @@ export default function Board({
     };
   }, [path]);
 
+  // Cleanup: cancel pending RAF on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current != null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+    };
+  }, []);
+
   // Detect moved pieces by tracking per-position changes
   // Skip this animation during multi-capture (handled by step animation above)
   const prev = prevBoardRef.current;
@@ -181,13 +192,13 @@ export default function Board({
         animFromRef.current = current;
         forceUpdate((n) => n + 1);
         if (t < 1) {
-          requestAnimationFrame(animate);
+          rafIdRef.current = requestAnimationFrame(animate);
         } else {
           animFromRef.current = {};
           animFlagRef.current = false;
         }
       }
-      requestAnimationFrame(animate);
+      rafIdRef.current = requestAnimationFrame(animate);
     }
   }
   // Save old board for animation BEFORE overwriting (deep copy)

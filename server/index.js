@@ -81,6 +81,13 @@ app.post('/api/ai/train', async (req, res) => {
 
 app.post('/api/ai/params', (req, res) => {
   const { epsilon, networkSize, side = 'both' } = req.body;
+  // Validate epsilon
+  if (epsilon != null && (typeof epsilon !== 'number' || epsilon < 0 || epsilon > 1)) {
+    return res.status(400).json({ error: 'epsilon must be 0-1' });
+  }
+  if (networkSize != null && !['small', 'medium', 'large'].includes(networkSize)) {
+    return res.status(400).json({ error: 'networkSize must be small|medium|large' });
+  }
   trainer.setParams(epsilon, networkSize, side);
   io.emit('paramsChange', { epsilon, networkSize, side });
   res.json({ ok: true, ...trainer.getStatus() });
@@ -343,6 +350,33 @@ io.on('connection', async (socket) => {
   // ── Model params ──────────────────────────────────────────────────────
   socket.on('setParams', async (newParams) => {
     try {
+      // Auth: only allow in aivai mode — PvAI/PvP players must not change the model
+      if (socket.gameMode !== 'aivai') {
+        console.warn(`[WS] setParams rejected — mode is '${socket.gameMode}', not 'aivai'`);
+        socket.emit('error', { message: 'Zmiana parametrów modelu dozwolona tylko w trybie AI vs AI' });
+        return;
+      }
+
+      // Validate params ranges
+      const errors = [];
+      if (newParams.layers != null && (newParams.layers < 1 || newParams.layers > 8)) {
+        errors.push(`layers=${newParams.layers} (zakres: 1-8)`);
+      }
+      if (newParams.neurons != null && (newParams.neurons < 32 || newParams.neurons > 1024)) {
+        errors.push(`neurons=${newParams.neurons} (zakres: 32-1024)`);
+      }
+      if (newParams.batchSize != null && (newParams.batchSize < 8 || newParams.batchSize > 256)) {
+        errors.push(`batchSize=${newParams.batchSize} (zakres: 8-256)`);
+      }
+      if (newParams.dropout != null && (newParams.dropout < 0 || newParams.dropout > 0.5)) {
+        errors.push(`dropout=${newParams.dropout} (zakres: 0-0.5)`);
+      }
+      if (errors.length > 0) {
+        console.warn(`[WS] setParams validation failed: ${errors.join(', ')}`);
+        socket.emit('error', { message: `Nieprawidłowe parametry: ${errors.join('; ')}` });
+        return;
+      }
+
       console.log(`[WS] setParams from ${socket.id}:`, newParams);
       const wasRunning = trainer.running;
       // 1. Stop self-play

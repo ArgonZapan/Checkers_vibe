@@ -51,12 +51,12 @@ export default function App() {
   });
 
   const DEFAULT_MODEL_PARAMS = {
-    layers: 5,
-    neurons: 512,
+    layers: 3,
+    neurons: 128,
     activation: 'relu',
     lr: 0.001,
-    batchSize: 256,
-    dropout: 0.1,
+    batchSize: 64,
+    dropout: 0,
   };
 
   const [modelParams, setModelParams] = useState({ ...DEFAULT_MODEL_PARAMS });

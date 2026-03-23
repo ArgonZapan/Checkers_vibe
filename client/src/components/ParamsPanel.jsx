@@ -88,24 +88,24 @@ export default function ParamsPanel({
       <div className="param-group">
         <h4>🏗️ Architektura</h4>
         <div className="param-row">
-          <label>Warstwy: <strong>{mp.layers ?? 5}</strong></label>
+          <label>Warstwy: <strong>{mp.layers ?? 3}</strong></label>
           <input
             type="range"
             min="1"
             max="5"
             step="1"
-            value={mp.layers ?? 5}
+            value={mp.layers ?? 3}
             onChange={(e) => onModelParamsChange({ layers: parseInt(e.target.value) })}
           />
         </div>
         <div className="param-row">
-          <label>Neurony: <strong>{mp.neurons ?? 512}</strong></label>
+          <label>Neurony: <strong>{mp.neurons ?? 128}</strong></label>
           <input
             type="range"
             min="32"
             max="512"
             step="32"
-            value={mp.neurons ?? 512}
+            value={mp.neurons ?? 128}
             onChange={(e) => onModelParamsChange({ neurons: parseInt(e.target.value) })}
           />
         </div>
@@ -138,13 +138,13 @@ export default function ParamsPanel({
           />
         </div>
         <div className="param-row">
-          <label>Batch: <strong>{mp.batchSize ?? 256}</strong></label>
+          <label>Batch: <strong>{mp.batchSize ?? 64}</strong></label>
           <input
             type="range"
             min="0"
             max="5"
             step="1"
-            value={[8, 16, 32, 64, 128, 256].indexOf(mp.batchSize ?? 256)}
+            value={[8, 16, 32, 64, 128, 256].indexOf(mp.batchSize ?? 64)}
             onChange={(e) => {
               const sizes = [8, 16, 32, 64, 128, 256];
               onModelParamsChange({ batchSize: sizes[parseInt(e.target.value)] });
@@ -152,13 +152,13 @@ export default function ParamsPanel({
           />
         </div>
         <div className="param-row">
-          <label>Dropout: <strong>{(mp.dropout ?? 0.1).toFixed(2)}</strong></label>
+          <label>Dropout: <strong>{(mp.dropout ?? 0).toFixed(2)}</strong></label>
           <input
             type="range"
             min="0"
             max="0.5"
             step="0.05"
-            value={mp.dropout ?? 0.1}
+            value={mp.dropout ?? 0}
             onChange={(e) => onModelParamsChange({ dropout: parseFloat(e.target.value) })}
           />
         </div>
