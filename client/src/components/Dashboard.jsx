@@ -9,6 +9,9 @@ export default function Dashboard({
   avgTime = 0,
   totalTimeMs = 0,
   lastRoundTime = 0,
+  whiteEpsilon,
+  blackEpsilon,
+  connected,
 }) {
   const canvasRef = useRef(null);
 
@@ -104,6 +107,59 @@ export default function Dashboard({
           <div className="stat-item">
             <div className="stat-label">Remisy</div>
             <div className="stat-value winner-draw">{stats.draws}</div>
+          </div>
+        </div>
+        {/* Win rates */}
+        {stats.games > 0 && (
+          <div className="stats-grid" style={{ marginTop: '0.4rem' }}>
+            <div className="stat-item">
+              <div className="stat-label">⚪ Win Rate</div>
+              <div className="stat-value winner-white">{((stats.whiteWins / stats.games) * 100).toFixed(1)}%</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-label">⚫ Win Rate</div>
+              <div className="stat-value">{((stats.blackWins / stats.games) * 100).toFixed(1)}%</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Epsilon display */}
+      {(whiteEpsilon !== undefined || blackEpsilon !== undefined) && (
+        <div className="dashboard-section">
+          <h3>🎯 Epsilon (exploration)</h3>
+          <div className="stats-grid">
+            {whiteEpsilon !== undefined && (
+              <div className="stat-item">
+                <div className="stat-label">⚪ Epsilon</div>
+                <div className="stat-value winner-white">{whiteEpsilon.toFixed(2)}</div>
+              </div>
+            )}
+            {blackEpsilon !== undefined && (
+              <div className="stat-item">
+                <div className="stat-label">⚫ Epsilon</div>
+                <div className="stat-value">{blackEpsilon.toFixed(2)}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Connection & Model Status */}
+      <div className="dashboard-section">
+        <h3>📡 Status</h3>
+        <div className="stats-grid">
+          <div className="stat-item">
+            <div className="stat-label">Połączenie</div>
+            <div className="stat-value" style={{ color: connected ? '#3fb950' : '#f85149' }}>
+              {connected ? '🟢 Online' : '🔴 Offline'}
+            </div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-label">Model</div>
+            <div className="stat-value" style={{ color: active ? '#3fb950' : '#8b949e', fontSize: '0.9rem' }}>
+              {active ? '🎓 Training' : '⏸ Idle'}
+            </div>
           </div>
         </div>
       </div>

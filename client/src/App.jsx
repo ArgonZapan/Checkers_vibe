@@ -71,6 +71,7 @@ export default function App() {
   const [lastRoundTime, setLastRoundTime] = useState(0);
 
   const socketRef = useRef(null);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
   // Refs for stable callback access (avoid recreating handleCellClick on every state change)
   const boardRef = useRef(board);
@@ -90,12 +91,32 @@ export default function App() {
   });
 
   useEffect(() => {
-    const s = io('/', { transports: ['websocket', 'polling'] });
+    const s = io('/', {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
+    });
     socketRef.current = s;
     setSocket(s);
 
-    s.on('connect', () => setConnected(true));
+    s.on('connect', () => {
+      setConnected(true);
+      setReconnectAttempts(0);
+    });
     s.on('disconnect', () => setConnected(false));
+    s.on('reconnect_attempt', (attempt) => {
+      setReconnectAttempts(attempt);
+    });
+    s.on('reconnect', () => {
+      setConnected(true);
+      setReconnectAttempts(0);
+      // Re-subscribe to state on reconnect
+      if (modeRef.current === 'aivai') {
+        s.emit('startGame', { mode: 'aivai' });
+      }
+    });
 
     s.on('state', (data) => {
       // Ignore state events from self-play when in a player game mode
@@ -390,6 +411,9 @@ export default function App() {
               avgTime={avgTime}
               totalTimeMs={totalTimeMs}
               lastRoundTime={lastRoundTime}
+              whiteEpsilon={params.whiteEpsilon}
+              blackEpsilon={params.blackEpsilon}
+              connected={connected}
             />
           )}
           <ParamsPanel

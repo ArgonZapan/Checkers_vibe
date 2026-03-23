@@ -142,8 +142,14 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   overflow: hidden;
   box-shadow: 0 4px 24px rgba(0,0,0,0.6), 0 0 0 1px var(--bg-card-hover);
   position: relative;
+  max-width: 100%;
 }
-.board-svg { display: block; }
+.board-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 480px;
+}
 
 /* Game Over Overlay */
 .game-over-overlay {

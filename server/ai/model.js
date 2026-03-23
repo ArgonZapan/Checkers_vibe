@@ -239,8 +239,13 @@ export async function predict(model, boardArray, legalMoves, turn = 1) {
       if (r <= cumulative) { bestIdx = idx; break; }
     }
 
+    // Return the full move object from legalMoves, not just the policy index.
+    // bestIdx is a policy vector index (0-47), not an index into legalMoves.
+    const selectedMove = legalMoves.find(m => (typeof m === 'number' ? m : m.index ?? m) === bestIdx)
+      || legalMoves[0];
+
     return {
-      move: bestIdx,
+      move: selectedMove,
       probabilities: normalizedProbs,
       value
     };

@@ -8,12 +8,14 @@ import { runBoardConvertTests } from './boardConvert.test.js';
 import { runWsMoveValidationTests } from './wsMoveValidation.test.js';
 import { runWsSetSpeedTests } from './wsSetSpeed.test.js';
 import { runDrawDetectionTests } from './drawDetection.test.js';
+import { runTrainerPolicyFixTests } from './trainerPolicyFix.test.js';
 
 const suites = [
-  { name: 'boardConvert',      run: runBoardConvertTests },
-  { name: 'wsMoveValidation',  run: runWsMoveValidationTests },
-  { name: 'wsSetSpeed',        run: runWsSetSpeedTests },
-  { name: 'drawDetection',     run: runDrawDetectionTests },
+  { name: 'boardConvert',        run: runBoardConvertTests },
+  { name: 'wsMoveValidation',    run: runWsMoveValidationTests },
+  { name: 'wsSetSpeed',          run: runWsSetSpeedTests },
+  { name: 'drawDetection',       run: runDrawDetectionTests },
+  { name: 'trainerPolicyFix',    run: runTrainerPolicyFixTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;

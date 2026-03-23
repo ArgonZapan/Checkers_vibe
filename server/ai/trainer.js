@@ -640,6 +640,39 @@ export class SelfPlay {
 
       // Get legal moves (already fetched in parallel with state above)
       const { moves: legalMoves } = await lmResInit.json();
+
+      // Issue #121: If no legal moves available, the game is over
+      if (!legalMoves || legalMoves.length === 0) {
+        console.warn('[SelfPlay] No legal moves available — game should be over');
+        // Force game over as draw (engine state may not reflect this yet)
+        gameOver = true;
+        winner = 'draw';
+        // Re-enter the gameOver handling block above
+        // We break here and let the next iteration handle it, or just record as draw
+        let result = 0;
+        this.stats.draws++;
+        this.stats.gamesPlayed++;
+        for (const s of samples) {
+          s.result = 0;
+        }
+        if (samples.length > 0) {
+          samples[samples.length - 1].done = true;
+        }
+        for (const s of samples) this.buffer.add(s);
+        this.io?.emit('gameOver', { winner: 'draw', moves: samples.length, source: 'selfPlay' });
+        const roundTime = Date.now() - roundStart;
+        this.roundTimes.push(roundTime);
+        if (this.roundTimes.length > 10) this.roundTimes.shift();
+        this.totalTimeMs += roundTime;
+        this.io?.emit('selfPlayStatus', {
+          active: this.running,
+          gameNumber: this.stats.gamesPlayed,
+          stats: this.stats,
+          totalTimeMs: this.totalTimeMs,
+        });
+        break;
+      }
+
       const movesWithIndex = legalMoves.map((m, i) => ({ ...m, index: i }));
 
       // Choose model based on turn
