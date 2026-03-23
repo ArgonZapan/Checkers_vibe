@@ -2,7 +2,7 @@
  * policyIndex.test.js — Tests for computePolicyIndex() mapping logic.
  *
  * computePolicyIndex maps a (fromSquare, toSquare) pair to a canonical
- * policy vector index (0–127 range, though only ~48 are used for pawns).
+ * policy vector index (0–127 range, 32 dark squares × 4 directions = 128 slots).
  *
  * Logic (extracted from server/ai/model.js):
  *   - fromSquare/toSquare: 0-63 board indices (row*8+col)

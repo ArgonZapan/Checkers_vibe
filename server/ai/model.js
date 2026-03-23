@@ -78,8 +78,8 @@ export function createModel(sizeOrOpts = 'small') {
     }
   }
 
-  // Policy head — 48 possible moves (max)
-  const policyHead = tf.layers.dense({ units: 48, activation: 'softmax', name: 'policy' }).apply(x);
+  // Policy head — 128 possible moves (32 dark squares × 4 directions)
+  const policyHead = tf.layers.dense({ units: 128, activation: 'softmax', name: 'policy' }).apply(x);
 
   // Value head
   const valueHead = tf.layers.dense({ units: 1, activation: 'tanh', name: 'value' }).apply(x);
@@ -198,8 +198,7 @@ function toScalar(idx) {
   return idx;
 }
 
-// 32 dark squares × 4 directions (NE, NW, SE, SW) = 128 max, but
-// only forward directions are valid for pawns → 48 effective slots.
+// 32 dark squares × 4 directions (NE, NW, SE, SW) = 128 slots.
 // fromSquare: 0-63 board index or [row,col] array; toSquare: same
 const DIRECTION_MAP = { '-1,1': 0, '-1,-1': 1, '1,1': 2, '1,-1': 3 };
 
@@ -340,10 +339,11 @@ export async function train(model, batch, epochs = 5) {
     boards.push(Array.from(buildInputArray(board, turn)));
 
     // Policy target: one-hot on chosen move (use canonical policyIndex)
-    const policyTarget = new Float32Array(48).fill(0);
+    // 32 dark squares × 4 directions = 128 slots
+    const policyTarget = new Float32Array(128).fill(0);
     const moveIdx = typeof chosenMove === 'number' ? chosenMove
       : (chosenMove.policyIndex ?? chosenMove.index ?? chosenMove);
-    if (moveIdx >= 0 && moveIdx < 48) {
+    if (moveIdx >= 0 && moveIdx < 128) {
       policyTarget[moveIdx] = 1;
     }
     policyTargets.push(Array.from(policyTarget));
