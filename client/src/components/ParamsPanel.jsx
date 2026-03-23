@@ -1,16 +1,4 @@
-import React, { useRef, useCallback, useState, useEffect } from 'react';
-
-// Debounce helper — delays fn call by `ms`, resets on each call
-function useDebouncedCallback(fn, ms) {
-  const timerRef = useRef(null);
-  const fnRef = useRef(fn);
-  fnRef.current = fn;
-  useEffect(() => () => clearTimeout(timerRef.current), []);
-  return useCallback((...args) => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => fnRef.current(...args), ms);
-  }, [ms]);
-}
+import React, { useState } from 'react';
 
 // Log-scale slider helpers
 const LR_MIN_LOG = Math.log10(0.0001);
@@ -39,10 +27,9 @@ function Slider({ label, value, min, max, step, onChange, format }) {
 
 // ── Side Tab (Białe / Czarne) ────────────────────────────────────────────────
 function SideTab({
-  side,             // 'white' | 'black'
-  emoji,            // '⚪' | '⚫'
+  side,
+  emoji,
   epsilon,
-  onEpsilonChange,
   networkSize,
   onNetworkSizeChange,
   modelParams,
@@ -51,29 +38,15 @@ function SideTab({
 }) {
   const mp = modelParams || {};
 
-  // Local epsilon for immediate slider feedback
-  const [localEps, setLocalEps] = useState(epsilon);
-  useEffect(() => { setLocalEps(epsilon); }, [epsilon]);
-
-  const debouncedEpsilon = useDebouncedCallback(onEpsilonChange, 300);
-
   return (
     <div className="side-tab">
-      {/* ── Exploration ──────────────────────────────────────────────── */}
+      {/* ── Exploration (read-only) ───────────────────────────────────── */}
       <div className="param-group">
         <h4>🔍 Eksploracja</h4>
         <div className="param-row">
           <label>Epsilon:</label>
-          <input
-            type="range" min="0" max="1" step="0.01"
-            value={localEps}
-            onChange={(e) => {
-              const v = parseFloat(e.target.value);
-              setLocalEps(v);
-              debouncedEpsilon(v);
-            }}
-          />
-          <span className="epsilon-val">{localEps.toFixed(2)}</span>
+          <span className="epsilon-val epsilon-readonly">{(epsilon ?? 0).toFixed(2)}</span>
+          <span className="epsilon-badge">auto</span>
         </div>
         <div className="param-row">
           <label>Min epsilon: <strong>{(mp.minEpsilon ?? config.minEpsilon ?? 0.01).toFixed(3)}</strong></label>
@@ -277,7 +250,6 @@ export default function ParamsPanel({
           <SideTab
             side="white" emoji="⚪"
             epsilon={params.whiteEpsilon}
-            onEpsilonChange={(v) => onParamsChange({ whiteEpsilon: v })}
             networkSize={params.whiteNetworkSize}
             onNetworkSizeChange={(v) => onParamsChange({ whiteNetworkSize: v })}
             modelParams={mp}
@@ -290,7 +262,6 @@ export default function ParamsPanel({
           <SideTab
             side="black" emoji="⚫"
             epsilon={params.blackEpsilon}
-            onEpsilonChange={(v) => onParamsChange({ blackEpsilon: v })}
             networkSize={params.blackNetworkSize}
             onNetworkSizeChange={(v) => onParamsChange({ blackNetworkSize: v })}
             modelParams={mp}

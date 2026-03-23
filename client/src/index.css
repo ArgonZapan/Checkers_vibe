@@ -375,6 +375,22 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   to { opacity: 1; }
 }
 
+/* Read-only epsilon display */
+.epsilon-readonly {
+  font-size: 1rem;
+  font-weight: 700;
+  min-width: 40px;
+}
+.epsilon-badge {
+  font-size: 0.65rem;
+  background: var(--bg-card);
+  color: var(--text-dim);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .restart-buttons, .selfplay-buttons, .apply-buttons {
   display: flex;
   gap: 0.4rem;
