@@ -72,8 +72,11 @@ app.post('/api/ai/train', async (req, res) => {
     if (batch.length === 0) {
       return res.status(400).json({ error: 'Empty batch' });
     }
-    const lossWhite = await train(trainer.modelWhite, batch, CONFIG.ai.trainEpochs);
-    const lossBlack = await train(trainer.modelBlack, batch, CONFIG.ai.trainEpochs);
+    // Filter batch by turn — each model should only train on its own samples
+    const batchWhite = batch.filter(s => s.turn === 1);
+    const batchBlack = batch.filter(s => s.turn === -1);
+    const lossWhite = batchWhite.length > 0 ? await train(trainer.modelWhite, batchWhite, CONFIG.ai.trainEpochs) : { loss: 0 };
+    const lossBlack = batchBlack.length > 0 ? await train(trainer.modelBlack, batchBlack, CONFIG.ai.trainEpochs) : { loss: 0 };
     const avgLoss = ((lossWhite.loss || 0) + (lossBlack.loss || 0)) / 2;
     io.emit('train', { loss: avgLoss });
     res.json({ loss: avgLoss });

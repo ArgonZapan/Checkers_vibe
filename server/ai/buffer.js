@@ -20,14 +20,16 @@ export class ReplayBuffer {
     if (this.count === 0) return [];
     const k = Math.min(n, this.count);
     const start = this.count < this.maxSize ? 0 : this.head;
-    // Classic reservoir sampling
+    // Fisher-Yates shuffle over all available items, return first k
+    const indices = [];
+    for (let i = 0; i < this.count; i++) indices.push(i);
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
     const result = [];
     for (let i = 0; i < k; i++) {
-      result.push(this.buffer[(start + i) % this.maxSize]);
-    }
-    for (let i = k; i < this.count; i++) {
-      const j = Math.floor(Math.random() * (i + 1));
-      if (j < k) result[j] = this.buffer[(start + i) % this.maxSize];
+      result.push(this.buffer[(start + indices[i]) % this.maxSize]);
     }
     return result;
   }
