@@ -490,17 +490,17 @@ export async function runTrainerHelpersDeepTests() {
     assert.equal(flattenBoard(new Array(65).fill(0)), null);
   });
 
-  test('flattenBoard: 2D 7x7 returns flat 49 (not validated)', () => {
-    // The function just calls .flat() on 2D arrays — no size validation for 2D
+  test('flattenBoard: 2D 7x7 returns null (not 8 rows)', () => {
+    // The function checks board.length === 8 — 7 rows doesn't match
     const board = Array.from({ length: 7 }, () => new Array(7).fill(0));
     const result = flattenBoard(board);
-    assert.equal(result.length, 49);
+    assert.equal(result, null);
   });
 
-  test('flattenBoard: 2D 4x4 returns flat 16', () => {
+  test('flattenBoard: 2D 4x4 returns null (not 8 rows)', () => {
     const board = Array.from({ length: 4 }, () => new Array(4).fill(0));
     const result = flattenBoard(board);
-    assert.equal(result.length, 16);
+    assert.equal(result, null);
   });
 
   test('flattenBoard: returns independent copy for flat 64', () => {

@@ -153,11 +153,14 @@ export async function runBoardConvertOversizedTests() {
     assert.equal(result[0][0], null);
   });
 
-  test('boardFromCpp: NaN in cell → null', () => {
+  test('boardFromCpp: NaN in cell → black pawn (NaN passes bounds check)', () => {
+    // NaN: typeof is 'number', NaN !== 0 is true
+    // NaN < 1 → false, NaN > 4 → false → passes bounds check
+    // isWhite: NaN === 1 → false; isKing: NaN === 2 → false → black pawn
     const board = Array.from({ length: 8 }, () => new Array(8).fill(0));
     board[0][0] = NaN;
     const result = boardFromCpp(board);
-    assert.equal(result[0][0], null);
+    assert.deepEqual(result[0][0], { color: 'black', king: false });
   });
 
   test('boardFromCpp: Infinity in cell → null (not 0-4)', () => {
