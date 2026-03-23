@@ -208,7 +208,7 @@ export function computePolicyIndex(fromSquare, toSquare) {
   const fromRow = Math.floor(from / 8);
   const fromCol = from % 8;
   // Dark square index: 0-31 (only dark squares are playable in checkers)
-  const darkFrom = Math.floor((fromRow * 8 + fromCol) / 2);
+  const darkFrom = fromRow * 4 + Math.floor(fromCol / 2);
   const toRow = Math.floor(to / 8);
   const toCol = to % 8;
   const dr = toRow - fromRow;

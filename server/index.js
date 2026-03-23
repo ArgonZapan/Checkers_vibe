@@ -93,6 +93,15 @@ app.post('/api/ai/params', (req, res) => {
     return res.status(400).json({ error: 'networkSize must be small|medium|large' });
   }
   trainer.setParams(epsilon, networkSize, side);
+  // Recreate models when network size changes (setParams stores size but doesn't recreate)
+  if (networkSize != null) {
+    if (side === 'white' || side === 'both') {
+      trainer.modelWhite = createModel({ ...trainer.modelParams });
+    }
+    if (side === 'black' || side === 'both') {
+      trainer.modelBlack = createModel({ ...trainer.modelParams });
+    }
+  }
   io.emit('paramsChange', { epsilon, networkSize, side });
   res.json({ ok: true, ...trainer.getStatus() });
 });
@@ -588,8 +597,8 @@ setInterval(async () => {
   if (_saving) return;
   // Skip save if nothing changed since last save (#102)
   if (!trainer.dirty) return;
-  _saving = true;
   try {
+    _saving = true;
     const now = Date.now();
 
     // State: every 30s (only when dirty)

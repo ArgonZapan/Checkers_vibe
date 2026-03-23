@@ -378,12 +378,14 @@ export class SelfPlay {
       }
     }
     if (side === 'black' || side === 'both') {
+      if (epsilon !== undefined) this.epsilonBlack = epsilon;
       if (networkSize !== undefined) {
         this.networkSizeBlack = networkSize;
         this.modelBlack = this._replaceModel(this.modelBlack, { ...this.modelParams });
       }
     }
     this.stats.epsilonWhite = this.epsilonWhite;
+    this.stats.epsilonBlack = this.epsilonBlack;
     this.dirty = true; // params changed (#102)
   }
 
@@ -403,6 +405,7 @@ export class SelfPlay {
 
     // 4. Reset epsilon
     this.epsilonWhite = CONFIG.ai.defaultEpsilon;
+    this.epsilonBlack = CONFIG.ai.defaultEpsilon;
     this.stats.epsilonWhite = CONFIG.ai.defaultEpsilon;
 
     // 5. Create fresh models
@@ -451,6 +454,7 @@ export class SelfPlay {
       this.stats.draws = 0;
       this.stats.lastLoss = null;
       this.epsilonWhite = CONFIG.ai.defaultEpsilon;
+      this.epsilonBlack = CONFIG.ai.defaultEpsilon;
     }
     this.dirty = true; // model restarted (#102)
     this.io?.emit('modelRestart', { side });
