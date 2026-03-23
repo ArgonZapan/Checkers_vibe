@@ -256,7 +256,11 @@ function Board({
             height={CELL_SIZE}
             fill={fillColor}
             onClick={() => onCellClick(row, col)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCellClick(row, col); } }}
             style={{ cursor: isDark ? 'pointer' : 'default' }}
+            tabIndex={isDark ? 0 : undefined}
+            role={isDark ? 'button' : undefined}
+            aria-label={`${String.fromCharCode(97 + col)}${8 - row}`}
             pointerEvents="visible"
           />
         );
@@ -303,7 +307,7 @@ function Board({
             : undefined;
 
           _pieces.push(
-            <g key={pieceKey} onClick={() => onCellClick(row, col)} transform={pieceTransform} style={{ cursor: 'pointer' }}>
+            <g key={pieceKey} onClick={() => onCellClick(row, col)} transform={pieceTransform} style={{ cursor: 'pointer' }} role="button" tabIndex={0} aria-label={`${isWhite ? 'White' : 'Black'}${piece.king ? ' king' : ' piece'} at ${String.fromCharCode(97 + col)}${8 - row}`} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCellClick(row, col); } }}>
               <circle
                 cx={px}
                 cy={py}
