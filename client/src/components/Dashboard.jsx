@@ -19,61 +19,69 @@ export default function Dashboard({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Set canvas dimensions to match container width for responsive rendering
-    const container = canvas.parentElement;
-    if (container) {
-      canvas.width = container.clientWidth;
-    }
-    canvas.height = 100; // match HTML attribute
+    const draw = () => {
+      // Set canvas dimensions to match container width for responsive rendering
+      const container = canvas.parentElement;
+      if (container) {
+        canvas.width = container.clientWidth;
+      }
+      canvas.height = 100; // match HTML attribute
 
-    const ctx = canvas.getContext('2d');
-    const w = canvas.width;
-    const h = canvas.height;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
 
-    ctx.clearRect(0, 0, w, h);
+      ctx.clearRect(0, 0, w, h);
 
-    if (lossHistory.length < 2) {
-      ctx.fillStyle = '#666';
-      ctx.font = '12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Brak danych loss', w / 2, h / 2);
-      return;
-    }
+      if (lossHistory.length < 2) {
+        ctx.fillStyle = '#666';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Brak danych loss', w / 2, h / 2);
+        return;
+      }
 
-    const max = Math.max(...lossHistory);
-    const min = Math.min(...lossHistory);
-    const range = max - min || 1;
+      const max = Math.max(...lossHistory);
+      const min = Math.min(...lossHistory);
+      const range = max - min || 1;
 
-    // Grid lines
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < 5; i++) {
-      const y = (i / 4) * h;
+      // Grid lines
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i < 5; i++) {
+        const y = (i / 4) * h;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // Loss line
+      ctx.strokeStyle = '#e94560';
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
+      lossHistory.forEach((val, i) => {
+        const x = (i / (lossHistory.length - 1)) * w;
+        const y = h - ((val - min) / range) * (h - 10) - 5;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
       ctx.stroke();
-    }
 
-    // Loss line
-    ctx.strokeStyle = '#e94560';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    lossHistory.forEach((val, i) => {
-      const x = (i / (lossHistory.length - 1)) * w;
-      const y = h - ((val - min) / range) * (h - 10) - 5;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
+      // Labels
+      ctx.fillStyle = '#888';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`max: ${max.toFixed(3)}`, 4, 12);
+      ctx.textAlign = 'right';
+      ctx.fillText(`min: ${min.toFixed(3)}`, w - 4, h - 4);
+    };
 
-    // Labels
-    ctx.fillStyle = '#888';
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(`max: ${max.toFixed(3)}`, 4, 12);
-    ctx.textAlign = 'right';
-    ctx.fillText(`min: ${min.toFixed(3)}`, w - 4, h - 4);
+    draw();
+
+    // Re-draw chart on window resize for responsive sizing
+    window.addEventListener('resize', draw);
+    return () => window.removeEventListener('resize', draw);
   }, [lossHistory]);
 
   const winnerClass = (w) => {
