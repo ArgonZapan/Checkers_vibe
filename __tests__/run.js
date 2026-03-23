@@ -40,6 +40,7 @@ import { runAiMovePredictionTests } from './aiMovePrediction.test.js';
 import { runCppFetchLogicTests } from './cppFetchLogic.test.js';
 import { runResetHandlerLogicTests } from './resetHandlerLogic.test.js';
 import { runKingMovesPathTests } from './kingMovesPath.test.js';
+import { runHunterCoverageGapsTests } from './hunter-coverageGaps.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -78,6 +79,7 @@ const suites = [
   { name: 'cppFetchLogic',       run: runCppFetchLogicTests },
   { name: 'resetHandlerLogic',   run: runResetHandlerLogicTests },
   { name: 'kingMovesPath',       run: runKingMovesPathTests },
+  { name: 'hunterCoverageGaps',  run: runHunterCoverageGapsTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
