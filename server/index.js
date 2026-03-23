@@ -321,7 +321,7 @@ io.on('connection', async (socket) => {
       }
     } catch (err) {
       console.error('[WS] startGame error:', err.message);
-      socket.emit('error', { message: 'Failed to start game: ' + err.message });
+      socket.emit('error', { message: 'Failed to start game' });
     }
   });
 
