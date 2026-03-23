@@ -295,7 +295,7 @@ export default function App() {
 
   const handleParamsChange = useCallback((newParams) => {
     setParams((prev) => ({ ...prev, ...newParams }));
-    socketRef.current?.emit('params', newParams);
+    socketRef.current?.emit('setParams', newParams);
   }, []);
 
   // Toast helper

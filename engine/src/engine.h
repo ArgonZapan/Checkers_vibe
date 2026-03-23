@@ -43,6 +43,9 @@ public:
     // Cofnij ostatni ruch
     bool undoLastMove();
 
+    // Debug: get moves without capture counter
+    int getMovesWithoutCapture() const { return movesWithoutCapture_; }
+
 private:
     Board board_;
     std::vector<Move> history_;

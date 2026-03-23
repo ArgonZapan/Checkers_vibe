@@ -244,7 +244,8 @@ void registerRoutes(httplib::Server& svr) {
     svr.Post("/api/game/reset", [](const httplib::Request&, httplib::Response& res) {
         std::lock_guard<std::mutex> lock(engineMutex);
         engine.reset();
-        gamesPlayed++;
+        // Note: don't increment gamesPlayed here — this is a reset, not a new game.
+        // Only /api/game/start should count games for proper first-move alternation.
         res.set_content(gameStateJson(engine).dump(), "application/json");
     });
 
@@ -287,6 +288,9 @@ void registerRoutes(httplib::Server& svr) {
                 }
             }
             std::lock_guard<std::mutex> lock(engineMutex);
+            // Reset engine first to clear history_ and movesWithoutCapture_
+            // so draw detection counter starts fresh for the custom position
+            engine.reset();
             Board b = arrayToBoard(boardArr, turn);
             engine.getBoard() = b;
             res.set_content(gameStateJson(engine).dump(), "application/json");

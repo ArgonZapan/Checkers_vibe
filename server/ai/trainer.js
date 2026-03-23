@@ -1,4 +1,4 @@
-import { createModel, predict, train, saveModel, loadModel, boardToTensor } from './model.js';
+import { createModel, predict, train, saveModel, loadModel, boardToTensor, computePolicyIndex } from './model.js';
 import { ReplayBuffer } from './buffer.js';
 import { writeFile, readFile, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
@@ -526,9 +526,9 @@ export class SelfPlay {
         if (CONFIG.moveDelayMs > 0) await this._sleep(CONFIG.moveDelayMs * 3);
       } catch (err) {
         consecutiveErrors++;
-        console.error(`[SelfPlay] Game error (${consecutiveErrors}/5):`, err.message);
-        if (consecutiveErrors >= 5) {
-          console.error('[SelfPlay] Too many errors, stopping self-play');
+        console.error(`[SelfPlay] Game error (${consecutiveErrors}/3):`, err.message);
+        if (consecutiveErrors >= 3) {
+          console.error('[SelfPlay] Too many errors (3), stopping self-play');
           this.running = false;
           this.io?.emit('selfPlayStatus', { active: false, gameNumber: this.stats.gamesPlayed, stats: this.stats });
           break;
@@ -604,9 +604,14 @@ export class SelfPlay {
         this.stats.gamesPlayed++;
 
         // Assign terminal results to samples (backward-compatible field)
-        const winnerTurn = result; // 1, -1, or 0
+        // BUG-201 fix: use winner string ("white"/"black"/"draw") instead of integer result,
+        // because s.turn is a string ("white"/"black"), not an integer (1/-1)
         for (const s of samples) {
-          s.result = s.turn === winnerTurn ? 1 : winnerTurn === 0 ? 0 : -1;
+          if (winner === 'draw' || !winner) {
+            s.result = 0;
+          } else {
+            s.result = s.turn === winner ? 1 : -1;
+          }
         }
         // Mark last sample as terminal
         if (samples.length > 0) {
@@ -645,7 +650,9 @@ export class SelfPlay {
       // Get legal moves (already fetched in parallel with state above)
       const { moves: legalMoves } = await lmResInit.json();
 
-      // Issue #121: If no legal moves available, the game is over
+      // Safety net: if engine says game is not over but has no legal moves,
+      // treat as draw. This duplicates the gameOver block above intentionally —
+      // it catches the edge case where engine state and legal moves are out of sync. (#121)
       if (!legalMoves || legalMoves.length === 0) {
         console.warn('[SelfPlay] No legal moves available — game should be over');
         // Force game over as draw (engine state may not reflect this yet)
@@ -677,7 +684,11 @@ export class SelfPlay {
         break;
       }
 
-      const movesWithIndex = legalMoves.map((m, i) => ({ ...m, index: i }));
+      const movesWithIndex = legalMoves.map((m, i) => ({
+        ...m,
+        index: i,
+        policyIndex: computePolicyIndex(m.from, m.to),
+      }));
 
       // Choose model based on turn
       const model = turn === 1 ? this.modelWhite : this.modelBlack;
@@ -770,7 +781,7 @@ export class SelfPlay {
 
       const boardReact = boardFromCpp(newState.board);
 
-      const turnColor = newState.turn === 1 || newState.turn === 'white' ? 'white' : 'black';
+      const turnColor = newState.turn;
       this.io?.emit('state', {
         board: boardReact,
         turn: turnColor,
@@ -792,7 +803,7 @@ export class SelfPlay {
       const batchWhite = [];
       const batchBlack = [];
       for (const s of batch) {
-        if (s.turn === 1) batchWhite.push(s);
+        if (s.turn === 'white') batchWhite.push(s);
         else batchBlack.push(s);
       }
       const lw = batchWhite.length > 0 ? await train(this.modelWhite, batchWhite, 1) : { loss: 0 };

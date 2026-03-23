@@ -5,17 +5,37 @@
  * Usage: node __tests__/run.js
  */
 import { runBoardConvertTests } from './boardConvert.test.js';
+import { runBoardConvertEdgeTests } from './boardConvertEdge.test.js';
 import { runWsMoveValidationTests } from './wsMoveValidation.test.js';
 import { runWsSetSpeedTests } from './wsSetSpeed.test.js';
 import { runDrawDetectionTests } from './drawDetection.test.js';
 import { runTrainerPolicyFixTests } from './trainerPolicyFix.test.js';
+import { runTrainerLogicTests } from './trainerLogic.test.js';
+import { runBoardSetLookupTests } from './boardSetLookup.test.js';
+import { runBoardConvertInvalidTests } from './boardConvertInvalid.test.js';
+import { runPredictMaskingTests } from './predictMasking.test.js';
+import { runWebsocketHandlersTests } from './websocketHandlers.test.js';
+import { runTrainerPlayGameTests } from './trainerPlayGame.test.js';
+import { runPolicyIndexTests } from './policyIndex.test.js';
+import { runTrainImportTests } from './trainImport.test.js';
+import { runBoardAreEqualTests } from './boardAreEqual.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
+  { name: 'boardConvertEdge',    run: runBoardConvertEdgeTests },
   { name: 'wsMoveValidation',    run: runWsMoveValidationTests },
   { name: 'wsSetSpeed',          run: runWsSetSpeedTests },
   { name: 'drawDetection',       run: runDrawDetectionTests },
   { name: 'trainerPolicyFix',    run: runTrainerPolicyFixTests },
+  { name: 'trainerLogic',        run: runTrainerLogicTests },
+  { name: 'boardSetLookup',      run: runBoardSetLookupTests },
+  { name: 'boardConvertInvalid', run: runBoardConvertInvalidTests },
+  { name: 'predictMasking',      run: runPredictMaskingTests },
+  { name: 'websocketHandlers',   run: runWebsocketHandlersTests },
+  { name: 'trainerPlayGame',     run: runTrainerPlayGameTests },
+  { name: 'policyIndex',         run: runPolicyIndexTests },
+  { name: 'trainImport',         run: runTrainImportTests },
+  { name: 'boardAreEqual',       run: runBoardAreEqualTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;

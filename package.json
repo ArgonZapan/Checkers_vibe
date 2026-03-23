@@ -8,6 +8,7 @@
     "doc": "docs"
   },
   "scripts": {
+    "test": "node __tests__/run.js",
     "test:e2e": "node tests/e2e-smoke.mjs && node tests/e2e-pvai.mjs && node tests/e2e-aivai.mjs"
   },
   "repository": {
