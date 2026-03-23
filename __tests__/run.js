@@ -5,17 +5,23 @@
  * Usage: node __tests__/run.js
  */
 import { runBoardConvertTests } from './boardConvert.test.js';
+import { runBoardConvertEdgeTests } from './boardConvertEdge.test.js';
 import { runWsMoveValidationTests } from './wsMoveValidation.test.js';
 import { runWsSetSpeedTests } from './wsSetSpeed.test.js';
 import { runDrawDetectionTests } from './drawDetection.test.js';
 import { runTrainerPolicyFixTests } from './trainerPolicyFix.test.js';
+import { runTrainerLogicTests } from './trainerLogic.test.js';
+import { runBoardSetLookupTests } from './boardSetLookup.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
+  { name: 'boardConvertEdge',    run: runBoardConvertEdgeTests },
   { name: 'wsMoveValidation',    run: runWsMoveValidationTests },
   { name: 'wsSetSpeed',          run: runWsSetSpeedTests },
   { name: 'drawDetection',       run: runDrawDetectionTests },
   { name: 'trainerPolicyFix',    run: runTrainerPolicyFixTests },
+  { name: 'trainerLogic',        run: runTrainerLogicTests },
+  { name: 'boardSetLookup',      run: runBoardSetLookupTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
