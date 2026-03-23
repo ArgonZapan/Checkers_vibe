@@ -102,8 +102,8 @@ export default function Dashboard({
   };
 
   const winnerLabel = (w) => {
-    if (w === 'white') return '⚪ Białe';
-    if (w === 'black') return '⚫ Czarne';
+    if (w === 'white') return <><span aria-label="białe">⚪</span> Białe</>;
+    if (w === 'black') return <><span aria-label="czarne">⚫</span> Czarne</>;
     return '🤝 Remis';
   };
 

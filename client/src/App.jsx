@@ -448,7 +448,7 @@ export default function App() {
                   <li key={i}>
                     <span className="move-number">{Math.floor(i / 2) + 1}{i % 2 === 0 ? '.' : '...'}</span>
                     <span className={m.turn === 'white' ? 'move-white' : 'move-black'}>
-                      {m.capture ? '⚔️' : ''} {m.from}-{m.to}
+                      {m.capture ? <><span aria-label="zbicie">⚔️</span>{' '}</> : ''}{m.from}-{m.to}
                     </span>
                   </li>
                 ))}

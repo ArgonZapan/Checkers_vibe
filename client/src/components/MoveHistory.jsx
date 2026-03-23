@@ -20,11 +20,12 @@ export default function MoveHistory({ moves = [] }) {
             <li key={i} className={i === recent.length - 1 ? 'move-last' : ''}>
               <span className={m.color === 'white' ? 'move-white' : 'move-black'}>
                 {m.color === 'white' ? '⚪' : '⚫'}
+                <span className="sr-only">{m.color === 'white' ? 'biały' : 'czarny'}</span>
               </span>
               {' '}
               <span className="move-notation">
                 {posLabel(m.from[0], m.from[1])} → {posLabel(m.to[0], m.to[1])}
-                {m.captured && <span className="move-capture"> ✕</span>}
+                {m.captured && <span className="move-capture"> <span aria-label="zbicie">✕</span></span>}
                 {m.becameKing && <span className="move-king"> 👑</span>}
               </span>
             </li>
