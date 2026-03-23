@@ -37,6 +37,7 @@ function useDebouncedCallback(fn, ms) {
 
 ### FBUG-001: Debounce timer nie czyszczony przy unmount ParamsPanel
 - **Severity:** ważny
+- **Status:** ✅ ALREADY FIXED (było w HEAD przed skanowaniem)
 - **Plik:** `client/src/components/ParamsPanel.jsx:5-11`
 - **Opis:** `useDebouncedCallback` nie czyści `timerRef.current` w cleanup function useEffect. Po odmontowaniu ParamsPanel (np. przejście do menu), pending timeout może wywołać `onParamsChange` na odmontowanym komponencie. W praktyce mały impact bo `onParamsChange` w App.jsx nie zmienia state jeśli socket nie istnieje, ale jest to violation of React cleanup rules.
 - **Fix:** Dodać cleanup:
@@ -82,6 +83,7 @@ function useDebouncedCallback(fn, ms) {
 
 ### FBUG-004: Imperatywny kod animacji w body render Board.jsx — violation of render purity
 - **Severity:** ważny
+- **Status:** ✅ FIXED (commit f738ee4)
 - **Plik:** `client/src/components/Board.jsx:116-160`
 - **Opis:** Duży blok kodu w body funkcji render Board wykonuje:
   1. Mutację `animFromRef.current` (side effect)

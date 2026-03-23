@@ -114,32 +114,39 @@ function Board({
     };
   }, [path]);
 
-  // Cleanup: cancel pending RAF on unmount to prevent memory leaks
+  // Detect moved pieces and animate — effect handles all side effects (#FBUG-004)
   useEffect(() => {
-    return () => {
-      if (rafIdRef.current != null) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
-      }
-    };
-  }, []);
+    const prev = prevBoardRef.current;
 
-  // Detect moved pieces by tracking per-position changes
-  // Skip this animation during multi-capture (handled by step animation above)
-  const prev = prevBoardRef.current;
-  const isMultiCapture = animStep >= 0;
-  // Only animate if board actually changed
-  const boardChanged = prev && board.some((row, r) => row.some((cell, c) => {
-    const old = prev[r][c];
-    if (!old && !cell) return false;
-    if (!old || !cell) return true;
-    return old.color !== cell.color || old.king !== cell.king;
-  }));
-  if (prev && !animFlagRef.current && !isMultiCapture && boardChanged) {
-    // Find empty cells (pieces left or were captured)
-    const empties = []; // positions that lost a piece
-    const newPieces = []; // positions that gained a piece
+    // Save old board for multi-capture animation reference (deep copy)
+    if (prev) {
+      animPrevBoardRef.current = prev.map(row => row.map(cell => cell ? { ...cell } : null));
+    }
+    prevBoardRef.current = board.map((row) => [...row]);
 
+    // Cancel any in-flight animation
+    if (rafIdRef.current != null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+      animFlagRef.current = false;
+    }
+
+    // Skip animation during multi-capture or if already animating
+    if (!prev || animFlagRef.current || animStep >= 0) return;
+
+    // Only animate if board actually changed
+    const boardChanged = prev.some((row, r) => row.some((cell, c) => {
+      const old = prev[r][c];
+      const cur = board[r][c];
+      if (!old && !cur) return false;
+      if (!old || !cur) return true;
+      return old.color !== cur.color || old.king !== cur.king;
+    }));
+    if (!boardChanged) return;
+
+    // Find empty cells (pieces left or were captured) and new pieces
+    const empties = [];
+    const newPieces = [];
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
         const old = prev[r][c];
@@ -148,8 +155,6 @@ function Board({
           empties.push({ r, c, color: old.color, king: old.king });
         } else if (!old && cur) {
           newPieces.push({ r, c, color: cur.color, king: cur.king });
-        } else if (old && cur && (old.color !== cur.color || old.king !== cur.king)) {
-          // Captured + new piece placed — skip animation
         }
       }
     }
@@ -173,14 +178,12 @@ function Board({
     if (Object.keys(animOffsets).length > 0) {
       animFromRef.current = { ...animOffsets };
       animFlagRef.current = true;
-      // Smooth SVG animation via requestAnimationFrame (250ms)
       const startTime = performance.now();
       const duration = STEP_DURATION_MS;
       const startOffsets = { ...animOffsets };
       function animate(now) {
         const elapsed = now - startTime;
         const t = Math.min(elapsed / duration, 1);
-        // Ease out
         const ease = 1 - (1 - t) * (1 - t);
         const current = {};
         for (const key in startOffsets) {
@@ -200,12 +203,15 @@ function Board({
       }
       rafIdRef.current = requestAnimationFrame(animate);
     }
-  }
-  // Save old board for animation BEFORE overwriting (deep copy)
-  if (prevBoardRef.current) {
-    animPrevBoardRef.current = prevBoardRef.current.map(row => row.map(cell => cell ? { ...cell } : null));
-  }
-  prevBoardRef.current = board.map((row) => [...row]);
+
+    // Cleanup: cancel pending RAF on unmount or next board change
+    return () => {
+      if (rafIdRef.current != null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+    };
+  }, [board, animStep]);
 
   // Memoize cells + pieces to avoid re-computing SVG elements when nothing changed (#52)
   const { cells, pieces } = useMemo(() => {
