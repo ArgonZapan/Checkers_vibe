@@ -3,7 +3,10 @@ import React, { useState } from 'react';
 // Log-scale slider helpers
 const LR_MIN_LOG = Math.log10(0.0001);
 const LR_MAX_LOG = Math.log10(0.1);
-const lrToSlider = (lr) => ((Math.log10(lr) - LR_MIN_LOG) / (LR_MAX_LOG - LR_MIN_LOG)) * 100;
+const lrToSlider = (lr) => {
+  const safeLr = Math.max(lr || 0.0001, 0.0001);
+  return ((Math.log10(safeLr) - LR_MIN_LOG) / (LR_MAX_LOG - LR_MIN_LOG)) * 100;
+};
 const sliderToLr = (val) => Math.pow(10, LR_MIN_LOG + (val / 100) * (LR_MAX_LOG - LR_MIN_LOG));
 
 const BATCH_SIZES = [8, 16, 32, 64, 128, 256];
