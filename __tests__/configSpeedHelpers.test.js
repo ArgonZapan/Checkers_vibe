@@ -100,6 +100,68 @@ export async function runConfigSpeedHelpersTests() {
     assert.equal(cfg.animationStepDurationMs, 0);
   });
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // Edge cases: negative aiMoveDelayMs
+  // ═══════════════════════════════════════════════════════════════════════
+
+  test('moveDelayMs: negative aiMoveDelayMs falls through to normalModeDelayMs', () => {
+    const cfg = makeConfig({ server: { speedMode: 'normal', aiMoveDelayMs: -100, normalModeDelayMs: 500 } });
+    assert.equal(cfg.moveDelayMs, 500);
+  });
+
+  test('moveDelayMs: negative aiMoveDelayMs with custom normalModeDelayMs', () => {
+    const cfg = makeConfig({ server: { speedMode: 'normal', aiMoveDelayMs: -500, normalModeDelayMs: 200 } });
+    assert.equal(cfg.moveDelayMs, 200);
+  });
+
+  test('animationStepDurationMs: negative aiMoveDelayMs uses normalModeDelayMs/2', () => {
+    const cfg = makeConfig({ server: { speedMode: 'normal', aiMoveDelayMs: -100, normalModeDelayMs: 600 } });
+    assert.equal(cfg.animationStepDurationMs, 300);
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Edge cases: invalid speedMode (falls through to normal path)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  test('moveDelayMs: speedMode="turbo" falls through to normal path', () => {
+    const cfg = makeConfig({ server: { speedMode: 'turbo', aiMoveDelayMs: 0, normalModeDelayMs: 500 } });
+    assert.equal(cfg.moveDelayMs, 500);
+  });
+
+  test('moveDelayMs: speedMode="" falls through to normal path', () => {
+    const cfg = makeConfig({ server: { speedMode: '', aiMoveDelayMs: 300, normalModeDelayMs: 500 } });
+    assert.equal(cfg.moveDelayMs, 300);
+  });
+
+  test('moveDelayMs: speedMode=null falls through to normal path', () => {
+    const cfg = makeConfig({ server: { speedMode: null, aiMoveDelayMs: 0, normalModeDelayMs: 500 } });
+    assert.equal(cfg.moveDelayMs, 500);
+  });
+
+  test('animationStepDurationMs: speedMode="turbo" falls through to normal path', () => {
+    const cfg = makeConfig({ server: { speedMode: 'turbo', aiMoveDelayMs: 600, normalModeDelayMs: 500 } });
+    assert.equal(cfg.animationStepDurationMs, 300);
+  });
+
+  test('animationStepDurationMs: speedMode=null falls through to normal path', () => {
+    const cfg = makeConfig({ server: { speedMode: null, aiMoveDelayMs: 0, normalModeDelayMs: 1000 } });
+    assert.equal(cfg.animationStepDurationMs, 500);
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Edge cases: very large values
+  // ═══════════════════════════════════════════════════════════════════════
+
+  test('moveDelayMs: very large aiMoveDelayMs (999999)', () => {
+    const cfg = makeConfig({ server: { speedMode: 'normal', aiMoveDelayMs: 999999, normalModeDelayMs: 500 } });
+    assert.equal(cfg.moveDelayMs, 999999);
+  });
+
+  test('animationStepDurationMs: very large moveDelayMs floors correctly', () => {
+    const cfg = makeConfig({ server: { speedMode: 'normal', aiMoveDelayMs: 999999, normalModeDelayMs: 500 } });
+    assert.equal(cfg.animationStepDurationMs, 499999);
+  });
+
   // ── Run ───────────────────────────────────────────────────────────
 
   console.log('\n📋 Config Speed Helpers Tests');

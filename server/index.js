@@ -61,7 +61,7 @@ app.post('/api/ai/predict', async (req, res) => {
     const result = await predict(model, board, legalMoves, turn);
     res.json(result);
   } catch (err) {
-    console.error('[AI] Predict error:', err);
+    console.error('[AI] Predict error:', err.message);
     res.status(500).json({ error: 'Prediction failed' });
   }
 });
@@ -78,7 +78,7 @@ app.post('/api/ai/train', async (req, res) => {
     io.emit('train', { loss: avgLoss });
     res.json({ loss: avgLoss });
   } catch (err) {
-    console.error('[AI] Train error:', err);
+    console.error('[AI] Train error:', err.message);
     res.status(500).json({ error: 'Training failed' });
   }
 });
