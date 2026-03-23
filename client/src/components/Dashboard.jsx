@@ -18,6 +18,13 @@ export default function Dashboard({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Set canvas dimensions to match container width for responsive rendering
+    const container = canvas.parentElement;
+    if (container) {
+      canvas.width = container.clientWidth;
+    }
+
     const ctx = canvas.getContext('2d');
     const w = canvas.width;
     const h = canvas.height;
@@ -169,7 +176,6 @@ export default function Dashboard({
         <canvas
           ref={canvasRef}
           className="loss-chart"
-          width={280}
           height={100}
         />
       </div>

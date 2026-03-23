@@ -206,6 +206,13 @@ export default function App() {
       }
     });
 
+    // Server-side error messages (invalid moves, rejected params, etc.)
+    s.on('error', (data) => {
+      console.warn('[Server error]', data?.message || data);
+      setToast(data?.message || 'Błąd serwera');
+      setTimeout(() => setToast(null), 5000);
+    });
+
     return () => {
       s.disconnect();
     };

@@ -100,6 +100,19 @@ function calcThreat(board, turn) {
       const adjIdx = adjR * 8 + adjC;
       const jumpIdx = jumpR * 8 + jumpC;
       if (board[adjIdx] && !isOwnPiece(board[adjIdx], turn) && !board[jumpIdx]) {
+        // Check if opponent pawn can actually capture in this direction
+        // Pawns can only capture forward: white captures downward (+row), black captures upward (-row)
+        // dr is direction from us to opponent; opponent captures toward us if direction matches
+        const oppVal = board[adjIdx];
+        const oppAbsVal = Math.abs(oppVal);
+        const oppIsKing = oppAbsVal === 2 || oppAbsVal === 4;
+        if (!oppIsKing) {
+          const oppIsWhite = oppVal > 0 && (oppAbsVal === 1 || oppAbsVal === 2);
+          // White captures downward: must be above us (dr = -1) to jump over us
+          // Black captures upward: must be below us (dr = 1) to jump over us
+          if (oppIsWhite && dr !== -1) continue;
+          if (!oppIsWhite && dr !== 1) continue;
+        }
         if (isMy) myThreats++; else oppThreats++;
       }
     }
@@ -606,13 +619,13 @@ export class SelfPlay {
         this.stats.gamesPlayed++;
 
         // Assign terminal results to samples (backward-compatible field)
-        // BUG-201 fix: use winner string ("white"/"black"/"draw") instead of integer result,
-        // because s.turn is a string ("white"/"black"), not an integer (1/-1)
+        // s.turn is numeric: 1 (white) or -1 (black); winner is string: "white"/"black"/"draw"
         for (const s of samples) {
           if (winner === 'draw' || !winner) {
             s.result = 0;
           } else {
-            s.result = s.turn === winner ? 1 : -1;
+            const winnerVal = winner === 'white' ? 1 : -1;
+            s.result = s.turn === winnerVal ? 1 : -1;
           }
         }
         // Mark last sample as terminal
@@ -805,7 +818,7 @@ export class SelfPlay {
       const batchWhite = [];
       const batchBlack = [];
       for (const s of batch) {
-        if (s.turn === 'white') batchWhite.push(s);
+        if (s.turn === 1) batchWhite.push(s);
         else batchBlack.push(s);
       }
       const lw = batchWhite.length > 0 ? await train(this.modelWhite, batchWhite, 1) : { loss: 0 };
