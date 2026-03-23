@@ -102,5 +102,20 @@ export const CONFIG = {
 
 };
 
-// Freeze AI strategies to prevent runtime mutation
-Object.freeze(CONFIG.ai.strategies);
+// Deep freeze helper — recursively freezes all nested objects
+function deepFreeze(obj) {
+  if (obj === null || typeof obj !== 'object') return obj;
+  // Freeze own enumerable properties first
+  for (const key of Object.keys(obj)) {
+    const val = obj[key];
+    if (val !== null && typeof val === 'object') {
+      deepFreeze(val);
+    }
+  }
+  return Object.freeze(obj);
+}
+
+// Deep freeze AI strategies to prevent runtime mutation of weights or any
+// nested property. Copy-on-write is used in server/index.js for intentional
+// changes (e.g. minimax depth).
+deepFreeze(CONFIG.ai.strategies);

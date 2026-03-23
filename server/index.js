@@ -456,6 +456,8 @@ io.on('connection', async (socket) => {
 
   // ── Start game ─────────────────────────────────────────────────────────
   socket.on('startGame', async ({ mode }) => {
+    // Throttle: max 1 startGame per 1s per socket
+    if (!wsThrottle(socket, 'startGame', 1000)) return;
     const validModes = ['pvai', 'pvp', 'aivai'];
     socket.gameMode = validModes.includes(mode) ? mode : 'pvai';
     // Stop self-play when starting a player game (C++ handles one game at a time)
@@ -481,6 +483,8 @@ io.on('connection', async (socket) => {
 
   // ── Get legal moves for a piece ────────────────────────────────────────
   socket.on('getLegalMoves', async ({ from }) => {
+    // Throttle: max 1 getLegalMoves per 50ms per socket (called on hover)
+    if (!wsThrottle(socket, 'getLegalMoves', 50)) return;
     // Validate from coordinate
     if (!Array.isArray(from) || from.length !== 2
       || !Number.isInteger(from[0]) || !Number.isInteger(from[1])
@@ -547,6 +551,8 @@ io.on('connection', async (socket) => {
 
   // ── SelfPlay controls ─────────────────────────────────────────────────
   socket.on('startSelfPlay', async () => {
+    // Throttle: max 1 startSelfPlay per 1s per socket
+    if (!wsThrottle(socket, 'startSelfPlay', 1000)) return;
     try {
       console.log(`[WS] startSelfPlay from ${socket.id}`);
       await trainer.start();
@@ -558,6 +564,8 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('stopSelfPlay', () => {
+    // Throttle: max 1 stopSelfPlay per 1s per socket
+    if (!wsThrottle(socket, 'stopSelfPlay', 1000)) return;
     console.log(`[WS] stopSelfPlay from ${socket.id}`);
     trainer.stop();
     io.emit('selfPlayStatus', { active: false });
