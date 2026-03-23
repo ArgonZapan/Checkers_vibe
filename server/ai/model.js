@@ -354,6 +354,8 @@ export async function saveModel(model, dirPath) {
   await mkdir(tmpDir, { recursive: true });
   await model.save(`file://${tmpDir}`);
   // Atomic swap: rename tmp → target (overwrites on Linux)
+  // rm first because renameSync/rename cannot overwrite non-empty directories on Linux
+  await rm(dirPath, { recursive: true, force: true });
   await rename(tmpDir, dirPath);
   console.log(`[Model] Saved to ${dirPath}`);
 }
