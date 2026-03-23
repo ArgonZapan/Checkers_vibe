@@ -877,6 +877,7 @@ main().catch(err => {
 function shutdown() {
   clearInterval(_rateLimitCleanupInterval);
   clearInterval(_autoSaveInterval);
+  trainer.stop(); // stop self-play loop before closing HTTP server
   httpServer.close(() => process.exit(0));
 }
 process.on('SIGTERM', shutdown);

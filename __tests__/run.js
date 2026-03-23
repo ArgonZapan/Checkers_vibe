@@ -81,6 +81,14 @@ import { runHunterSecurityFixesTests } from './hunter-security-fixes.test.js';
 import { runProxyErrorScenariosTests } from './proxyErrorScenarios.test.js';
 import { runDisconnectCleanupAndModeSwitchTests } from './disconnectCleanupAndModeSwitch.test.js';
 import { runClientComponentLogicTests } from './clientComponentLogic.test.js';
+import { runHunterAlphaBufferEdgeTests } from './hunter-alpha-buffer-edge.test.js';
+import { runHunterAlphaTrainerHelpersBoundaryTests } from './hunter-alpha-trainer-helpers-boundary.test.js';
+import { runHunterAlphaConfigBoundaryTests } from './hunter-alpha-config-boundary.test.js';
+import { runHunterAlphaTurnThrottleTests } from './hunter-alpha-turn-throttle.test.js';
+import { runHunterAlphaBoardconvertNanTests } from './hunter-alpha-boardconvert-nan.test.js';
+import { runHunterAlphaRateLimitCleanupTests } from './hunter-alpha-rate-limit-cleanup.test.js';
+import { runHunterAlphaSelfplayMethodsTests } from './hunter-alpha-selfplay-methods.test.js';
+import { runHunterAlphaProxyFilterTests } from './hunter-alpha-proxy-filter.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -160,6 +168,14 @@ const suites = [
   { name: 'proxyErrorScenarios', run: runProxyErrorScenariosTests },
   { name: 'disconnectCleanupAndModeSwitch', run: runDisconnectCleanupAndModeSwitchTests },
   { name: 'clientComponentLogic', run: runClientComponentLogicTests },
+  { name: 'hunterAlphaBufferEdge', run: runHunterAlphaBufferEdgeTests },
+  { name: 'hunterAlphaTrainerHelpersBoundary', run: runHunterAlphaTrainerHelpersBoundaryTests },
+  { name: 'hunterAlphaConfigBoundary', run: runHunterAlphaConfigBoundaryTests },
+  { name: 'hunterAlphaTurnThrottle', run: runHunterAlphaTurnThrottleTests },
+  { name: 'hunterAlphaBoardconvertNan', run: runHunterAlphaBoardconvertNanTests },
+  { name: 'hunterAlphaRateLimitCleanup', run: runHunterAlphaRateLimitCleanupTests },
+  { name: 'hunterAlphaSelfplayMethods', run: runHunterAlphaSelfplayMethodsTests },
+  { name: 'hunterAlphaProxyFilter', run: runHunterAlphaProxyFilterTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;

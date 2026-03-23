@@ -142,7 +142,7 @@ export function boardToTensor(boardArray, turn) {
       }
     }
   }
-  input[256] = turn; // store the turn value
+  input[256] = (turn === 1 || turn === -1) ? turn : 1; // guard against NaN/invalid turn
 
   return tf.tensor2d([Array.from(input)]);
 }
@@ -186,7 +186,7 @@ export function buildInputArray(boardArray, turn) {
       }
     }
   }
-  input[256] = turn;
+  input[256] = (turn === 1 || turn === -1) ? turn : 1; // guard against NaN/invalid turn
   return input;
 }
 
@@ -221,9 +221,14 @@ export function computePolicyIndex(fromSquare, toSquare) {
 
 // ── Predict ─────────────────────────────────────────────────────────────────
 export async function predict(model, boardArray, legalMoves, turn = 1) {
-  const tensor = boardToTensor(boardArray, turn);
-  let policyTensor, valueTensor;
+  // Validate turn — prevent NaN/invalid values from silently corrupting inference
+  if (turn !== 1 && turn !== -1) {
+    console.warn(`[predict] Invalid turn=${turn} (type ${typeof turn}), defaulting to 1`);
+    turn = 1;
+  }
+  let tensor, policyTensor, valueTensor;
   try {
+    tensor = boardToTensor(boardArray, turn);
     [policyTensor, valueTensor] = model.predictOnBatch(tensor);
 
     const policy = await policyTensor.data();
