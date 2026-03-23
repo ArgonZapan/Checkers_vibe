@@ -91,6 +91,12 @@ import { runHunterAlphaSelfplayMethodsTests } from './hunter-alpha-selfplay-meth
 import { runHunterAlphaProxyFilterTests } from './hunter-alpha-proxy-filter.test.js';
 import { runHunterSub003CoverageTests } from './hunter-sub-003-coverage.test.js';
 import { runCppFetchLogSanitizationTests } from './cppFetchLogSanitization.test.js';
+import { runHunterAlphaMinimaxCoreTests } from './hunter-alpha-minimax-core.test.js';
+import { runHunterAlphaValidateMoveTests } from './hunter-alpha-validate-move.test.js';
+import { runHunterAlphaRewardEdgeTests } from './hunter-alpha-reward-edge.test.js';
+import { runHunterAlphaModelTensorTests } from './hunter-alpha-model-tensor.test.js';
+import { runHunterAlphaConfigSpeedEdgeTests } from './hunter-alpha-config-speed-edge.test.js';
+import { runHunterAlphaTrainerStateTests } from './hunter-alpha-trainer-state.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -180,6 +186,12 @@ const suites = [
   { name: 'hunterAlphaProxyFilter', run: runHunterAlphaProxyFilterTests },
   { name: 'hunterSub003Coverage', run: runHunterSub003CoverageTests },
   { name: 'cppFetchLogSanitization', run: runCppFetchLogSanitizationTests },
+  { name: 'hunterAlphaMinimaxCore', run: runHunterAlphaMinimaxCoreTests },
+  { name: 'hunterAlphaValidateMove', run: runHunterAlphaValidateMoveTests },
+  { name: 'hunterAlphaRewardEdge', run: runHunterAlphaRewardEdgeTests },
+  { name: 'hunterAlphaModelTensor', run: runHunterAlphaModelTensorTests },
+  { name: 'hunterAlphaConfigSpeedEdge', run: runHunterAlphaConfigSpeedEdgeTests },
+  { name: 'hunterAlphaTrainerState', run: runHunterAlphaTrainerStateTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
