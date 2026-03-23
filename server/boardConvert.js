@@ -11,6 +11,14 @@
  * @returns {Array<Array<{color: string, king: boolean}|null>>}
  */
 export function boardFromCpp(cppBoard) {
+  // Input validation — prevent crash on null/undefined/non-array
+  if (!cppBoard || !Array.isArray(cppBoard)) {
+    console.warn('[boardFromCpp] Invalid input:', typeof cppBoard);
+    return Array.from({ length: 8 }, () => Array(8).fill(null));
+  }
+  if (cppBoard.length === 0) {
+    return Array.from({ length: 8 }, () => Array(8).fill(null));
+  }
   // Normalize to 2D array
   let board2D = cppBoard;
   if (Array.isArray(cppBoard) && !Array.isArray(cppBoard[0])) {
@@ -33,9 +41,14 @@ export function boardFromCpp(cppBoard) {
  * @returns {number[]}
  */
 export function boardToCpp(board) {
+  if (!board || !Array.isArray(board)) {
+    console.warn('[boardToCpp] Invalid input:', typeof board);
+    return new Array(64).fill(0);
+  }
   return board.flat().map(p => {
-    if (!p) return 0;
+    if (!p || typeof p !== 'object') return 0;
     if (p.color === 'white') return p.king ? 2 : 1;
-    return p.king ? 4 : 3;
+    if (p.color === 'black') return p.king ? 4 : 3;
+    return 0;
   });
 }
