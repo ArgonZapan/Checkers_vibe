@@ -323,7 +323,7 @@ io.on('connection', async (socket) => {
     // Validate move coordinates
     const { from, to, captures } = data || {};
     const isValidCoord = (c) =>
-      Array.isArray(c) && c.length === 2 && typeof c[0] === 'number' && typeof c[1] === 'number'
+      Array.isArray(c) && c.length === 2 && Number.isInteger(c[0]) && Number.isInteger(c[1])
       && c[0] >= 0 && c[0] <= 7 && c[1] >= 0 && c[1] <= 7;
 
     if (!isValidCoord(from)) {
@@ -429,9 +429,9 @@ io.on('connection', async (socket) => {
 
   // ── Speed control ──────────────────────────────────────────────────────
   socket.on('setSpeed', (ms) => {
-    // Validate: must be a number >= 0, clamp to max 10s
-    if (typeof ms !== 'number' || !isFinite(ms)) {
-      socket.emit('error', { message: 'Invalid speed — expected a number (ms)' });
+    // Validate: must be a number 0-60000, not NaN
+    if (typeof ms !== 'number' || ms < 0 || ms > 60000 || Number.isNaN(ms)) {
+      socket.emit('error', { message: 'Invalid speed value' });
       return;
     }
     const clamped = Math.max(0, Math.min(ms, 10000));
