@@ -254,6 +254,7 @@ export default function App() {
     setLegalMoves([]);
     setMovePath(null);
     setMoveHistory([]);
+    setSelfPlayActive(false); // Clear stale self-play state
     socketRef.current?.emit('startGame', { mode: 'pvai' });
   }, []);
 

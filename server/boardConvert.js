@@ -44,7 +44,7 @@ export function boardFromCpp(cppBoard) {
     }
   }
   return board2D.map(row => row.map(val => {
-    if (typeof val !== 'number' || val === 0) return null;
+    if (typeof val !== 'number' || Number.isNaN(val) || val === 0) return null;
     if (val < 1 || val > 4) return null; // guard against unexpected values
     const isWhite = val === 1 || val === 2;
     const isKing = val === 2 || val === 4;

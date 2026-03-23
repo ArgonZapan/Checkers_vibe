@@ -366,19 +366,20 @@ export async function train(model, batch, epochs = 5) {
   const yPolicyTensor = tf.tensor2d(policyTargets);
   const yValueTensor = tf.tensor2d(valueTargets);
 
-  const history = await model.fit(xTensor, [yPolicyTensor, yValueTensor], {
-    epochs,
-    batchSize: Math.min(batch.length, 256),
-    verbose: 0
-  });
+  try {
+    const history = await model.fit(xTensor, [yPolicyTensor, yValueTensor], {
+      epochs,
+      batchSize: Math.min(batch.length, 256),
+      verbose: 0
+    });
 
-  const loss = history.history.loss[history.history.loss.length - 1];
-
-  xTensor.dispose();
-  yPolicyTensor.dispose();
-  yValueTensor.dispose();
-
-  return { loss: Array.isArray(loss) ? loss[0] : loss };
+    const loss = history.history.loss[history.history.loss.length - 1];
+    return { loss: Array.isArray(loss) ? loss[0] : loss };
+  } finally {
+    xTensor.dispose();
+    yPolicyTensor.dispose();
+    yValueTensor.dispose();
+  }
 }
 
 // ── Save / Load ─────────────────────────────────────────────────────────────

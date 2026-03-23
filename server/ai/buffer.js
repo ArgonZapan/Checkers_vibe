@@ -70,6 +70,11 @@ export class ReplayBuffer {
         this.buffer = new Array(this.maxSize);
         this.head = 0;
         this.count = 0;
+      } else if (err instanceof SyntaxError) {
+        console.warn(`[Buffer] Malformed JSON at ${filePath}, starting fresh: ${err.message}`);
+        this.buffer = new Array(this.maxSize);
+        this.head = 0;
+        this.count = 0;
       } else {
         throw err;
       }
