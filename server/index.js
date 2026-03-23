@@ -767,11 +767,13 @@ setInterval(async () => {
   if (!trainer.dirty) return;
   try {
     _saving = true;
+    // Snapshot dirty flag BEFORE async save — if dirty is set again during save,
+    // the reset here won't clobber it and the next cycle will catch it (BUG-003)
+    trainer.dirty = false;
     const now = Date.now();
 
     // State: every 30s (only when dirty)
     await trainer.saveState();
-    trainer.dirty = false; // reset after save (#102)
 
     // Buffer: every 2 minutes
     if (now - _lastBufferSave >= 2 * 60 * 1000) {
