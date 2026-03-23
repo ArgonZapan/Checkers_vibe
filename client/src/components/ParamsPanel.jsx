@@ -38,11 +38,39 @@ function SideTab({
   modelParams,
   onModelParamsChange,
   config,
+  strategy,
+  onStrategyChange,
 }) {
   const mp = modelParams || {};
+  const isMinimax = strategy === 'minimax';
 
   return (
     <div className="side-tab">
+      {/* ── Strategy selector ───────────────────────────────────────── */}
+      <div className="param-group">
+        <h4>⚔️ Strategia</h4>
+        <div className="param-row">
+          <label>Typ:</label>
+          <select
+            value={strategy || (side === 'white' ? 'aggressor' : 'fortress')}
+            onChange={(e) => onStrategyChange(e.target.value)}
+          >
+            <option value="aggressor">🗡️ Agresor (DQN)</option>
+            <option value="fortress">🏰 Forteca (DQN)</option>
+            <option value="minimax">🧠 Minimax (α-β)</option>
+          </select>
+        </div>
+        {isMinimax && (
+          <div className="param-row">
+            <label>Głębokość: <strong>{mp.minimaxDepth ?? 4}</strong></label>
+            <input
+              type="range" min="1" max="8" step="1"
+              value={mp.minimaxDepth ?? 4}
+              onChange={(e) => onModelParamsChange({ minimaxDepth: parseInt(e.target.value) })}
+            />
+          </div>
+        )}
+      </div>
       {/* ── Exploration (read-only) ───────────────────────────────────── */}
       <div className="param-group">
         <h4>🔍 Eksploracja</h4>
@@ -258,6 +286,8 @@ export default function ParamsPanel({
             modelParams={mp}
             onModelParamsChange={onModelParamsChange}
             config={config}
+            strategy={params.whiteStrategy}
+            onStrategyChange={(v) => onParamsChange({ whiteStrategy: v })}
           />
         )}
 
@@ -270,6 +300,8 @@ export default function ParamsPanel({
             modelParams={mp}
             onModelParamsChange={onModelParamsChange}
             config={config}
+            strategy={params.blackStrategy}
+            onStrategyChange={(v) => onParamsChange({ blackStrategy: v })}
           />
         )}
 

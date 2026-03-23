@@ -1,5 +1,6 @@
 import { createModel, predict, train, saveModel, computePolicyIndex } from './model.js';
 import { ReplayBuffer } from './buffer.js';
+import { minimaxSearch, applyMove, generateLegalMoves, evaluate } from './minimax.js';
 import { writeFile, readFile, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -310,8 +311,8 @@ export class SelfPlay {
     // Parameters per side
     const stratWhite = CONFIG.ai.strategies[CONFIG.ai.strategy.white];
     const stratBlack = CONFIG.ai.strategies[CONFIG.ai.strategy.black];
-    this.epsilonWhite = stratWhite.minEpsilon + 0.7; // start high
-    this.epsilonBlack = stratBlack.minEpsilon + 0.7;
+    this.epsilonWhite = (stratWhite.minEpsilon ?? 0.01) + 0.7; // start high
+    this.epsilonBlack = (stratBlack.minEpsilon ?? 0.01) + 0.7;
     this.networkSizeWhite = 'small';
     this.networkSizeBlack = 'small';
 
@@ -490,8 +491,8 @@ export class SelfPlay {
     // 4. Reset epsilon
     const stratWhite = CONFIG.ai.strategies[CONFIG.ai.strategy.white];
     const stratBlack = CONFIG.ai.strategies[CONFIG.ai.strategy.black];
-    this.epsilonWhite = stratWhite.minEpsilon + 0.7;
-    this.epsilonBlack = stratBlack.minEpsilon + 0.7;
+    this.epsilonWhite = (stratWhite.minEpsilon ?? 0.01) + 0.7;
+    this.epsilonBlack = (stratBlack.minEpsilon ?? 0.01) + 0.7;
     this.stats.epsilonWhite = this.epsilonWhite;
     this.stats.epsilonBlack = this.epsilonBlack;
 
@@ -542,8 +543,8 @@ export class SelfPlay {
       this.stats.lastLoss = null;
       const stratWhite = CONFIG.ai.strategies[CONFIG.ai.strategy.white];
       const stratBlack = CONFIG.ai.strategies[CONFIG.ai.strategy.black];
-      this.epsilonWhite = stratWhite.minEpsilon + 0.7;
-      this.epsilonBlack = stratBlack.minEpsilon + 0.7;
+      this.epsilonWhite = (stratWhite.minEpsilon ?? 0.01) + 0.7;
+      this.epsilonBlack = (stratBlack.minEpsilon ?? 0.01) + 0.7;
     }
     this.dirty = true; // model restarted (#102)
     this.io?.emit('modelRestart', { side });
@@ -813,20 +814,38 @@ export class SelfPlay {
         policyIndex: computePolicyIndex(m.from, m.to),
       }));
 
-      // Choose model based on turn
-      const model = turn === 1 ? this.modelWhite : this.modelBlack;
-      const epsilon = turn === 1 ? this.epsilonWhite : this.epsilonBlack;
-
-      // Epsilon-greedy: explore or exploit
+      // Choose move based on strategy
+      const strategyName = turn === 1 ? CONFIG.ai.strategy.white : CONFIG.ai.strategy.black;
+      const strategyConfig = CONFIG.ai.strategies[strategyName];
       let chosenMove;
-      if (Math.random() < epsilon) {
-        // Random legal move
-        const randomIdx = Math.floor(Math.random() * legalMoves.length);
-        chosenMove = legalMoves[randomIdx];
+
+      if (strategyConfig && strategyConfig.type === 'minimax') {
+        // ── Minimax path: pure JS search, no DQN ─────────────────────
+        const depth = strategyConfig.depth || 4;
+        const flatBoard = flattenBoard(boardArray);
+        if (!flatBoard) throw new Error('minimax: invalid board');
+        const result = minimaxSearch(flatBoard, turn, depth);
+        chosenMove = result.move;
+        if (!chosenMove) {
+          // Fallback to random if minimax returns nothing
+          const randomIdx = Math.floor(Math.random() * legalMoves.length);
+          chosenMove = legalMoves[randomIdx];
+        }
       } else {
-        const pred = await predict(model, boardArray, movesWithIndex, turn);
-        // pred.move is the selected move object from movesWithIndex
-        chosenMove = pred.move;
+        // ── DQN path (existing) ──────────────────────────────────────
+        const model = turn === 1 ? this.modelWhite : this.modelBlack;
+        const epsilon = turn === 1 ? this.epsilonWhite : this.epsilonBlack;
+
+        // Epsilon-greedy: explore or exploit
+        if (Math.random() < epsilon) {
+          // Random legal move
+          const randomIdx = Math.floor(Math.random() * legalMoves.length);
+          chosenMove = legalMoves[randomIdx];
+        } else {
+          const pred = await predict(model, boardArray, movesWithIndex, turn);
+          // pred.move is the selected move object from movesWithIndex
+          chosenMove = pred.move;
+        }
       }
 
       // Save board state before move for reward calculation
@@ -944,8 +963,12 @@ export class SelfPlay {
     }
     const stratWhite = CONFIG.ai.strategies[CONFIG.ai.strategy.white];
     const stratBlack = CONFIG.ai.strategies[CONFIG.ai.strategy.black];
-    this.epsilonWhite = Math.max(stratWhite.minEpsilon, this.epsilonWhite - stratWhite.epsilonDecay);
-    this.epsilonBlack = Math.max(stratBlack.minEpsilon, this.epsilonBlack - stratBlack.epsilonDecay);
+    if (stratWhite.epsilonDecay != null) {
+      this.epsilonWhite = Math.max(stratWhite.minEpsilon, this.epsilonWhite - stratWhite.epsilonDecay);
+    }
+    if (stratBlack.epsilonDecay != null) {
+      this.epsilonBlack = Math.max(stratBlack.minEpsilon, this.epsilonBlack - stratBlack.epsilonDecay);
+    }
     this.stats.epsilonWhite = this.epsilonWhite;
     this.stats.epsilonBlack = this.epsilonBlack;
     this.dirty = true; // epsilon changed — auto-save must persist it (#132)

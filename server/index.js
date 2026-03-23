@@ -549,6 +549,8 @@ io.on('connection', async (socket) => {
         'minEpsilon', 'epsilonDecay', 'gamma', 'bufferSize', 'epochs',
         'rewardCapture', 'rewardLosePiece', 'rewardPromotion', 'rewardWin', 'rewardLose',
         'speedMode', 'aiMoveDelayMs', // speed settings (applied to CONFIG, not model)
+        'whiteStrategy', 'blackStrategy', // strategy selection (DQN vs minimax)
+        'minimaxDepth', // minimax search depth
       ]);
       const filtered = {};
       for (const key of Object.keys(newParams)) {
@@ -608,6 +610,21 @@ io.on('connection', async (socket) => {
         const clamped = Math.max(0, Math.min(newParams.aiMoveDelayMs, 10000));
         CONFIG.server.aiMoveDelayMs = clamped;
         if (clamped > 0) CONFIG.server.normalModeDelayMs = clamped;
+      }
+
+      // Handle strategy changes (DQN vs minimax)
+      const validStrategies = Object.keys(CONFIG.ai.strategies);
+      if (newParams.whiteStrategy != null && validStrategies.includes(newParams.whiteStrategy)) {
+        CONFIG.ai.strategy.white = newParams.whiteStrategy;
+      }
+      if (newParams.blackStrategy != null && validStrategies.includes(newParams.blackStrategy)) {
+        CONFIG.ai.strategy.black = newParams.blackStrategy;
+      }
+      // Handle minimax depth
+      if (newParams.minimaxDepth != null && typeof newParams.minimaxDepth === 'number' && Number.isFinite(newParams.minimaxDepth)) {
+        if (CONFIG.ai.strategies.minimax) {
+          CONFIG.ai.strategies.minimax.depth = Math.max(1, Math.min(8, Math.round(newParams.minimaxDepth)));
+        }
       }
 
       // 1. Stop self-play

@@ -92,6 +92,11 @@ export const CONFIG = {
         rewardWin: 1.0,
         rewardLose: -1.2,
       },
+      minimax: {
+        type: 'minimax',
+        depth: 4,
+        weights: { material: 1.0, position: 0.3 },
+      },
     },
   },
 
