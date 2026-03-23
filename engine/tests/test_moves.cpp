@@ -19,8 +19,8 @@ bool hasMove(const std::vector<Move>& moves, int fr, int fc, int tr, int tc) {
 bool hasCapture(const std::vector<Move>& moves, int fr, int fc, int tr, int tc, int cr, int cc) {
     for (auto& m : moves) {
         if (m.from.row == fr && m.from.col == fc && m.to.row == tr && m.to.col == tc) {
-            for (auto& c : m.captures) {
-                if (c.row == cr && c.col == cc) return true;
+            for (int i = 0; i < m.numCaptures; i++) {
+                if (m.captures[i].row == cr && m.captures[i].col == cc) return true;
             }
         }
     }
@@ -136,7 +136,7 @@ void test_multi_capture() {
     // Biały (3,3) bije (4,4) → (5,5), potem (6,6) → (7,7)
     bool foundMulti = false;
     for (auto& m : moves) {
-        if (m.captures.size() == 2) {
+        if (m.numCaptures == 2) {
             foundMulti = true;
             break;
         }
@@ -378,7 +378,7 @@ void test_multiple_captures_chain() {
 
         bool foundChain3 = false;
         for (auto& m : moves) {
-            if (m.from.row == 1 && m.from.col == 1 && m.captures.size() >= 3) {
+            if (m.from.row == 1 && m.from.col == 1 && m.numCaptures >= 3) {
                 foundChain3 = true;
                 break;
             }
@@ -410,7 +410,7 @@ void test_multiple_captures_chain() {
 
         bool foundChain3 = false;
         for (auto& m : moves) {
-            if (m.from.row == 3 && m.from.col == 1 && m.captures.size() >= 3) {
+            if (m.from.row == 3 && m.from.col == 1 && m.numCaptures >= 3) {
                 foundChain3 = true;
                 break;
             }

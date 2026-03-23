@@ -109,11 +109,12 @@ void Board::makeMove(Move& move) {
 
     // Record pre-move state for undo
     move.wasKing = isKing;
-    move.capturedKings.clear();
-    for (const auto& cap : move.captures) {
-        Bitboard capMask = squareToMask(cap.row, cap.col);
+    move.numCapturedKings = 0;
+    for (int i = 0; i < move.numCaptures; i++) {
+        Bitboard capMask = squareToMask(move.captures[i].row, move.captures[i].col);
         bool capWasKing = (whiteKings | blackKings) & capMask;
-        move.capturedKings.push_back(capWasKing);
+        move.capturedKings[i] = capWasKing;
+        move.numCapturedKings++;
     }
 
     // Przesuń pionek
@@ -127,8 +128,8 @@ void Board::makeMove(Move& move) {
     }
 
     // Usuń zbite pionki
-    for (const auto& cap : move.captures) {
-        Bitboard capMask = squareToMask(cap.row, cap.col);
+    for (int i = 0; i < move.numCaptures; i++) {
+        Bitboard capMask = squareToMask(move.captures[i].row, move.captures[i].col);
         whitePieces &= ~capMask;
         whiteKings &= ~capMask;
         blackPieces &= ~capMask;
@@ -180,10 +181,10 @@ void Board::undoMove(const Move& move) {
     }
 
     // Przywróć zbite pionki z ich oryginalnym typem
-    for (size_t i = 0; i < move.captures.size(); i++) {
+    for (int i = 0; i < move.numCaptures; i++) {
         const auto& cap = move.captures[i];
         Bitboard capMask = squareToMask(cap.row, cap.col);
-        bool wasKing = (i < move.capturedKings.size()) ? move.capturedKings[i] : false;
+        bool wasKing = (i < move.numCapturedKings) ? move.capturedKings[i] : false;
 
         if (isWhite) {
             // Biały bił — przywróć czarnego
