@@ -176,6 +176,8 @@ function Board({
       for (let i = 0; i < empties.length; i++) {
         const e = empties[i];
         if (e.color === np.color && e.king === np.king) {
+          // Piece moves FROM empty pos (e) TO new pos (np)
+          // Offset = direction from new pos toward old pos (initial offset before animation)
           animOffsets[`piece-${np.r}-${np.c}`] = {
             x: (e.c - np.c) * CELL_SIZE,
             y: (e.r - np.r) * CELL_SIZE,

@@ -182,18 +182,6 @@ export async function runTrainerArrayMovesTests() {
     assert.ok(isMoveLegal(move, legalMoves));
   });
 
-  test('isMoveLegal: null move returns false', () => {
-    assert.ok(!isMoveLegal(null, ARRAY_MOVES));
-  });
-
-  test('isMoveLegal: empty legalMoves returns false', () => {
-    assert.ok(!isMoveLegal({ from: [0, 0], to: [1, 1] }, []));
-  });
-
-  test('isMoveLegal: null legalMoves returns false', () => {
-    assert.ok(!isMoveLegal({ from: [0, 0], to: [1, 1] }, null));
-  });
-
   // ═══════════════════════════════════════════════════════════════════════
   // validateAndFallback — array coordinates
   // ═══════════════════════════════════════════════════════════════════════

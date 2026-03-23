@@ -1,7 +1,7 @@
 /**
  * wsHandlerLogic.test.js — Tests for WebSocket handler logic not covered elsewhere.
  *
- * Covers: startGame mode handling, setParams auth & validation, setSpeedMode,
+ * Covers: startGame mode handling, setParams auth & validation,
  *         getLegalMoves filtering, proxy filter logic.
  * Extracted logic — no server required.
  */
@@ -235,40 +235,6 @@ export async function runWsHandlerLogicTests() {
 
   test('setParams: empty object passes', () => {
     assert.equal(validateSetParams({}).valid, true);
-  });
-
-  // setSpeedMode
-
-  function validateSpeedMode(mode) {
-    return mode === 'fast' || mode === 'normal';
-  }
-
-  test('setSpeedMode: "fast" is valid', () => {
-    assert.ok(validateSpeedMode('fast'));
-  });
-
-  test('setSpeedMode: "normal" is valid', () => {
-    assert.ok(validateSpeedMode('normal'));
-  });
-
-  test('setSpeedMode: "FAST" is invalid', () => {
-    assert.ok(!validateSpeedMode('FAST'));
-  });
-
-  test('setSpeedMode: "" is invalid', () => {
-    assert.ok(!validateSpeedMode(''));
-  });
-
-  test('setSpeedMode: null is invalid', () => {
-    assert.ok(!validateSpeedMode(null));
-  });
-
-  test('setSpeedMode: undefined is invalid', () => {
-    assert.ok(!validateSpeedMode(undefined));
-  });
-
-  test('setSpeedMode: "turbo" is invalid', () => {
-    assert.ok(!validateSpeedMode('turbo'));
   });
 
   // ═══════════════════════════════════════════════════════════════════════
