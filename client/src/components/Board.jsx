@@ -430,10 +430,12 @@ function areEqual(prevProps, nextProps) {
   if (prevProps.selected?.[0] !== nextProps.selected?.[0] || prevProps.selected?.[1] !== nextProps.selected?.[1]) return false;
   if (prevProps.board !== nextProps.board) return false;
   if (prevProps.legalMoves !== nextProps.legalMoves) return false;
+  if (prevProps.legalMoves?.length !== nextProps.legalMoves?.length) return false;
   if (prevProps.lastMove !== nextProps.lastMove) return false;
   if (prevProps.path !== nextProps.path) return false;
   if (prevProps.captures?.length !== nextProps.captures?.length) return false;
   if (prevProps.onCellClick !== nextProps.onCellClick) return false;
+  if (prevProps.onReset !== nextProps.onReset) return false;
   return true;
 }
 
