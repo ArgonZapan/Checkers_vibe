@@ -97,7 +97,7 @@ button {
   border-radius: 6px;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, border-color 0.15s;
   font-weight: 600;
   font-family: inherit;
 }
@@ -154,6 +154,11 @@ button:focus-visible, select:focus-visible, input:focus-visible {
   width: 100%;
   height: auto;
   max-width: 480px;
+}
+
+/* Prevent CSS transition from conflicting with JS SVG transform animation (Issue #137) */
+.piece {
+  transition: none;
 }
 
 /* Game Over Overlay */
