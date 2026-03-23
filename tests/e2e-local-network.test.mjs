@@ -5,7 +5,7 @@
  */
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.TEST_BASE_URL || 'http://192.168.50.202:3000';
+const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
 
 test.describe('Local network deployment smoke', () => {
   test('page loads without errors', async ({ page }) => {

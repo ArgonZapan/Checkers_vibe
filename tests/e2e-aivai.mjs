@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const BASE = 'http://192.168.50.202:3000';
+const BASE = process.env.TEST_BASE_URL || 'http://localhost:3000';
 
 let pass = 0, fail = 0;
 function assert(name, condition) {
