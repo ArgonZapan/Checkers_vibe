@@ -1029,6 +1029,279 @@ export async function runKingMultiCaptureAndUndoTests() {
     assert.equal(board.currentTurn, 'white');
   });
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Edge cases: pawn captures king (hunter-sub-003 additions)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  test('makeMove/undoMove: pawn captures king → undo → king restored as king (not pawn)', () => {
+    // White pawn at (5,1) captures black king at (4,2), lands at (3,3)
+    const board = new TestBoard();
+    board.whitePieces.add('5,1');
+    board.blackKings.add('4,2');
+
+    const m = new Move();
+    m.from = new Square(5, 1);
+    m.to = new Square(3, 3);
+    m.captures = [new Square(4, 2)];
+    m.numCaptures = 1;
+    m.path = [new Square(5, 1), new Square(3, 3)];
+    m.numPath = 2;
+
+    // makeMove sets capturedKingsMask
+    board.makeMove(m);
+    assert.ok(board.isEmpty(4, 2), 'captured king removed');
+    assert.ok(board.isWhite(3, 3), 'pawn at destination');
+    assert.equal(board.isKing(3, 3), false, 'pawn did not become king');
+    assert.equal(m.capturedKing(0), true, 'captured piece was a king');
+    assert.equal(m.capturedKingsMask, 1, 'bit 0 should be set for captured king');
+
+    // undoMove should restore black king as king, not as pawn
+    board.undoMove(m);
+    assert.ok(board.isWhite(5, 1), 'white pawn restored');
+    assert.equal(board.isKing(5, 1), false, 'white pawn should not be king');
+    assert.ok(board.isEmpty(3, 3), 'destination empty');
+    assert.ok(board.blackKings.has('4,2'), 'black king restored as king (not demoted to pawn)');
+    assert.ok(!board.blackPieces.has('4,2'), 'black king should NOT be in blackPieces');
+    assert.equal(board.currentTurn, 'white');
+  });
+
+  test('makeMove/undoMove: black pawn captures white king → undo → white king restored', () => {
+    // Black pawn at (2,2) captures white king at (3,3), lands at (4,4)
+    const board = new TestBoard();
+    board.currentTurn = 'black';
+    board.blackPieces.add('2,2');
+    board.whiteKings.add('3,3');
+
+    const m = new Move();
+    m.from = new Square(2, 2);
+    m.to = new Square(4, 4);
+    m.captures = [new Square(3, 3)];
+    m.numCaptures = 1;
+    m.path = [new Square(2, 2), new Square(4, 4)];
+    m.numPath = 2;
+
+    board.makeMove(m);
+    assert.ok(board.isEmpty(3, 3), 'white king removed');
+    assert.ok(board.isBlack(4, 4), 'black pawn at destination');
+    assert.equal(m.capturedKing(0), true, 'captured piece was a king');
+    assert.equal(m.capturedKingsMask, 1);
+
+    board.undoMove(m);
+    assert.ok(board.isBlack(2, 2), 'black pawn restored');
+    assert.ok(board.isEmpty(4, 4), 'destination empty');
+    assert.ok(board.whiteKings.has('3,3'), 'white king restored as king');
+    assert.ok(!board.whitePieces.has('3,3'), 'white king should NOT be in whitePieces');
+    assert.equal(board.currentTurn, 'black');
+  });
+
+  test('makeMove/undoMove: pawn captures king in multi-capture → undo → kings restored', () => {
+    // White pawn at (5,1) captures black pawn at (4,2), then captures black king at (2,4)
+    const board = new TestBoard();
+    board.whitePieces.add('5,1');
+    board.blackPieces.add('4,2');
+    board.blackKings.add('2,4');
+
+    const m = new Move();
+    m.from = new Square(5, 1);
+    m.to = new Square(1, 5);
+    m.captures = [new Square(4, 2), new Square(2, 4)];
+    m.numCaptures = 2;
+    m.path = [new Square(5, 1), new Square(3, 3), new Square(1, 5)];
+    m.numPath = 3;
+
+    board.makeMove(m);
+    assert.ok(board.isEmpty(4, 2), 'black pawn captured');
+    assert.ok(board.isEmpty(2, 4), 'black king captured');
+    assert.ok(board.isWhite(1, 5), 'white pawn at destination');
+    assert.equal(m.capturedKing(0), false, 'first capture was pawn');
+    assert.equal(m.capturedKing(1), true, 'second capture was king');
+    assert.equal(m.capturedKingsMask, 2, 'mask should be 0b10 (bit 1 set)');
+
+    board.undoMove(m);
+    assert.ok(board.isWhite(5, 1), 'white pawn restored');
+    assert.ok(board.isEmpty(1, 5), 'destination empty');
+    assert.ok(board.blackPieces.has('4,2'), 'black pawn restored');
+    assert.ok(board.blackKings.has('2,4'), 'black king restored as king (not pawn)');
+    assert.ok(!board.blackPieces.has('2,4'), 'black king should NOT be in blackPieces');
+    assert.equal(board.currentTurn, 'white');
+  });
+
+  test('makeMove/undoMove: king captures two kings → undo → both restored as kings', () => {
+    const board = new TestBoard();
+    board.whiteKings.add('0,0');
+    board.blackKings.add('2,2');
+    board.blackKings.add('4,4');
+
+    const m = new Move();
+    m.from = new Square(0, 0);
+    m.to = new Square(5, 5);
+    m.captures = [new Square(2, 2), new Square(4, 4)];
+    m.numCaptures = 2;
+    m.path = [new Square(0, 0), new Square(3, 3), new Square(5, 5)];
+    m.numPath = 3;
+
+    board.makeMove(m);
+    assert.ok(board.isEmpty(2, 2), 'first king captured');
+    assert.ok(board.isEmpty(4, 4), 'second king captured');
+    assert.equal(m.capturedKingsMask, 3, 'both bits set (both were kings)');
+    assert.equal(m.capturedKing(0), true, 'first capture was king');
+    assert.equal(m.capturedKing(1), true, 'second capture was king');
+
+    board.undoMove(m);
+    assert.ok(board.isWhite(0, 0), 'white king restored at origin');
+    assert.equal(board.isKing(0, 0), true, 'white king type preserved');
+    assert.ok(board.blackKings.has('2,2'), 'first black king restored as king');
+    assert.ok(board.blackKings.has('4,4'), 'second black king restored as king');
+    assert.ok(!board.blackPieces.has('2,2'), 'first king should NOT be in blackPieces');
+    assert.ok(!board.blackPieces.has('4,4'), 'second king should NOT be in blackPieces');
+    assert.ok(board.isEmpty(5, 5), 'destination empty after undo');
+    assert.equal(board.currentTurn, 'white');
+  });
+
+  test('makeMove/undoMove: king move sets wasKing=true and captures=[]', () => {
+    const board = new TestBoard();
+    board.whiteKings.add('3,3');
+
+    const m = new Move();
+    m.from = new Square(3, 3);
+    m.to = new Square(6, 6);
+    m.path = [new Square(3, 3), new Square(6, 6)];
+    m.numPath = 2;
+
+    board.makeMove(m);
+    assert.equal(m.wasKing, true, 'wasKing should be true for king move');
+    assert.equal(m.numCaptures, 0, 'non-capture move should have 0 captures');
+    assert.equal(m.capturedKingsMask, 0, 'no captures → mask is 0');
+    assert.equal(m.isCapture(), false, 'isCapture() should return false');
+
+    board.undoMove(m);
+    assert.ok(board.isWhite(3, 3), 'king restored');
+    assert.equal(board.isKing(3, 3), true, 'king type preserved after undo');
+  });
+
+  test('makeMove/undoMove: consecutive pawn-captures-king then undo restores both', () => {
+    const board = new TestBoard();
+    board.whitePieces.add('5,1');
+    board.blackKings.add('4,2');
+
+    // White pawn captures black king
+    const m1 = new Move();
+    m1.from = new Square(5, 1);
+    m1.to = new Square(3, 3);
+    m1.captures = [new Square(4, 2)];
+    m1.numCaptures = 1;
+    m1.path = [new Square(5, 1), new Square(3, 3)];
+    m1.numPath = 2;
+
+    board.makeMove(m1);
+    assert.equal(board.currentTurn, 'black');
+    assert.equal(m1.capturedKing(0), true);
+
+    // Black pawn captures white pawn (now at 3,3)
+    const m2 = new Move();
+    m2.from = new Square(2, 4);
+    m2.to = new Square(4, 2);
+    m2.captures = [new Square(3, 3)];
+    m2.numCaptures = 1;
+    m2.path = [new Square(2, 4), new Square(4, 2)];
+    m2.numPath = 2;
+
+    board.makeMove(m2);
+    assert.equal(board.currentTurn, 'white');
+    assert.equal(m2.capturedKing(0), false, 'captured piece was a pawn');
+
+    // Undo black's move
+    board.undoMove(m2);
+    assert.ok(board.isWhite(3, 3), 'white pawn restored');
+    assert.equal(board.isKing(3, 3), false, 'white piece is pawn (not king)');
+    assert.ok(board.isBlack(2, 4), 'black pawn restored');
+    assert.equal(board.currentTurn, 'black');
+
+    // Undo white's move
+    board.undoMove(m1);
+    assert.ok(board.isWhite(5, 1), 'white pawn restored');
+    assert.ok(board.blackKings.has('4,2'), 'black king restored as king');
+    assert.ok(!board.blackPieces.has('4,2'), 'black king NOT in blackPieces');
+    assert.ok(board.isEmpty(3, 3));
+    assert.equal(board.currentTurn, 'white');
+  });
+
+  test('makeMove/undoMove: king captures pawn then captures king → undo restores correctly', () => {
+    const board = new TestBoard();
+    board.whiteKings.add('1,1');
+    board.blackPieces.add('2,2');
+    board.blackKings.add('4,4');
+
+    const m = new Move();
+    m.from = new Square(1, 1);
+    m.to = new Square(5, 5);
+    m.captures = [new Square(2, 2), new Square(4, 4)];
+    m.numCaptures = 2;
+    m.path = [new Square(1, 1), new Square(3, 3), new Square(5, 5)];
+    m.numPath = 3;
+
+    board.makeMove(m);
+    assert.equal(m.capturedKing(0), false, 'first capture (pawn) should not set king bit');
+    assert.equal(m.capturedKing(1), true, 'second capture (king) should set king bit');
+    assert.equal(m.capturedKingsMask, 2, 'mask should be 0b10');
+
+    board.undoMove(m);
+    assert.ok(board.isWhite(1, 1), 'white king restored at origin');
+    assert.equal(board.isKing(1, 1), true);
+    assert.ok(board.blackPieces.has('2,2'), 'black pawn restored (not king)');
+    assert.ok(!board.blackKings.has('2,2'), 'pawn should NOT be in blackKings');
+    assert.ok(board.blackKings.has('4,4'), 'black king restored as king');
+    assert.ok(!board.blackPieces.has('4,4'), 'king should NOT be in blackPieces');
+    assert.ok(board.isEmpty(3, 3), 'intermediate empty');
+    assert.ok(board.isEmpty(5, 5), 'destination empty');
+    assert.equal(board.currentTurn, 'white');
+  });
+
+  test('makeMove/undoMove: multiple round-trips preserve identical board state', () => {
+    const board = new TestBoard();
+    board.whitePieces.add('5,1').add('5,3');
+    board.whiteKings.add('3,3');
+    board.blackPieces.add('2,2').add('4,4').add('2,6');
+    board.blackKings.add('1,7');
+
+    const origWhitePieces = new Set(board.whitePieces);
+    const origWhiteKings = new Set(board.whiteKings);
+    const origBlackPieces = new Set(board.blackPieces);
+    const origBlackKings = new Set(board.blackKings);
+
+    // Move 1: white pawn (5,1) → (4,0)
+    const m1 = new Move();
+    m1.from = new Square(5, 1); m1.to = new Square(4, 0);
+    m1.path = [new Square(5, 1), new Square(4, 0)]; m1.numPath = 2;
+    board.makeMove(m1);
+
+    // Move 2: black pawn (2,2) → (3,1)
+    const m2 = new Move();
+    m2.from = new Square(2, 2); m2.to = new Square(3, 1);
+    m2.path = [new Square(2, 2), new Square(3, 1)]; m2.numPath = 2;
+    board.makeMove(m2);
+
+    // Move 3: white king (3,3) captures black pawn (4,4), lands at (5,5) — square is empty
+    const m3 = new Move();
+    m3.from = new Square(3, 3); m3.to = new Square(5, 5);
+    m3.captures = [new Square(4, 4)]; m3.numCaptures = 1;
+    m3.path = [new Square(3, 3), new Square(5, 5)]; m3.numPath = 2;
+    board.makeMove(m3);
+
+    assert.ok(board.isEmpty(4, 4));
+
+    // Undo all 3
+    board.undoMove(m3);
+    board.undoMove(m2);
+    board.undoMove(m1);
+
+    assert.deepEqual(board.whitePieces, origWhitePieces, 'white pieces restored');
+    assert.deepEqual(board.whiteKings, origWhiteKings, 'white kings restored');
+    assert.deepEqual(board.blackPieces, origBlackPieces, 'black pieces restored');
+    assert.deepEqual(board.blackKings, origBlackKings, 'black kings restored');
+    assert.equal(board.currentTurn, 'white', 'turn restored');
+  });
+
   // ── Run ─────────────────────────────────────────────────────────────────
 
   console.log('\n📋 King Multi-Capture & Undo Move Tests');
