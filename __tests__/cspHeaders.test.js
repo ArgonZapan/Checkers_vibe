@@ -5,7 +5,7 @@
  * - CSP directive parsing and validation
  * - Each directive has expected values
  * - No unsafe-eval in script-src
- * - No unsafe-inline in script-src (only in style-src)
+ * - No unsafe-inline in script-src or style-src
  * - connect-src allows WebSocket
  * - frame-ancestors prevents embedding
  * - default-src fallback behavior

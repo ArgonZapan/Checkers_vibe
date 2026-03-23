@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 
 // ── CSP from server/index.js ────────────────────────────────────────────────
 
-const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; frame-ancestors 'none'";
+const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' wss:; frame-ancestors 'none'";
 
 /**
  * Parse CSP string into directive map.
