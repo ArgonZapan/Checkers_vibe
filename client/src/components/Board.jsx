@@ -177,8 +177,8 @@ function Board({
         const e = empties[i];
         if (e.color === np.color && e.king === np.king) {
           animOffsets[`piece-${np.r}-${np.c}`] = {
-            x: (np.c - e.c) * CELL_SIZE,
-            y: (np.r - e.r) * CELL_SIZE,
+            x: (e.c - np.c) * CELL_SIZE,
+            y: (e.r - np.r) * CELL_SIZE,
           };
           empties.splice(i, 1);
           break;
@@ -323,7 +323,7 @@ function Board({
             : undefined;
 
           _pieces.push(
-            <g key={pieceKey} onClick={() => onCellClick(row, col)} transform={pieceTransform} style={{ cursor: 'pointer' }} role="button" tabIndex={0} aria-label={`${isWhite ? 'White' : 'Black'}${piece.king ? ' king' : ' piece'} at ${String.fromCharCode(97 + col)}${8 - row}`} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCellClick(row, col); } }}>
+            <g key={pieceKey} className="piece" onClick={() => onCellClick(row, col)} transform={pieceTransform} style={{ cursor: 'pointer' }} role="button" tabIndex={0} aria-label={`${isWhite ? 'White' : 'Black'}${piece.king ? ' king' : ' piece'} at ${String.fromCharCode(97 + col)}${8 - row}`} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCellClick(row, col); } }}>
               <circle
                 cx={px}
                 cy={py}
