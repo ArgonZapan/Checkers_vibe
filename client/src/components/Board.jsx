@@ -215,6 +215,9 @@ function Board({
     // Determine board to display: animBoard during multi-capture, normal board otherwise
     const displayBoard = (animStep >= 0 && animBoard) ? animBoard : board;
 
+    // Build Set for O(1) valid-move lookup instead of 64*len comparisons per render (#35)
+    const validTargets = new Set(legalMoves.map(m => `${m.to[0]},${m.to[1]}`));
+
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
         const x = col * CELL_SIZE;
@@ -223,7 +226,7 @@ function Board({
         const isSelected = selected && selected[0] === row && selected[1] === col;
         const isLastMoveFrom = lastMove && lastMove.from[0] === row && lastMove.from[1] === col;
         const isLastMoveTo = lastMove && lastMove.to[0] === row && lastMove.to[1] === col;
-        const isValidMove = legalMoves.some((m) => m.to[0] === row && m.to[1] === col);
+        const isValidMove = validTargets.has(`${row},${col}`);
 
         let fillColor = isDark ? DARK_COLOR : LIGHT_COLOR;
         let overlay = null;

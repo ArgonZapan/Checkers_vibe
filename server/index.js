@@ -9,6 +9,7 @@ import { saveModel, loadModel } from './ai/model.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG } from '../config.js';
+import { boardFromCpp, boardToCpp } from './boardConvert.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || CONFIG.server.port;
@@ -171,22 +172,7 @@ async function getGameState() {
     cppFetch('/api/game/state'),
     cppFetch('/api/legal-moves'),
   ]);
-  // Normalize board to 2D array
-  let board2D = state.board;
-  if (Array.isArray(state.board) && !Array.isArray(state.board[0])) {
-    board2D = [];
-    for (let r = 0; r < 8; r++) {
-      board2D.push(state.board.slice(r * 8, r * 8 + 8));
-    }
-  }
-  // Convert board ints to piece objects
-  // C++ encoding: 0=empty, 1=white pawn, 2=white king, 3=black pawn, 4=black king
-  const board = board2D.map(row => row.map(val => {
-    if (val === 0) return null;
-    const isWhite = val === 1 || val === 2;
-    const isKing = val === 2 || val === 4;
-    return { color: isWhite ? 'white' : 'black', king: isKing };
-  }));
+  const board = boardFromCpp(state.board);
   // Convert legal moves to client format
   const moves = (legalMoves || []).map(m => ({
     from: m.from,
@@ -482,13 +468,7 @@ async function aiMove(currentState) {
 
     // Predict best move (direct call instead of HTTP self-call)
     const turn = colorToTurn(currentState.turn);
-    // Convert board back to flat int array for model
-    // C++ encoding: 0=empty, 1=white pawn, 2=white king, 3=black pawn, 4=black king
-    const boardFlat = currentState.board.flat().map(p => {
-      if (!p) return 0;
-      if (p.color === 'white') return p.king ? 2 : 1;
-      return p.king ? 4 : 3;
-    });
+    const boardFlat = boardToCpp(currentState.board);
 
     let prediction;
     try {

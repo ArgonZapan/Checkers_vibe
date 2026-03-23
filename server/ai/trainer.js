@@ -4,6 +4,7 @@ import { writeFile, readFile, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG } from '../../config.js';
+import { boardFromCpp } from '../boardConvert.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -571,18 +572,7 @@ export class SelfPlay {
       currentSample.reward = calculateReward(prevBoardFlat, nextBoardFlat, turn);
       currentSample.nextState = Array.isArray(newState.board) ? newState.board.flat() : newState.board;
 
-      // Convert board from C++ ints to React objects
-      let board2D = newState.board;
-      if (Array.isArray(newState.board) && !Array.isArray(newState.board[0])) {
-        board2D = [];
-        for (let r = 0; r < 8; r++) {
-          board2D.push(newState.board.slice(r * 8, r * 8 + 8));
-        }
-      }
-      const boardReact = board2D.map(row => row.map(val => {
-        if (val === 0) return null;
-        return { color: (val === 1 || val === 2) ? 'white' : 'black', king: (val === 2 || val === 4) };
-      }));
+      const boardReact = boardFromCpp(newState.board);
 
       const turnColor = newState.turn === 1 || newState.turn === 'white' ? 'white' : 'black';
       this.io?.emit('state', {
