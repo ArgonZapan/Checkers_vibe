@@ -19,6 +19,7 @@ const BUFFER_FILE = path.join(__dirname, '..', 'data', 'buffer.json');
 const app = express();
 app.set('trust proxy', false); // SEC: prevent IP spoofing via X-Forwarded-For
 app.disable('X-Powered-By'); // SEC-001: prevent framework disclosure
+app.set('trust proxy', false); // SEC-002: prevent X-Forwarded-For spoofing (no proxy in front)
 const httpServer = createServer(app);
 const io = new SocketIO(httpServer, {
   cors: { origin: CONFIG.server.corsOrigin || 'http://localhost:3000' }
@@ -40,6 +41,7 @@ app.use((_req, res, next) => {
 const _rateLimitMap = new Map();
 const RATE_LIMIT_WINDOW_MS = 60_000; // 1 min
 const RATE_LIMIT_MAX = 120; // 120 req/min per IP
+const RATE_LIMIT_MAX_ENTRIES = 10_000;
 
 // Periodic cleanup of expired rate limit entries to prevent unbounded memory growth
 setInterval(() => {
@@ -58,8 +60,6 @@ setInterval(() => {
     }
   }
 }, RATE_LIMIT_WINDOW_MS);
-
-const RATE_LIMIT_MAX_ENTRIES = 10_000;
 
 app.use((req, res, next) => {
   const ip = req.ip || req.socket.remoteAddress;
