@@ -142,10 +142,15 @@ app.post('/api/ai/predict', async (req, res) => {
         }
       }
     }
+    // Compute canonical policyIndex for each legal move (predict() uses it for policy masking)
+    const movesWithPolicy = legalMoves.map(m => ({
+      ...m,
+      policyIndex: computePolicyIndex(m.from, m.to),
+    }));
     const model = turn === 1 ? trainer.modelWhite : trainer.modelBlack;
     if (!model) return res.status(503).json({ error: 'Model not initialized' });
 
-    const result = await predict(model, board, legalMoves, turn);
+    const result = await predict(model, board, movesWithPolicy, turn);
     res.json(result);
   } catch (err) {
     console.error('[AI] Predict error:', err.message);

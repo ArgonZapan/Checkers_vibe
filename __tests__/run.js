@@ -89,6 +89,7 @@ import { runHunterAlphaBoardconvertNanTests } from './hunter-alpha-boardconvert-
 import { runHunterAlphaRateLimitCleanupTests } from './hunter-alpha-rate-limit-cleanup.test.js';
 import { runHunterAlphaSelfplayMethodsTests } from './hunter-alpha-selfplay-methods.test.js';
 import { runHunterAlphaProxyFilterTests } from './hunter-alpha-proxy-filter.test.js';
+import { runHunterSub003CoverageTests } from './hunter-sub-003-coverage.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -176,6 +177,7 @@ const suites = [
   { name: 'hunterAlphaRateLimitCleanup', run: runHunterAlphaRateLimitCleanupTests },
   { name: 'hunterAlphaSelfplayMethods', run: runHunterAlphaSelfplayMethodsTests },
   { name: 'hunterAlphaProxyFilter', run: runHunterAlphaProxyFilterTests },
+  { name: 'hunterSub003Coverage', run: runHunterSub003CoverageTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;

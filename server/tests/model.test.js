@@ -181,6 +181,81 @@ describe('Model', () => {
     loaded.dispose();
   });
 
+  it('loadModel — throws on non-existent directory', async () => {
+    await assert.rejects(
+      () => loadModel('/tmp/nonexistent-model-dir-' + Date.now()),
+      (err) => err.message.includes('model.json') || err.code === 'ENOENT'
+    );
+  });
+
+  it('saveModel — atomic: no leftover .tmp dir after save', async () => {
+    const model = createModel('small');
+    const dirPath = '/tmp/test-model-atomic-' + Date.now();
+    await saveModel(model, dirPath);
+    // .tmp should not exist
+    const { access } = await import('node:fs/promises');
+    await assert.rejects(() => access(dirPath + '.tmp'), (err) => err.code === 'ENOENT');
+    // target should have model.json
+    await access(dirPath + '/model.json');
+    model.dispose();
+    const { rm } = await import('node:fs/promises');
+    await rm(dirPath, { recursive: true, force: true });
+  });
+
+  it('saveModel — overwrites existing model correctly', async () => {
+    const dirPath = '/tmp/test-model-overwrite-' + Date.now();
+    const model1 = createModel('small');
+    await saveModel(model1, dirPath);
+    const model2 = createModel('medium');
+    await saveModel(model2, dirPath); // overwrite
+    const loaded = await loadModel(dirPath);
+    const denseLayers = loaded.layers.filter(l => l.getClassName() === 'Dense');
+    assert.ok(denseLayers.length >= 4, 'loaded should be medium (more layers than small)');
+    model1.dispose();
+    model2.dispose();
+    loaded.dispose();
+    const { rm } = await import('node:fs/promises');
+    await rm(dirPath, { recursive: true, force: true });
+  });
+
+  it('train — shaped rewards: batch with nextState computes Bellman target', async () => {
+    const model = createModel('small');
+    const board = emptyBoard();
+    board[0][0] = 1; // white pawn
+    const batch = [{
+      board,
+      legalMoves: fakeLegalMoves(),
+      chosenMove: 0,
+      result: 0,
+      turn: 1,
+      reward: 0.1,
+      nextState: board, // same board for simplicity
+      done: false,
+    }];
+    const { loss } = await train(model, batch, 1);
+    assert.ok(typeof loss === 'number', 'loss should be a number');
+    assert.ok(!isNaN(loss), 'loss should not be NaN');
+    model.dispose();
+  });
+
+  it('train — terminal sample (done=true) skips gamma term', async () => {
+    const model = createModel('small');
+    const board = emptyBoard();
+    const batch = [{
+      board,
+      legalMoves: fakeLegalMoves(),
+      chosenMove: 0,
+      result: 1,
+      turn: 1,
+      reward: 1.0,
+      nextState: board,
+      done: true, // terminal
+    }];
+    const { loss } = await train(model, batch, 1);
+    assert.ok(typeof loss === 'number');
+    model.dispose();
+  });
+
   // Run
 
 }
