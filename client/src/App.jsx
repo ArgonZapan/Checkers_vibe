@@ -101,7 +101,7 @@ export default function App() {
     legalMovesRef.current = legalMoves;
     modeRef.current = mode;
     gameOverRef.current = gameOver;
-  });
+  }, [board, turn, selected, legalMoves, mode, gameOver]);
 
   useEffect(() => {
     const s = io('/', {
@@ -420,6 +420,9 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <h1>♟ Checkers AI</h1>
+        <span style={{ fontSize: '0.75rem', color: connected ? 'var(--green)' : 'var(--red)' }} role="status" aria-live="polite">
+          {connected ? '🟢 Online' : '🔴 Offline — reconnecting...'}
+        </span>
       </header>
       <div className="game-layout">
         <div className="game-main">

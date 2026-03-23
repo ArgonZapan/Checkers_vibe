@@ -423,12 +423,31 @@ function Board({
         })()}
       </svg>
       {gameOver && (
-        <div className="game-over-overlay" role="dialog" aria-modal="true" aria-label="Game over">
+        <div
+          className="game-over-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Game over"
+          onKeyDown={(e) => {
+            if (e.key === 'Tab') {
+              const overlay = e.currentTarget;
+              const focusable = overlay.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+              if (focusable.length === 0) return;
+              const first = focusable[0];
+              const last = focusable[focusable.length - 1];
+              if (e.shiftKey) {
+                if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+              } else {
+                if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+              }
+            }
+          }}
+        >
           <div className="game-over-text">
             <h2 className={winner === 'draw' ? 'winner-draw-text' : winner === 'white' ? 'winner-white-text' : 'winner-black-text'}>
               {winner === 'draw' ? '🤝 Remis' : winner === 'white' ? '⚪ Białe wygrywają!' : '⚫ Czarne wygrywają!'}
             </h2>
-            <button className="btn-primary" onClick={onReset} style={{ marginTop: '1rem' }}>
+            <button className="btn-primary" onClick={onReset} style={{ marginTop: '1rem' }} autoFocus>
               🔄 Nowa gra
             </button>
           </div>
@@ -446,7 +465,6 @@ function areEqual(prevProps, nextProps) {
   if (prevProps.selected?.[0] !== nextProps.selected?.[0] || prevProps.selected?.[1] !== nextProps.selected?.[1]) return false;
   if (prevProps.board !== nextProps.board) return false;
   if (prevProps.legalMoves !== nextProps.legalMoves) return false;
-  if (prevProps.legalMoves?.length !== nextProps.legalMoves?.length) return false;
   if (prevProps.lastMove !== nextProps.lastMove) return false;
   if (prevProps.path !== nextProps.path) return false;
   if (prevProps.captures?.length !== nextProps.captures?.length) return false;

@@ -4,14 +4,16 @@ import React, { useRef, useEffect, useCallback } from 'react';
 function drawLossChart(canvas, data) {
   if (!canvas) return;
   const container = canvas.parentElement;
-  if (container) {
-    canvas.width = container.clientWidth;
-  }
-  canvas.height = 100;
+  const dpr = window.devicePixelRatio || 1;
+  const w = container ? container.clientWidth : 300;
+  const h = 100;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
 
   const ctx = canvas.getContext('2d');
-  const w = canvas.width;
-  const h = canvas.height;
+  ctx.scale(dpr, dpr);
 
   ctx.clearRect(0, 0, w, h);
 
