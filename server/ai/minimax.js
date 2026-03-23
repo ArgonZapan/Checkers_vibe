@@ -31,8 +31,8 @@ function evaluate(flatBoard, turn) {
     let posBonus = 0;
     if (val === 1 || val === 3) {
       // Pawn: advance bonus + center bonus
-      // White advances toward row 0, black toward row 7
-      const advance = turn === 1 ? (7 - row) : row;
+      // White advances toward row 7, black toward row 0
+      const advance = turn === 1 ? row : (7 - row);
       posBonus = advance * 0.05;
       if (col >= 2 && col <= 5 && row >= 2 && row <= 5) posBonus += 0.1;
     } else {
@@ -83,10 +83,10 @@ function applyMove(board, move, turn) {
   newBoard[toIdx] = piece;
 
   // Promotion: pawn reaches last row
-  // White starts rows 5-7, promotes at row 0; Black starts rows 0-2, promotes at row 7
+  // White starts rows 0-2, promotes at row 7; Black starts rows 5-7, promotes at row 0
   const isPawn = piece === 1 || piece === 3;
   if (isPawn) {
-    if ((turn === 1 && toRow === 0) || (turn === -1 && toRow === 7)) {
+    if ((turn === 1 && toRow === 7) || (turn === -1 && toRow === 0)) {
       newBoard[toIdx] = turn === 1 ? 2 : 4; // promote to king
     }
   }
@@ -123,11 +123,11 @@ function generateLegalMoves(board, turn) {
     // Check all 4 diagonal directions for captures
     for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
       // Pawns can only capture forward (unless king)
-      // White starts rows 5-7, moves forward = decreasing row (toward row 0)
-      // Black starts rows 0-2, moves forward = increasing row (toward row 7)
+      // White starts rows 0-2, forward = increasing row (toward row 7)
+      // Black starts rows 5-7, forward = decreasing row (toward row 0)
       if (!isKing) {
-        if (isWhiteTurn && dr > 0) continue; // white skips downward (captures upward)
-        if (!isWhiteTurn && dr < 0) continue; // black skips upward (captures downward)
+        if (isWhiteTurn && dr < 0) continue; // white skips upward (captures downward)
+        if (!isWhiteTurn && dr > 0) continue; // black skips downward (captures upward)
       }
 
       // Find jump targets for simple captures
@@ -176,11 +176,11 @@ function generateLegalMoves(board, turn) {
 
     for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
       // Pawns can only move forward
-      // White starts rows 5-7, moves forward = decreasing row (toward row 0)
-      // Black starts rows 0-2, moves forward = increasing row (toward row 7)
+      // White starts rows 0-2, forward = increasing row (toward row 7)
+      // Black starts rows 5-7, forward = decreasing row (toward row 0)
       if (!isKing) {
-        if (isWhiteTurn && dr > 0) continue; // white skips downward
-        if (!isWhiteTurn && dr < 0) continue; // black skips upward
+        if (isWhiteTurn && dr < 0) continue; // white skips upward
+        if (!isWhiteTurn && dr > 0) continue; // black skips downward
       }
 
       const newR = row + dr, newC = col + dc;
@@ -215,10 +215,10 @@ function _extendCapture(board, cap, turn, result) {
 
   for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
     // Pawns can only capture forward
-    // White: forward = decreasing row (toward row 0); Black: forward = increasing row (toward row 7)
+    // White: forward = increasing row (toward row 7); Black: forward = decreasing row (toward row 0)
     if (!isKing) {
-      if (isWhiteTurn && dr > 0) continue; // white skips downward
-      if (!isWhiteTurn && dr < 0) continue; // black skips upward
+      if (isWhiteTurn && dr < 0) continue; // white skips upward
+      if (!isWhiteTurn && dr > 0) continue; // black skips downward
     }
 
     const adjR = landR + dr, adjC = landC + dc;

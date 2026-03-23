@@ -274,6 +274,10 @@ export async function predict(model, boardArray, legalMoves, turn = 1) {
       cumulative += normalizedProbs[idx];
       if (r <= cumulative) { bestIdx = idx; break; }
     }
+    // Guard: if r == 1.0 and floating-point cumulative < 1.0, loop never triggers
+    if (bestIdx === legalIndices[0] && r > cumulative) {
+      bestIdx = legalIndices[legalIndices.length - 1];
+    }
 
     // Return the full move object from legalMoves, not just the policy index.
     // bestIdx is a canonical policy vector index (0-127), not an array index.
