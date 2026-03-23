@@ -229,6 +229,9 @@ app.post('/api/ai/reset', async (_req, res) => {
 });
 
 app.post('/api/ai/restart', async (req, res) => {
+  if (!req.body || typeof req.body !== 'object') {
+    return res.status(400).json({ error: 'Bad request: expected JSON body' });
+  }
   const { side = 'both' } = req.body;
   if (!['white', 'black', 'both'].includes(side)) {
     return res.status(400).json({ error: 'side must be white|black|both' });

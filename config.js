@@ -101,3 +101,6 @@ export const CONFIG = {
   },
 
 };
+
+// Freeze AI strategies to prevent runtime mutation
+Object.freeze(CONFIG.ai.strategies);
