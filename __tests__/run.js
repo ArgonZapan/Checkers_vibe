@@ -107,6 +107,10 @@ import { runIssues140to143ExtraRegressionTests } from './issues140to143-extra-re
 import { runMinimaxDirectionTests } from './hunter-sub-minimax-direction.test.js';
 import { runHunterAlphaV3RegressionTests } from './hunter-alpha-v3-regression.test.js';
 import { runBoardconvertRoundtripTests } from './hunter-sub-boardconvert-roundtrip.test.js';
+import { runWsSetParamsFullTests } from './hunter-v3-ws-setparams-full.test.js';
+import { runAutoSaveLockEdgeTests } from './hunter-v3-autosave-lock-edge.test.js';
+import { runBoardConvertExoticTests } from './hunter-v3-boardconvert-exotic.test.js';
+import { runWsHandlerEdgeTests } from './hunter-v3-ws-handler-edge.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -212,6 +216,10 @@ const suites = [
   { name: 'issues140to143ExtraRegression', run: runIssues140to143ExtraRegressionTests },
   { name: 'hunterAlphaV3Regression', run: runHunterAlphaV3RegressionTests },
   { name: 'boardconvertRoundtrip', run: runBoardconvertRoundtripTests },
+  { name: 'wsSetParamsFull', run: runWsSetParamsFullTests },
+  { name: 'autoSaveLockEdge', run: runAutoSaveLockEdgeTests },
+  { name: 'boardConvertExotic', run: runBoardConvertExoticTests },
+  { name: 'wsHandlerEdge', run: runWsHandlerEdgeTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
