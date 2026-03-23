@@ -280,6 +280,7 @@ export class SelfPlay {
       draws: 0,
       lastLoss: null,
       epsilonWhite: this.epsilonWhite,
+      epsilonBlack: this.epsilonBlack,
     };
 
     // Race condition guard (#133)
@@ -430,6 +431,7 @@ export class SelfPlay {
     this.epsilonWhite = CONFIG.ai.defaultEpsilon;
     this.epsilonBlack = CONFIG.ai.defaultEpsilon;
     this.stats.epsilonWhite = CONFIG.ai.defaultEpsilon;
+    this.stats.epsilonBlack = CONFIG.ai.defaultEpsilon;
 
     // 5. Create fresh models
     this.modelWhite = this._replaceModel(this.modelWhite, { ...this.modelParams });

@@ -292,9 +292,9 @@ export default function App() {
     socketRef.current?.emit('reset');
   }, []);
 
-  const handleMove = useCallback((from, to) => {
+  const handleMove = useCallback((from, to, captures) => {
     if (gameOverRef.current) return;
-    socketRef.current?.emit('move', { from, to });
+    socketRef.current?.emit('move', { from, to, captures });
     setSelected(null);
     setLegalMoves([]);
   }, []);
@@ -313,7 +313,9 @@ export default function App() {
         (m) => m.to[0] === row && m.to[1] === col
       );
       if (isLegal) {
-        handleMove(selectedRef.current, [row, col]);
+        // Find the matching legal move to include captures for disambiguation
+        const matchingMove = legalMoves.find(m => m.to[0] === row && m.to[1] === col);
+        handleMove(selectedRef.current, [row, col], matchingMove?.captures);
         return;
       }
     }

@@ -169,16 +169,8 @@ app.post('/api/ai/params', (req, res) => {
   if (networkSize != null && !['small', 'medium', 'large'].includes(networkSize)) {
     return res.status(400).json({ error: 'networkSize must be small|medium|large' });
   }
+  // trainer.setParams() already recreates models when networkSize changes via _replaceModel
   trainer.setParams(epsilon, networkSize, side);
-  // Recreate models when network size changes (setParams stores size but doesn't recreate)
-  if (networkSize != null) {
-    if (side === 'white' || side === 'both') {
-      trainer.modelWhite = createModel({ ...trainer.modelParams });
-    }
-    if (side === 'black' || side === 'both') {
-      trainer.modelBlack = createModel({ ...trainer.modelParams });
-    }
-  }
   io.emit('paramsChange', { epsilon, networkSize, side });
   res.json({ ok: true, ...trainer.getStatus() });
 });
@@ -584,8 +576,12 @@ io.on('connection', async (socket) => {
       trainer.stop();
       // 2. Increment params version to invalidate in-flight _playGame (#133)
       trainer.paramsVersion++;
-      // 3. Update params
+      // 3. Update params — also track networkSize so status reports correct value
       trainer.setModelParams(newParams);
+      if (newParams.networkSize != null) {
+        trainer.networkSizeWhite = newParams.networkSize;
+        trainer.networkSizeBlack = newParams.networkSize;
+      }
       // 4. Create fresh models with new architecture
       trainer.modelWhite = createModel({ ...trainer.modelParams });
       trainer.modelBlack = createModel({ ...trainer.modelParams });
