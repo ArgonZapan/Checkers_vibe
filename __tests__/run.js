@@ -72,6 +72,10 @@ import { runPredictPolicyIndexTests } from './predictPolicyIndex.test.js';
 import { runBoardRoundTripTests } from './boardRoundTrip.test.js';
 import { runAutoSaveRaceConditionTests } from './autoSaveRaceCondition.test.js';
 import { runSecurityFixesTests } from './securityFixes.test.js';
+import { runEpsilonValidationServerTests } from './epsilonValidationServer.test.js';
+import { runAutoSaveDirtySnapshotTests } from './autoSaveDirtySnapshot.test.js';
+import { runCspCompletenessTests } from './cspCompleteness.test.js';
+import { runWsHandlerInputGapsTests } from './wsHandlerInputGaps.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -142,6 +146,10 @@ const suites = [
   { name: 'boardRoundTrip', run: runBoardRoundTripTests },
   { name: 'autoSaveRaceCondition', run: runAutoSaveRaceConditionTests },
   { name: 'securityFixes', run: runSecurityFixesTests },
+  { name: 'epsilonValidationServer', run: runEpsilonValidationServerTests },
+  { name: 'autoSaveDirtySnapshot', run: runAutoSaveDirtySnapshotTests },
+  { name: 'cspCompleteness', run: runCspCompletenessTests },
+  { name: 'wsHandlerInputGaps', run: runWsHandlerInputGapsTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;

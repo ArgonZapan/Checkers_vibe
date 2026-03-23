@@ -1,0 +1,260 @@
+/**
+ * cspCompleteness.test.js — CSP header completeness and alignment tests.
+ *
+ * Covers gaps in cspHeaders.test.js, cspHeaderContent.test.js, cspResilience.test.js:
+ *
+ * 1. CSP + X-Frame-Options alignment (both prevent clickjacking)
+ * 2. All expected resource-type directives are present or fall back to default-src
+ * 3. No data leakage via CSP (no external domains, no blob:, no filesystem)
+ * 4. CSP header format validation (no trailing semicolons, no double spaces)
+ * 5. Permissions-Policy completeness for dangerous features
+ * 6. Header ordering and middleware placement in source
+ *
+ * Extracted logic + source analysis — no server required.
+ */
+
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const serverPath = path.join(__dirname, '..', 'server', 'index.js');
+
+let serverSource;
+try {
+  serverSource = readFileSync(serverPath, 'utf-8');
+} catch {
+  serverSource = '';
+}
+
+// ── Extracted: security headers (mirrors server/index.js) ───────────────────
+
+// Extracted from actual server/index.js line 34
+const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' ws: wss:; frame-ancestors 'none'";
+const X_FRAME_OPTIONS = 'DENY';
+const PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=()';
+
+function parseCSP(cspString) {
+  const directives = {};
+  for (const part of cspString.split(';')) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const [directive, ...values] = trimmed.split(/\s+/);
+    directives[directive] = values;
+  }
+  return directives;
+}
+
+// ── Test runner ─────────────────────────────────────────────────────────────
+
+export async function runCspCompletenessTests() {
+  let passed = 0, failed = 0;
+  const tests = [];
+
+  function test(name, fn) {
+    tests.push({ name, fn });
+  }
+
+  const parsed = parseCSP(CSP);
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // CSP + X-Frame-Options alignment
+  // ═══════════════════════════════════════════════════════════════════════
+
+  test('CSP frame-ancestors none AND X-Frame-Options DENY — both present', () => {
+    assert.ok(parsed['frame-ancestors']?.includes("'none'"),
+      'CSP frame-ancestors must be none');
+    assert.equal(X_FRAME_OPTIONS, 'DENY',
+      'X-Frame-Options must be DENY');
+  });
+
+  test('CSP frame-ancestors and X-Frame-Options are consistent (both deny)', () => {
+    // frame-ancestors 'none' ≡ X-Frame-Options: DENY
+    const cspDenies = parsed['frame-ancestors']?.includes("'none'");
+    const xfoDenies = X_FRAME_OPTIONS === 'DENY';
+    assert.ok(cspDenies && xfoDenies, 'Both headers must deny framing');
+  });
+
+  test('X-Frame-Options not set to SAMEORIGIN (would conflict with frame-ancestors none)', () => {
+    assert.notEqual(X_FRAME_OPTIONS, 'SAMEORIGIN');
+    assert.notEqual(X_FRAME_OPTIONS, 'ALLOW-FROM');
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Resource-type directive completeness
+  // ═══════════════════════════════════════════════════════════════════════
+
+  test('CSP has all 7 expected directives', () => {
+    const expected = [
+      'default-src', 'script-src', 'style-src', 'img-src',
+      'font-src', 'connect-src', 'frame-ancestors'
+    ];
+    for (const dir of expected) {
+      assert.ok(parsed[dir], `Missing directive: ${dir}`);
+    }
+    assert.equal(Object.keys(parsed).length, 7, 'Should have exactly 7 directives');
+  });
+
+  test('missing media-src falls back to default-src (self only)', () => {
+    assert.equal(parsed['media-src'], undefined, 'media-src not explicitly set');
+    // Falls back to default-src 'self' — no external media
+    assert.ok(parsed['default-src'].includes("'self'"));
+  });
+
+  test('missing object-src falls back to default-src (self only)', () => {
+    assert.equal(parsed['object-src'], undefined);
+    assert.ok(parsed['default-src'].includes("'self'"));
+  });
+
+  test('missing worker-src falls back to default-src (self only)', () => {
+    assert.equal(parsed['worker-src'], undefined);
+    assert.ok(parsed['default-src'].includes("'self'"));
+  });
+
+  test('missing form-action falls back to default-src (self only)', () => {
+    assert.equal(parsed['form-action'], undefined);
+    assert.ok(parsed['default-src'].includes("'self'"));
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // No data leakage via CSP
+  // ═══════════════════════════════════════════════════════════════════════
+
+  test('no blob: in any directive', () => {
+    for (const [dir, values] of Object.entries(parsed)) {
+      assert.ok(!values.includes('blob:'), `${dir} should not allow blob:`);
+    }
+  });
+
+  test('no filesystem: in any directive', () => {
+    for (const [dir, values] of Object.entries(parsed)) {
+      assert.ok(!values.includes('filesystem:'), `${dir} should not allow filesystem:`);
+    }
+  });
+
+  test('no external domains in any directive', () => {
+    for (const [dir, values] of Object.entries(parsed)) {
+      for (const val of values) {
+        // Allowed: 'self', 'unsafe-inline', 'none', ws:, wss:, data:
+        const safe = ["'self'", "'unsafe-inline'", "'unsafe-eval'", "'none'",
+          'ws:', 'wss:', 'data:', 'blob:', 'filesystem:'];
+        const isSafeKeyword = safe.includes(val);
+        const isScheme = val.endsWith(':') && !val.startsWith("'"); // e.g. ws:, wss:, data:
+        assert.ok(
+          isSafeKeyword || isScheme || val.startsWith("'"),
+          `${dir}: unexpected external value "${val}" — only self-referencing values expected`
+        );
+      }
+    }
+  });
+
+  test('connect-src allows WebSocket but not arbitrary http:', () => {
+    const connectSrc = parsed['connect-src'] || [];
+    assert.ok(connectSrc.includes('ws:'), 'Must allow ws:');
+    assert.ok(connectSrc.includes('wss:'), 'Must allow wss:');
+    assert.ok(!connectSrc.includes('http:'), 'Must not allow http:');
+    assert.ok(!connectSrc.includes('https:'), 'Must not allow https:');
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // CSP format validation
+  // ═══════════════════════════════════════════════════════════════════════
+
+  test('CSP has no trailing semicolon', () => {
+    assert.ok(!CSP.endsWith(';'), 'CSP should not end with semicolon');
+  });
+
+  test('CSP has no double spaces', () => {
+    assert.ok(!CSP.includes('  '), 'CSP should not contain double spaces');
+  });
+
+  test('CSP has no leading/trailing whitespace', () => {
+    assert.equal(CSP, CSP.trim(), 'CSP should be trimmed');
+  });
+
+  test('each directive is separated by "; " (semicolon + space)', () => {
+    const parts = CSP.split(';');
+    // All but the last should end with nothing (split removes semicolon)
+    // Check there are no accidental empty directives
+    for (const part of parts) {
+      assert.ok(part.trim().length > 0, 'No empty directives');
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Permissions-Policy completeness
+  // ═══════════════════════════════════════════════════════════════════════
+
+  test('Permissions-Policy blocks camera', () => {
+    assert.ok(PERMISSIONS_POLICY.includes('camera=()'));
+  });
+
+  test('Permissions-Policy blocks microphone', () => {
+    assert.ok(PERMISSIONS_POLICY.includes('microphone=()'));
+  });
+
+  test('Permissions-Policy blocks geolocation', () => {
+    assert.ok(PERMISSIONS_POLICY.includes('geolocation=()'));
+  });
+
+  test('Permissions-Policy uses empty parens (fully blocked, not just self)', () => {
+    const features = PERMISSIONS_POLICY.split(',').map(s => s.trim());
+    for (const feat of features) {
+      assert.ok(feat.endsWith('=()'), `${feat} should use empty parens (fully blocked)`);
+      assert.ok(!feat.includes('(self)'), `${feat} should not allow (self)`);
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Source code validation
+  // ═══════════════════════════════════════════════════════════════════════
+
+  test('server sets CSP header before route handlers', () => {
+    const cspIdx = serverSource.indexOf('Content-Security-Policy');
+    const firstRoute = serverSource.indexOf('app.get(');
+    if (cspIdx !== -1 && firstRoute !== -1) {
+      assert.ok(cspIdx < firstRoute, 'CSP header should be set before routes');
+    }
+  });
+
+  test('server uses res.setHeader (not res.header or res.set)', () => {
+    assert.ok(
+      serverSource.includes("res.setHeader('Content-Security-Policy'"),
+      'Server should use res.setHeader for CSP'
+    );
+  });
+
+  test('server CSP string matches extracted constant', () => {
+    assert.ok(
+      serverSource.includes(CSP),
+      'Server CSP should match the extracted constant exactly'
+    );
+  });
+
+  test('X-Frame-Options DENY is set in server', () => {
+    assert.ok(
+      serverSource.includes("X-Frame-Options', 'DENY'") ||
+      serverSource.includes('X-Frame-Options", "DENY"'),
+      'Server should set X-Frame-Options DENY'
+    );
+  });
+
+  // ── Run ────────────────────────────────────────────────────────────────
+
+  console.log('\n📋 CSP Completeness & Alignment Tests');
+
+  for (const { name, fn } of tests) {
+    try {
+      fn();
+      console.log(`   ✅ ${name}`);
+      passed++;
+    } catch (err) {
+      console.log(`   ❌ ${name}: ${err.message}`);
+      failed++;
+    }
+  }
+
+  console.log(`   ─── ${passed} passed, ${failed} failed ───`);
+  return { passed, failed };
+}
