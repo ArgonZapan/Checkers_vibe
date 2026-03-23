@@ -29,11 +29,12 @@ struct Move {
     Square captures[MAX_CAPTURES]; // zbite pionki
     int numCaptures = 0;
     bool wasKing = false;          // czy ruszający się pionek był damką PRZED ruchem
-    bool capturedKings[MAX_CAPTURES]; // czy zbite pionki były damkami
-    int numCapturedKings = 0;
+    uint16_t capturedKingsMask = 0; // bit i = captures[i] was a king
     Square path[MAX_PATH];         // pozycje pośrednie przy wielobiciu (łącznie z from i to)
     int numPath = 0;
     bool isCapture() const { return numCaptures > 0; }
+    bool capturedKing(int i) const { return (capturedKingsMask >> i) & 1; }
+    void setCapturedKing(int i) { capturedKingsMask |= (1 << i); }
 };
 
 // Bitboard: 64-bit, bit 0 = pole a1, bit 63 = pole h8
