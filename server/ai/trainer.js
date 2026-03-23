@@ -124,17 +124,18 @@ function calcThreat(board, turn) {
 // ── Helper: calcAdvance ──────────────────────────────────────────────────────
 function calcAdvance(prev, next, turn) {
   // Compare total pawn advancement score between boards.
-  // For white: closer to row 0 = more advanced. For black: closer to row 7 = more advanced.
+  // White starts rows 0-2, promotes at row 7 → forward = increasing row
+  // Black starts rows 5-7, promotes at row 0 → forward = decreasing row
   let totalAdvance = 0;
   let prevTotalAdvance = 0;
   for (let i = 0; i < 64; i++) {
     const row = Math.floor(i / 8);
     if (isPawn(next[i], turn)) {
-      const adv = turn === 1 ? (7 - row) / 7 : row / 7;
+      const adv = turn === 1 ? row / 7 : (7 - row) / 7;
       totalAdvance += adv;
     }
     if (isPawn(prev[i], turn)) {
-      const adv = turn === 1 ? (7 - row) / 7 : row / 7;
+      const adv = turn === 1 ? row / 7 : (7 - row) / 7;
       prevTotalAdvance += adv;
     }
   }
@@ -840,6 +841,10 @@ export class SelfPlay {
           // Fallback to random if minimax returns nothing
           const randomIdx = Math.floor(Math.random() * legalMoves.length);
           chosenMove = legalMoves[randomIdx];
+        }
+        // Ensure policyIndex is set for training — without it, policy target is all zeros
+        if (chosenMove && chosenMove.policyIndex == null) {
+          chosenMove = { ...chosenMove, policyIndex: computePolicyIndex(chosenMove.from, chosenMove.to) };
         }
       } else {
         // ── DQN path (existing) ──────────────────────────────────────
