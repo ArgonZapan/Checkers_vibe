@@ -140,6 +140,67 @@ export async function runWsSetSpeedTests() {
     assert.equal(r.valid, false);
   });
 
+  // ── Side-effect consistency (server/index.js behavior) ────────────
+  // Real handler: clamped=0 → aiMoveDelayMs=0, normalModeDelayMs NOT updated
+  //               clamped>0 → both updated
+
+  test('handler simulation: clamped=0 updates aiMoveDelayMs only', () => {
+    const CONFIG = { server: { aiMoveDelayMs: 500, normalModeDelayMs: 500 } };
+    const r = validateSetSpeed(0);
+    assert.equal(r.valid, true);
+    assert.equal(r.clamped, 0);
+    // Simulate real handler side-effect
+    CONFIG.server.aiMoveDelayMs = r.clamped;
+    if (r.clamped > 0) CONFIG.server.normalModeDelayMs = r.clamped;
+    assert.equal(CONFIG.server.aiMoveDelayMs, 0);
+    assert.equal(CONFIG.server.normalModeDelayMs, 500, 'normalModeDelayMs should NOT change when clamped=0');
+  });
+
+  test('handler simulation: clamped=100 updates both', () => {
+    const CONFIG = { server: { aiMoveDelayMs: 500, normalModeDelayMs: 500 } };
+    const r = validateSetSpeed(100);
+    assert.equal(r.valid, true);
+    CONFIG.server.aiMoveDelayMs = r.clamped;
+    if (r.clamped > 0) CONFIG.server.normalModeDelayMs = r.clamped;
+    assert.equal(CONFIG.server.aiMoveDelayMs, 100);
+    assert.equal(CONFIG.server.normalModeDelayMs, 100);
+  });
+
+  test('handler simulation: clamped=10000 updates both', () => {
+    const CONFIG = { server: { aiMoveDelayMs: 0, normalModeDelayMs: 0 } };
+    const r = validateSetSpeed(10000);
+    assert.equal(r.valid, true);
+    CONFIG.server.aiMoveDelayMs = r.clamped;
+    if (r.clamped > 0) CONFIG.server.normalModeDelayMs = r.clamped;
+    assert.equal(CONFIG.server.aiMoveDelayMs, 10000);
+    assert.equal(CONFIG.server.normalModeDelayMs, 10000);
+  });
+
+  test('handler simulation: set to 0 then back to 500 restores normalModeDelayMs', () => {
+    const CONFIG = { server: { aiMoveDelayMs: 300, normalModeDelayMs: 300 } };
+    // Set to 0
+    let r = validateSetSpeed(0);
+    CONFIG.server.aiMoveDelayMs = r.clamped;
+    if (r.clamped > 0) CONFIG.server.normalModeDelayMs = r.clamped;
+    assert.equal(CONFIG.server.aiMoveDelayMs, 0);
+    assert.equal(CONFIG.server.normalModeDelayMs, 300, 'normalModeDelayMs frozen at 300');
+    // Set back to 500
+    r = validateSetSpeed(500);
+    CONFIG.server.aiMoveDelayMs = r.clamped;
+    if (r.clamped > 0) CONFIG.server.normalModeDelayMs = r.clamped;
+    assert.equal(CONFIG.server.aiMoveDelayMs, 500);
+    assert.equal(CONFIG.server.normalModeDelayMs, 500);
+  });
+
+  test('handler simulation: rejected value changes nothing', () => {
+    const CONFIG = { server: { aiMoveDelayMs: 200, normalModeDelayMs: 200 } };
+    const r = validateSetSpeed(-5);
+    assert.equal(r.valid, false);
+    // Real handler would return early — no side effects
+    assert.equal(CONFIG.server.aiMoveDelayMs, 200);
+    assert.equal(CONFIG.server.normalModeDelayMs, 200);
+  });
+
   // ── Run ───────────────────────────────────────────────────────────
 
   console.log('\n📋 WebSocket setSpeed Validation Tests');

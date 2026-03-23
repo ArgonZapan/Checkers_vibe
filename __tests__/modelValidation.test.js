@@ -218,6 +218,112 @@ export async function runModelValidationTests() {
     assert.ok(r.warnings.length >= 4);
   });
 
+  // ── Additional edge cases (hunter-sub-testwriter) ──────────────────
+
+  test('createModel validation: layers=-5 deep negative clamps to 1', () => {
+    const r = validateModelParams({ layers: -5 });
+    assert.equal(r.numLayers, 1);
+    assert.ok(r.warnings.some(w => w.includes('layers')));
+  });
+
+  test('createModel validation: layers=fractional clamps to integer range', () => {
+    const r = validateModelParams({ layers: 2.7 });
+    // 2.7 is between 1 and 5, so no clamping warning — stays as-is
+    assert.ok(r.numLayers >= 1 && r.numLayers <= 5);
+  });
+
+  test('createModel validation: neurons=31 (just below min) clamps to 32', () => {
+    const r = validateModelParams({ neurons: 31 });
+    assert.equal(r.neurons, 32);
+    assert.ok(r.warnings.some(w => w.includes('neurons')));
+  });
+
+  test('createModel validation: neurons=33 (just above min) passes', () => {
+    const r = validateModelParams({ neurons: 33 });
+    assert.equal(r.neurons, 33);
+    assert.ok(!r.warnings.some(w => w.includes('neurons')));
+  });
+
+  test('createModel validation: neurons=511 (just below max) passes', () => {
+    const r = validateModelParams({ neurons: 511 });
+    assert.equal(r.neurons, 511);
+    assert.ok(!r.warnings.some(w => w.includes('neurons')));
+  });
+
+  test('createModel validation: neurons=513 (just above max) clamps to 512', () => {
+    const r = validateModelParams({ neurons: 513 });
+    assert.equal(r.neurons, 512);
+    assert.ok(r.warnings.some(w => w.includes('neurons')));
+  });
+
+  test('createModel validation: lr=-0.001 (negative) clamps to 0.0001', () => {
+    const r = validateModelParams({ lr: -0.001 });
+    assert.ok(Math.abs(r.lr - 0.0001) < 0.00001);
+    assert.ok(r.warnings.some(w => w.includes('lr')));
+  });
+
+  test('createModel validation: lr=0.0001 (exact min boundary) passes', () => {
+    const r = validateModelParams({ lr: 0.0001 });
+    assert.ok(Math.abs(r.lr - 0.0001) < 0.00001);
+    assert.ok(!r.warnings.some(w => w.includes('lr')));
+  });
+
+  test('createModel validation: lr=0.1 (exact max boundary) passes', () => {
+    const r = validateModelParams({ lr: 0.1 });
+    assert.ok(Math.abs(r.lr - 0.1) < 0.0001);
+    assert.ok(!r.warnings.some(w => w.includes('lr')));
+  });
+
+  test('createModel validation: lr=0.1001 (just above max) clamps to 0.1', () => {
+    const r = validateModelParams({ lr: 0.1001 });
+    assert.ok(Math.abs(r.lr - 0.1) < 0.0001);
+  });
+
+  test('createModel validation: dropout=0 (exact min boundary) passes', () => {
+    const r = validateModelParams({ dropout: 0 });
+    assert.equal(r.dropout, 0);
+    assert.ok(!r.warnings.some(w => w.includes('dropout')));
+  });
+
+  test('createModel validation: dropout=0.5 (exact max boundary) passes', () => {
+    const r = validateModelParams({ dropout: 0.5 });
+    assert.ok(Math.abs(r.dropout - 0.5) < 0.001);
+    assert.ok(!r.warnings.some(w => w.includes('dropout')));
+  });
+
+  test('createModel validation: dropout=0.51 (just above max) clamps to 0.5', () => {
+    const r = validateModelParams({ dropout: 0.51 });
+    assert.ok(Math.abs(r.dropout - 0.5) < 0.001);
+    assert.ok(r.warnings.some(w => w.includes('dropout')));
+  });
+
+  test('createModel validation: activation empty string defaults to relu', () => {
+    const r = validateModelParams({ activation: '' });
+    assert.equal(r.activation, 'relu');
+  });
+
+  test('createModel validation: activation null defaults to relu', () => {
+    const r = validateModelParams({ activation: null });
+    assert.equal(r.activation, 'relu');
+  });
+
+  test('createModel validation: layers=0 and neurons=0 both clamp', () => {
+    const r = validateModelParams({ layers: 0, neurons: 0 });
+    assert.equal(r.numLayers, 1);
+    assert.equal(r.neurons, 32);
+    assert.ok(r.warnings.length >= 2);
+  });
+
+  test('createModel validation: defaults used when empty opts', () => {
+    const r = validateModelParams({});
+    assert.equal(r.numLayers, 3);
+    assert.equal(r.neurons, 128);
+    assert.equal(r.activation, 'relu');
+    assert.equal(r.dropout, 0);
+    assert.ok(Math.abs(r.lr - 0.001) < 0.0001);
+    assert.equal(r.warnings.length, 0);
+  });
+
   // ═══════════════════════════════════════════════════════════════════════
   // buildInputArray edge cases
   // ═══════════════════════════════════════════════════════════════════════
