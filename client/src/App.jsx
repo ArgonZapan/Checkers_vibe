@@ -66,6 +66,13 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
 
+  // Cleanup toast timer on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
   const [stats, setStats] = useState({ games: 0, whiteWins: 0, blackWins: 0, draws: 0 });
   const [lossHistory, setLossHistory] = useState([]);
   const [gameHistory, setGameHistory] = useState([]);
@@ -228,6 +235,7 @@ export default function App() {
     });
 
     return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       s.disconnect();
     };
   }, []);

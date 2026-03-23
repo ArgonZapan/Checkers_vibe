@@ -26,10 +26,11 @@ export default function GameControls({
 
   return (
     <div className="controls">
-      <div className="controls-status">
+      <div className="controls-status" aria-live="polite" role="status">
         {!gameOver && (
           <span
             className={`turn-indicator ${turn === 'white' ? 'turn-white' : 'turn-black'}`}
+            aria-label={`Current turn: ${turnLabel}`}
           />
         )}
         {statusText}
