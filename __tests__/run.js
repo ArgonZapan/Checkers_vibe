@@ -77,6 +77,7 @@ import { runAutoSaveDirtySnapshotTests } from './autoSaveDirtySnapshot.test.js';
 import { runCspCompletenessTests } from './cspCompleteness.test.js';
 import { runWsHandlerInputGapsTests } from './wsHandlerInputGaps.test.js';
 import { runRateLimitSecurityTests } from './rateLimitSecurity.test.js';
+import { runHunterSecurityFixesTests } from './hunter-security-fixes.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -152,6 +153,7 @@ const suites = [
   { name: 'cspCompleteness', run: runCspCompletenessTests },
   { name: 'wsHandlerInputGaps', run: runWsHandlerInputGapsTests },
   { name: 'rateLimitSecurity', run: runRateLimitSecurityTests },
+  { name: 'hunterSecurityFixes', run: runHunterSecurityFixesTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
