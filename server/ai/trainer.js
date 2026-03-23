@@ -248,6 +248,7 @@ export class SelfPlay {
       }
     }
     this.stats.epsilonWhite = this.epsilonWhite;
+    this.dirty = true; // params changed (#102)
   }
 
   async resetModel() {
@@ -315,6 +316,7 @@ export class SelfPlay {
       this.stats.lastLoss = null;
       this.epsilonWhite = CONFIG.ai.defaultEpsilon;
     }
+    this.dirty = true; // model restarted (#102)
     this.io?.emit('modelRestart', { side });
     console.log(`[SelfPlay] Model restarted (${side})`);
   }
@@ -442,8 +444,8 @@ export class SelfPlay {
       moveCount++;
       // Get game state and legal moves in parallel
       const [stateRes, lmResInit] = await Promise.all([
-        fetch(`${CPP_BASE}/api/game/state`),
-        fetch(`${CPP_BASE}/api/legal-moves`),
+        cppFetch(`${CPP_BASE}/api/game/state`),
+        cppFetch(`${CPP_BASE}/api/legal-moves`),
       ]);
       if (!stateRes.ok) throw new Error(`Game state failed: ${stateRes.status}`);
       if (!lmResInit.ok) throw new Error(`Legal moves failed: ${lmResInit.status}`);
@@ -553,7 +555,7 @@ export class SelfPlay {
       if (selectedMove.captures && selectedMove.captures.length > 0) {
         moveBody.captures = selectedMove.captures;
       }
-      const moveRes = await fetch(`${CPP_BASE}/api/move`, {
+      const moveRes = await cppFetch(`${CPP_BASE}/api/move`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(moveBody)
@@ -611,6 +613,7 @@ export class SelfPlay {
       const lb = batchBlack.length > 0 ? await train(this.modelBlack, batchBlack, 1) : { loss: 0 };
       const avgLoss = ((lw.loss || 0) + (lb.loss || 0)) / 2;
       this.stats.lastLoss = avgLoss;
+      this.dirty = true; // model trained (#102)
       this.io?.emit('loss', { loss: avgLoss });
     }
 

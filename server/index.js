@@ -320,6 +320,25 @@ io.on('connection', async (socket) => {
 
   // ── Player move (PvAI / PvP) — serialized per-socket to prevent races ───
   socket.on('move', (data) => {
+    // Validate move coordinates
+    const { from, to, captures } = data || {};
+    const isValidCoord = (c) =>
+      Array.isArray(c) && c.length === 2 && typeof c[0] === 'number' && typeof c[1] === 'number'
+      && c[0] >= 0 && c[0] <= 7 && c[1] >= 0 && c[1] <= 7;
+
+    if (!isValidCoord(from)) {
+      socket.emit('error', { message: 'Invalid "from" coordinate — expected [row, col] with values 0-7' });
+      return;
+    }
+    if (!isValidCoord(to)) {
+      socket.emit('error', { message: 'Invalid "to" coordinate — expected [row, col] with values 0-7' });
+      return;
+    }
+    if (captures != null && !Array.isArray(captures)) {
+      socket.emit('error', { message: 'Invalid "captures" — expected an array' });
+      return;
+    }
+
     socket._moveQueue = (socket._moveQueue || Promise.resolve())
       .then(() => handleMove(socket, data))
       .catch(err => console.error('[WS] move error:', err));
@@ -410,10 +429,15 @@ io.on('connection', async (socket) => {
 
   // ── Speed control ──────────────────────────────────────────────────────
   socket.on('setSpeed', (ms) => {
-    CONFIG.server.aiMoveDelayMs = ms;
-    // Also update normalModeDelayMs so the getter stays consistent
-    if (ms > 0) CONFIG.server.normalModeDelayMs = ms;
-    console.log(`[WS] Speed set to ${ms}ms`);
+    // Validate: must be a number >= 0, clamp to max 10s
+    if (typeof ms !== 'number' || !isFinite(ms)) {
+      socket.emit('error', { message: 'Invalid speed — expected a number (ms)' });
+      return;
+    }
+    const clamped = Math.max(0, Math.min(ms, 10000));
+    CONFIG.server.aiMoveDelayMs = clamped;
+    if (clamped > 0) CONFIG.server.normalModeDelayMs = clamped;
+    console.log(`[WS] Speed set to ${clamped}ms`);
   });
 
   // ── Speed mode control ────────────────────────────────────────────────
@@ -531,12 +555,15 @@ let _lastModelSave = 0;
 
 setInterval(async () => {
   if (_saving) return;
+  // Skip save if nothing changed since last save (#102)
+  if (!trainer.dirty) return;
   _saving = true;
   try {
     const now = Date.now();
 
-    // State: every 30s
+    // State: every 30s (only when dirty)
     await trainer.saveState();
+    trainer.dirty = false; // reset after save (#102)
 
     // Buffer: every 2 minutes
     if (now - _lastBufferSave >= 2 * 60 * 1000) {

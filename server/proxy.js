@@ -25,11 +25,14 @@ export function setupProxy(app) {
           }
         },
         proxyReq: (_proxyReq, req) => {
-          console.log(`[Proxy] → ${req.method} ${req.url} → ${CPP_TARGET}`);
+          // Only log non-GET requests to avoid spam during self-play (1000+ requests/game)
+          if (req.method !== 'GET') {
+            console.log(`[Proxy] → ${req.method} ${req.url} → ${CPP_TARGET}`);
+          }
           // Re-serialize body only for methods with body (POST/PUT/PATCH)
           // and only if express.json() already parsed it
           const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
-          if (hasBody && req.body && Object.keys(req.body).length > 0) {
+          if (hasBody && req.body) {
             const bodyData = JSON.stringify(req.body);
             _proxyReq.setHeader('Content-Type', 'application/json');
             _proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));

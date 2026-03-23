@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { CONFIG } from '../../../config.js';
 
 const CELL_SIZE = CONFIG.board.cellSize;
@@ -12,7 +12,7 @@ const SELECTED_COLOR = CONFIG.board.colors.selected;
 const VALID_MOVE_COLOR = CONFIG.board.colors.validMove;
 const VALID_MOVE_DOT_COLOR = CONFIG.board.colors.validDot;
 
-export default function Board({
+function Board({
   board,
   turn,
   onCellClick,

@@ -40,12 +40,11 @@ std::vector<Move> MoveGenerator::generateCaptures(const Board& board, Color colo
     Bitboard pawns = (color == WHITE) ? board.whitePieces : board.blackPieces;
     Bitboard kings = (color == WHITE) ? board.whiteKings : board.blackKings;
 
-    // Single copy for all pieces — multiCapture mutates board in place
-    Board temp = board;
-
     for (int row = 0; row < 8; row++) {
         for (int col = 0; col < 8; col++) {
             if (!(myPieces & squareToMask(row, col))) continue;
+            // Fresh copy per piece — multiCapture mutates board in place
+            Board temp = board;
             if (pawns & squareToMask(row, col)) {
                 auto caps = generatePawnCaptures(temp, row, col, color);
                 allCaptures.insert(allCaptures.end(), caps.begin(), caps.end());
@@ -143,7 +142,8 @@ std::vector<Move> MoveGenerator::generateKingMoves(const Board& board, int row, 
 // Helper: rekurencyjne bicie wielokrotne z oryginalną pozycją startową
 static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
                           Color color, bool isKing, std::vector<Square>& captures,
-                          std::vector<Move>& result, std::vector<Square>& path) {
+                          std::vector<Move>& result, std::vector<Square>& path,
+                          Bitboard capturedMask = 0) {
     Bitboard myPieces = board.pieces(color);
     Bitboard oppPieces = board.pieces((color == WHITE) ? BLACK : WHITE);
     bool foundAny = false;
@@ -166,15 +166,12 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
                 } else if (myPieces & mask) {
                     break;
                 } else if (foundOpp) {
-                    // Sprawdź czy nie zbity już
-                    Square cap(oppR, oppC);
-                    bool already = false;
-                    for (auto& c : captures) {
-                        if (c == cap) { already = true; break; }
-                    }
-                    if (!already) {
+                    // Sprawdź czy nie zbity już — bitboard check zamiast linear search
+                    Bitboard capMask = squareToMask(oppR, oppC);
+                    if (capturedMask & capMask) {
+                        // Already captured this piece, continue searching
+                    } else {
                         // Mutate board in place, save state for rollback
-                        Bitboard capMask = squareToMask(oppR, oppC);
                         Bitboard fromMask = squareToMask(curR, curC);
                         Bitboard toMask = squareToMask(nr, nc);
                         Bitboard savedOpp, savedOppKings, savedMyKings;
@@ -196,10 +193,12 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
                             board.blackKings |= toMask;
                         }
 
-                        captures.push_back(cap);
+                        captures.push_back(Square{oppR, oppC});
                         path.push_back(Square{nr, nc});
+                        capturedMask |= capMask;
                         foundAny = true;
-                        multiCapture(board, origR, origC, nr, nc, color, true, captures, result, path);
+                        multiCapture(board, origR, origC, nr, nc, color, true, captures, result, path, capturedMask);
+                        capturedMask &= ~capMask;
                         path.pop_back();
                         captures.pop_back();
 
