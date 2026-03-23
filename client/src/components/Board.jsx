@@ -177,8 +177,8 @@ function Board({
         const e = empties[i];
         if (e.color === np.color && e.king === np.king) {
           animOffsets[`piece-${np.r}-${np.c}`] = {
-            x: (e.c - np.c) * CELL_SIZE,
-            y: (e.r - np.r) * CELL_SIZE,
+            x: (np.c - e.c) * CELL_SIZE,
+            y: (np.r - e.r) * CELL_SIZE,
           };
           empties.splice(i, 1);
           break;
