@@ -123,10 +123,8 @@ export default function App() {
     s.on('reconnect', () => {
       setConnected(true);
       setReconnectAttempts(0);
-      // Re-subscribe to state on reconnect
-      if (modeRef.current === 'aivai' || modeRef.current === 'pvai') {
-        s.emit('startGame', { mode: modeRef.current });
-      }
+      // Don't re-emit startGame — server preserves game state across reconnects.
+      // Player will see current board state from next state event.
     });
 
     s.on('state', (data) => {

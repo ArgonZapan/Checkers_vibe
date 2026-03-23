@@ -329,11 +329,6 @@ export async function train(model, batch, epochs = 5) {
         nextTensor.dispose();
         if (nextValues) nextValues.dispose();
       }
-
-      nextQValues = new Float32Array(batch.length).fill(0);
-      for (let j = 0; j < withNext.length; j++) {
-        nextQValues[withNextIdx[j]] = nextVals[j];
-      }
     }
   }
 
