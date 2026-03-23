@@ -9,12 +9,12 @@ const EMPTY_BOARD = () => {
   const b = Array.from({ length: 8 }, () => Array(8).fill(null));
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 8; c++) {
-      if ((r + c) % 2 === 1) b[r][c] = { color: 'black', king: false };
+      if ((r + c) % 2 === 1) b[r][c] = { color: 'white', king: false };
     }
   }
   for (let r = 5; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
-      if ((r + c) % 2 === 1) b[r][c] = { color: 'white', king: false };
+      if ((r + c) % 2 === 1) b[r][c] = { color: 'black', king: false };
     }
   }
   return b;
@@ -442,11 +442,6 @@ export default function App() {
             <button className="btn-secondary" onClick={handleStartAivai} style={{ fontSize: '1.2rem', padding: '1rem 2rem' }}>
               🤖 AI vs AI
             </button>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '1rem' }}>
-            <button onClick={() => handleSpeed(0)} className={speed === 0 ? 'btn-primary' : 'btn-secondary'} aria-pressed={speed === 0} aria-label="Speed: Lightning">⚡ Błyskawica</button>
-            <button onClick={() => handleSpeed(100)} className={speed === 100 ? 'btn-primary' : 'btn-secondary'} aria-pressed={speed === 100} aria-label="Speed: Fast">🏃 Szybko</button>
-            <button onClick={() => handleSpeed(350)} className={speed === 350 ? 'btn-primary' : 'btn-secondary'} aria-pressed={speed === 350} aria-label="Speed: Slow">🐢 Wolno</button>
           </div>
           <p style={{ color: 'var(--text-dim)', marginTop: '1rem' }}>
             {connected ? '🟢 Połączono z serwerem' : '🔴 Brak połączenia'}
