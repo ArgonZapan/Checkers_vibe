@@ -19,6 +19,12 @@ import { runTrainerPlayGameTests } from './trainerPlayGame.test.js';
 import { runPolicyIndexTests } from './policyIndex.test.js';
 import { runTrainImportTests } from './trainImport.test.js';
 import { runBoardAreEqualTests } from './boardAreEqual.test.js';
+import { runConfigSpeedHelpersTests } from './configSpeedHelpers.test.js';
+import { runTrainerRewardHelpersTests } from './trainerRewardHelpers.test.js';
+import { runColorTurnConversionTests } from './colorTurnConversion.test.js';
+import { runWsHandlerLogicTests } from './wsHandlerLogic.test.js';
+import { runModelValidationTests } from './modelValidation.test.js';
+import { runTrainerArrayMovesTests } from './trainerArrayMoves.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -36,6 +42,12 @@ const suites = [
   { name: 'policyIndex',         run: runPolicyIndexTests },
   { name: 'trainImport',         run: runTrainImportTests },
   { name: 'boardAreEqual',       run: runBoardAreEqualTests },
+  { name: 'configSpeedHelpers',  run: runConfigSpeedHelpersTests },
+  { name: 'trainerRewardHelpers', run: runTrainerRewardHelpersTests },
+  { name: 'colorTurnConversion', run: runColorTurnConversionTests },
+  { name: 'wsHandlerLogic',      run: runWsHandlerLogicTests },
+  { name: 'modelValidation',     run: runModelValidationTests },
+  { name: 'trainerArrayMoves',   run: runTrainerArrayMovesTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
