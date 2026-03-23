@@ -138,6 +138,9 @@ std::vector<Move> MoveGenerator::generateKingMoves(const Board& board, int row, 
             Move m;
             m.from = Square(row, col);
             m.to = Square(nr, nc);
+            m.path[0] = Square(row, col);
+            m.path[1] = Square(nr, nc);
+            m.numPath = 2;
             moves.push_back(m);
             nr += d[0];
             nc += d[1];
