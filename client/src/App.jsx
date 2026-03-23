@@ -34,6 +34,7 @@ export default function App() {
   const [gameNumber, setGameNumber] = useState(0);
   const [movePath, setMovePath] = useState(null);
   const [speed, setSpeed] = useState(0); // AI move delay in ms
+  const [moveHistory, setMoveHistory] = useState([]);
 
   const handleSpeed = (ms) => {
     setSpeed(ms);
@@ -101,7 +102,22 @@ export default function App() {
       if (data.turn) setTurn(data.turn);
       if (data.gameOver !== undefined) setGameOver(data.gameOver);
       if (data.winner !== undefined) setWinner(data.winner);
-      if (data.lastMove) setLastMove(data.lastMove);
+      if (data.lastMove) {
+        setLastMove(data.lastMove);
+        // Record move in history
+        const from = data.lastMove.from;
+        const to = data.lastMove.to;
+        const isCapture = data.lastMove.captures && data.lastMove.captures.length > 0;
+        setMoveHistory((prev) => {
+          const next = [...prev, {
+            turn: data.turn === 'white' ? 'black' : 'white', // the move was made by the previous turn
+            from: `${String.fromCharCode(97 + from[1])}${8 - from[0]}`,
+            to: `${String.fromCharCode(97 + to[1])}${8 - to[0]}`,
+            capture: isCapture,
+          }];
+          return next.slice(-40); // keep last 40 moves
+        });
+      }
       if (data.path && data.path.length > 2) {
         setMovePath(data.path);
       }
@@ -173,6 +189,7 @@ export default function App() {
     setSelected(null);
     setLegalMoves([]);
     setMovePath(null);
+    setMoveHistory([]);
     socketRef.current?.emit('startGame', { mode: 'pvai' });
   }, []);
 
@@ -186,6 +203,7 @@ export default function App() {
     setSelected(null);
     setLegalMoves([]);
     setMovePath(null);
+    setMoveHistory([]);
     socketRef.current?.emit('startGame', { mode: 'aivai' });
   }, []);
 
@@ -343,6 +361,21 @@ export default function App() {
           />
         </div>
         <div className="game-side">
+          {moveHistory.length > 0 && (
+            <div className="move-history">
+              <h3>📜 Historia ruchów</h3>
+              <ul className="move-list">
+                {moveHistory.map((m, i) => (
+                  <li key={i}>
+                    <span className="move-number">{Math.floor(i / 2) + 1}{i % 2 === 0 ? '.' : '...'}</span>
+                    <span className={m.turn === 'white' ? 'move-white' : 'move-black'}>
+                      {m.capture ? '⚔️' : ''} {m.from}-{m.to}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {mode === 'aivai' && (
             <Dashboard
               stats={stats}
