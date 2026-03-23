@@ -97,6 +97,9 @@ import { runHunterAlphaRewardEdgeTests } from './hunter-alpha-reward-edge.test.j
 import { runHunterAlphaModelTensorTests } from './hunter-alpha-model-tensor.test.js';
 import { runHunterAlphaConfigSpeedEdgeTests } from './hunter-alpha-config-speed-edge.test.js';
 import { runHunterAlphaTrainerStateTests } from './hunter-alpha-trainer-state.test.js';
+import { runHunterAlphaTestMinimax } from './hunter-alpha-test-minimax-import.test.js';
+import { runHunterAlphaTestBoardconvertReal } from './hunter-alpha-test-boardconvert-real.test.js';
+import { runHunterAlphaTestProxyReal } from './hunter-alpha-test-proxy-real.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -192,6 +195,9 @@ const suites = [
   { name: 'hunterAlphaModelTensor', run: runHunterAlphaModelTensorTests },
   { name: 'hunterAlphaConfigSpeedEdge', run: runHunterAlphaConfigSpeedEdgeTests },
   { name: 'hunterAlphaTrainerState', run: runHunterAlphaTrainerStateTests },
+  { name: 'hunterAlphaTestMinimaxReal', run: runHunterAlphaTestMinimax },
+  { name: 'hunterAlphaTestBoardconvertReal', run: runHunterAlphaTestBoardconvertReal },
+  { name: 'hunterAlphaTestProxyReal', run: runHunterAlphaTestProxyReal },
 ];
 
 let totalPassed = 0, totalFailed = 0;
