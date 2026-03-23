@@ -47,9 +47,9 @@ export default function GameControls({
         </button>
       </div>
       <div className="controls-buttons" style={{ marginTop: '0.3rem' }}>
-        <button onClick={() => onSpeed(0)} className={speed === 0 ? 'btn-primary btn-small' : 'btn-secondary btn-small'}>⚡ Błyskawica</button>
-        <button onClick={() => onSpeed(100)} className={speed === 100 ? 'btn-primary btn-small' : 'btn-secondary btn-small'}>🏃 Szybko</button>
-        <button onClick={() => onSpeed(350)} className={speed === 350 ? 'btn-primary btn-small' : 'btn-secondary btn-small'}>🐢 Wolno</button>
+        <button onClick={() => onSpeed(0)} className={speed === 0 ? 'btn-primary btn-small' : 'btn-secondary btn-small'} aria-pressed={speed === 0} aria-label="Speed: Lightning">⚡ Błyskawica</button>
+        <button onClick={() => onSpeed(100)} className={speed === 100 ? 'btn-primary btn-small' : 'btn-secondary btn-small'} aria-pressed={speed === 100} aria-label="Speed: Fast">🏃 Szybko</button>
+        <button onClick={() => onSpeed(350)} className={speed === 350 ? 'btn-primary btn-small' : 'btn-secondary btn-small'} aria-pressed={speed === 350} aria-label="Speed: Slow">🐢 Wolno</button>
       </div>
     </div>
   );

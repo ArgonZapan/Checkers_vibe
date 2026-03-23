@@ -380,9 +380,9 @@ export default function App() {
             </button>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '1rem' }}>
-            <button onClick={() => handleSpeed(0)} className={speed === 0 ? 'btn-primary' : 'btn-secondary'}>⚡ Błyskawica</button>
-            <button onClick={() => handleSpeed(100)} className={speed === 100 ? 'btn-primary' : 'btn-secondary'}>🏃 Szybko</button>
-            <button onClick={() => handleSpeed(350)} className={speed === 350 ? 'btn-primary' : 'btn-secondary'}>🐢 Wolno</button>
+            <button onClick={() => handleSpeed(0)} className={speed === 0 ? 'btn-primary' : 'btn-secondary'} aria-pressed={speed === 0} aria-label="Speed: Lightning">⚡ Błyskawica</button>
+            <button onClick={() => handleSpeed(100)} className={speed === 100 ? 'btn-primary' : 'btn-secondary'} aria-pressed={speed === 100} aria-label="Speed: Fast">🏃 Szybko</button>
+            <button onClick={() => handleSpeed(350)} className={speed === 350 ? 'btn-primary' : 'btn-secondary'} aria-pressed={speed === 350} aria-label="Speed: Slow">🐢 Wolno</button>
           </div>
           <p style={{ color: 'var(--text-dim)', marginTop: '1rem' }}>
             {connected ? '🟢 Połączono z serwerem' : '🔴 Brak połączenia'}
@@ -466,7 +466,7 @@ export default function App() {
             onResetModelParams={handleResetModelParams}
           />
           {toast && (
-            <div className="toast-notification">{toast}</div>
+            <div className="toast-notification" role="alert" aria-live="assertive">{toast}</div>
           )}
         </div>
       </div>

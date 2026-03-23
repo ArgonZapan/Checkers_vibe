@@ -235,22 +235,37 @@ export default function ParamsPanel({
       <h3>⚙️ Parametry AI</h3>
 
       {/* ── Tabs ──────────────────────────────────────────────────────── */}
-      <div className="params-tabs">
+      <div className="params-tabs" role="tablist" aria-label="AI parameters tabs">
         <button
+          role="tab"
           className={`params-tab ${activeTab === 'white' ? 'active' : ''}`}
           onClick={() => setActiveTab('white')}
+          aria-selected={activeTab === 'white'}
+          aria-controls="panel-white"
+          tabIndex={activeTab === 'white' ? 0 : -1}
+          onKeyDown={(e) => { if (e.key === 'ArrowRight') setActiveTab('black'); if (e.key === 'ArrowLeft') setActiveTab('general'); }}
         >
           ⚪ Białe
         </button>
         <button
+          role="tab"
           className={`params-tab ${activeTab === 'black' ? 'active' : ''}`}
           onClick={() => setActiveTab('black')}
+          aria-selected={activeTab === 'black'}
+          aria-controls="panel-black"
+          tabIndex={activeTab === 'black' ? 0 : -1}
+          onKeyDown={(e) => { if (e.key === 'ArrowRight') setActiveTab('general'); if (e.key === 'ArrowLeft') setActiveTab('white'); }}
         >
           ⚫ Czarne
         </button>
         <button
+          role="tab"
           className={`params-tab ${activeTab === 'general' ? 'active' : ''}`}
           onClick={() => setActiveTab('general')}
+          aria-selected={activeTab === 'general'}
+          aria-controls="panel-general"
+          tabIndex={activeTab === 'general' ? 0 : -1}
+          onKeyDown={(e) => { if (e.key === 'ArrowRight') setActiveTab('white'); if (e.key === 'ArrowLeft') setActiveTab('black'); }}
         >
           🔧 Ogólne
         </button>
@@ -311,10 +326,10 @@ export default function ParamsPanel({
             <div className="param-group">
               <h4>📝 Zatwierdź zmiany</h4>
               <div className="apply-buttons">
-                <button className="btn-small btn-apply" onClick={onApplyModelParams}>
+                <button className="btn-small btn-apply" onClick={onApplyModelParams} aria-label="Apply model parameter changes">
                   ✅ Zastosuj zmiany
                 </button>
-                <button className="btn-small btn-reset-defaults" onClick={onResetModelParams}>
+                <button className="btn-small btn-reset-defaults" onClick={onResetModelParams} aria-label="Reset model parameters to defaults">
                   🔄 Resetuj domyślne
                 </button>
               </div>
@@ -324,13 +339,13 @@ export default function ParamsPanel({
             <div className="param-group">
               <h4>🔄 Restart sieci</h4>
               <div className="restart-buttons">
-                <button className="btn-small btn-secondary" onClick={() => onRestart('white')}>
+                <button className="btn-small btn-secondary" onClick={() => onRestart('white')} aria-label="Restart white neural network">
                   Restart ⚪
                 </button>
-                <button className="btn-small btn-secondary" onClick={() => onRestart('black')}>
+                <button className="btn-small btn-secondary" onClick={() => onRestart('black')} aria-label="Restart black neural network">
                   Restart ⚫
                 </button>
-                <button className="btn-small btn-danger" onClick={() => onRestart('both')}>
+                <button className="btn-small btn-danger" onClick={() => onRestart('both')} aria-label="Restart both neural networks">
                   Restart oba
                 </button>
               </div>
@@ -341,11 +356,11 @@ export default function ParamsPanel({
               <h4>🎮 Self-Play</h4>
               <div className="selfplay-buttons">
                 {active ? (
-                  <button className="btn-small btn-danger" onClick={onToggleSelfplay}>
+                  <button className="btn-small btn-danger" onClick={onToggleSelfplay} aria-label="Stop self-play training">
                     ⏹ Stop Self-Play
                   </button>
                 ) : (
-                  <button className="btn-small btn-success" onClick={onToggleSelfplay}>
+                  <button className="btn-small btn-success" onClick={onToggleSelfplay} aria-label="Start self-play training">
                     ▶ Start Self-Play
                   </button>
                 )}

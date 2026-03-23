@@ -233,6 +233,8 @@ function Board({
         const isLastMoveFrom = lastMove && lastMove.from[0] === row && lastMove.from[1] === col;
         const isLastMoveTo = lastMove && lastMove.to[0] === row && lastMove.to[1] === col;
         const isValidMove = validTargets.has(`${row},${col}`);
+        const cellPiece = displayBoard[row][col];
+        const cellLabel = `${String.fromCharCode(97 + col)}${8 - row}${cellPiece ? `, ${cellPiece.color === 'white' ? 'biały' : 'czarny'}${cellPiece.king ? ' król' : ' pionek'}` : ''}`;
 
         let fillColor = isDark ? DARK_COLOR : LIGHT_COLOR;
         let overlay = null;
@@ -260,7 +262,7 @@ function Board({
             style={{ cursor: isDark ? 'pointer' : 'default' }}
             tabIndex={isDark ? 0 : undefined}
             role={isDark ? 'button' : undefined}
-            aria-label={`${String.fromCharCode(97 + col)}${8 - row}`}
+            aria-label={cellLabel}
             pointerEvents="visible"
           />
         );
@@ -404,7 +406,7 @@ function Board({
         })()}
       </svg>
       {gameOver && (
-        <div className="game-over-overlay">
+        <div className="game-over-overlay" role="dialog" aria-modal="true" aria-label="Game over">
           <div className="game-over-text">
             <h2 className={winner === 'draw' ? 'winner-draw-text' : winner === 'white' ? 'winner-white-text' : 'winner-black-text'}>
               {winner === 'draw' ? '🤝 Remis' : winner === 'white' ? '⚪ Białe wygrywają!' : '⚫ Czarne wygrywają!'}
