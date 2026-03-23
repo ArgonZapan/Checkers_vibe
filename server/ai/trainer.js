@@ -621,10 +621,10 @@ export class SelfPlay {
 
         // Record result
         let result = 0;
-        if (winner === 1 || winner === 'white') {
+        if (winner === 'white') {
           result = 1;
           this.stats.whiteWins++;
-        } else if (winner === -1 || winner === 'black') {
+        } else if (winner === 'black') {
           result = -1;
           this.stats.blackWins++;
         } else {
