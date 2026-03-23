@@ -724,13 +724,19 @@ export class SelfPlay {
       });
 
       // Make move with retry on 400 (issue #120)
+      // Use a separate copy for retries so validatedMove (stored in sample) is never mutated (#124)
+      let attemptedMove = {
+        from: validatedMove.from,
+        to: validatedMove.to,
+        captures: validatedMove.captures ? [...validatedMove.captures] : undefined,
+      };
       let moveRes;
       let lastError;
       const MAX_MOVE_RETRIES = 3;
       for (let attempt = 0; attempt < MAX_MOVE_RETRIES; attempt++) {
-        const moveBody = { from: validatedMove.from, to: validatedMove.to };
-        if (validatedMove.captures && validatedMove.captures.length > 0) {
-          moveBody.captures = validatedMove.captures;
+        const moveBody = { from: attemptedMove.from, to: attemptedMove.to };
+        if (attemptedMove.captures && attemptedMove.captures.length > 0) {
+          moveBody.captures = attemptedMove.captures;
         }
         moveRes = await cppFetch(`${CPP_BASE}/api/move`, {
           method: 'POST',
@@ -746,9 +752,9 @@ export class SelfPlay {
           // Engine rejected the move — try a different random legal move
           const altMove = this._randomLegalMove(legalMoves);
           if (altMove) {
-            validatedMove.from = altMove.from;
-            validatedMove.to = altMove.to;
-            validatedMove.captures = altMove.captures;
+            attemptedMove.from = altMove.from;
+            attemptedMove.to = altMove.to;
+            attemptedMove.captures = altMove.captures ? [...altMove.captures] : undefined;
           }
         }
 
