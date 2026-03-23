@@ -304,6 +304,8 @@ io.on('connection', async (socket) => {
     modelParams: { ...trainer.modelParams },
     whiteEpsilon: trainer.epsilonWhite,
     blackEpsilon: trainer.epsilonBlack,
+    whiteNetworkSize: trainer.networkSizeWhite,
+    blackNetworkSize: trainer.networkSizeBlack,
     speedMode: CONFIG.server.speedMode,
     aiMoveDelayMs: CONFIG.server.aiMoveDelayMs,
     _config: CONFIG.ai,  // default config snapshot for UI reference
@@ -461,6 +463,8 @@ io.on('connection', async (socket) => {
         modelParams: { ...trainer.modelParams },
         whiteEpsilon: trainer.epsilonWhite,
         blackEpsilon: trainer.epsilonBlack,
+        whiteNetworkSize: trainer.networkSizeWhite,
+        blackNetworkSize: trainer.networkSizeBlack,
         speedMode: CONFIG.server.speedMode,
         aiMoveDelayMs: CONFIG.server.aiMoveDelayMs,
       });
@@ -478,9 +482,9 @@ io.on('connection', async (socket) => {
 
   // ── Speed control ──────────────────────────────────────────────────────
   socket.on('setSpeed', (ms) => {
-    // Validate: must be a number 0-10000, not NaN
+    // Validate: must be a number 0-10000, not NaN (LEAK-006)
     if (typeof ms !== 'number' || ms < 0 || ms > 10000 || Number.isNaN(ms)) {
-      socket.emit('error', { message: 'Invalid speed value' });
+      socket.emit('error', { message: 'Invalid speed value — expected number 0-10000' });
       return;
     }
     const clamped = Math.max(0, Math.min(ms, 10000));
@@ -492,6 +496,11 @@ io.on('connection', async (socket) => {
 
   // ── Speed mode control ────────────────────────────────────────────────
   socket.on('setSpeedMode', (mode) => {
+    // Validate: must be a string (LEAK-006)
+    if (typeof mode !== 'string') {
+      socket.emit('error', { message: 'Invalid speed mode — expected string' });
+      return;
+    }
     if (mode === 'fast' || mode === 'normal') {
       CONFIG.server.speedMode = mode;
       io.emit('speedUpdate', { speedMode: mode });
@@ -652,8 +661,9 @@ async function main() {
   // Load persistent state (stats, epsilon, etc.)
   await trainer.loadState();
 
-  httpServer.listen(PORT, () => {
-    console.log(`[Server] Checkers server running on http://localhost:${PORT}`);
+  const HOST = process.env.HOST || '127.0.0.1';
+  httpServer.listen(PORT, HOST, () => {
+    console.log(`[Server] Checkers server running on http://${HOST}:${PORT}`);
   });
 
   // Auto-start self-play

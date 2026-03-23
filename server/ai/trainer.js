@@ -31,7 +31,7 @@ function isKing(val, turn) {
 }
 
 // ── Piece Values ─────────────────────────────────────────────────────────────
-const PIECE_VALUE = { 1: 1, 2: 3, 3: 1, 4: 3 }; // white pawn=1, white king=3, black pawn=3(val=1), black king=4(val=3)
+const PIECE_VALUE = { 1: 1, 2: 3, 3: 1, 4: 3 }; // C++ encoding → value: 1=white pawn(1), 2=white king(3), 3=black pawn(1), 4=black king(3)
 
 // ── Helper: calcMaterial ─────────────────────────────────────────────────────
 function calcMaterial(prev, next, turn) {

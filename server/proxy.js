@@ -10,6 +10,8 @@ export function setupProxy(app) {
     createProxyMiddleware({
       target: CPP_TARGET,
       changeOrigin: true,
+      // Express strips '/api' mount prefix, so filter sees '/game/state' etc.
+      // This rewrite restores '/api' prefix so the C++ backend gets '/api/game/state'.
       pathRewrite: { '^': '/api' },
       // Exclude AI and selfplay routes — handled by Node.js
       // Note: Express strips the mount path, so we see /ai/* and /selfplay/* here

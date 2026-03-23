@@ -22,6 +22,11 @@ export function boardFromCpp(cppBoard) {
   // Normalize to 2D array
   let board2D = cppBoard;
   if (Array.isArray(cppBoard) && !Array.isArray(cppBoard[0])) {
+    // Flat array must have exactly 64 elements for an 8×8 board
+    if (cppBoard.length !== 64) {
+      console.warn('[boardFromCpp] Flat array length', cppBoard.length, '!== 64, returning empty board');
+      return Array.from({ length: 8 }, () => Array(8).fill(null));
+    }
     board2D = [];
     for (let r = 0; r < 8; r++) {
       board2D.push(cppBoard.slice(r * 8, r * 8 + 8));
