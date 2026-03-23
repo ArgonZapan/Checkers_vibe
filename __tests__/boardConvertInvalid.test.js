@@ -16,36 +16,52 @@ export async function runBoardConvertInvalidTests() {
     tests.push({ name, fn });
   }
 
-  // ── Invalid input: null / undefined ──────────────────────────────────
+  // ── Invalid input: null / undefined (graceful defaults) ───────────────
 
-  test('boardFromCpp: null input → throws', () => {
-    assert.throws(() => boardFromCpp(null), /Cannot read/);
+  test('boardFromCpp: null input → returns empty 8x8 board', () => {
+    const board = boardFromCpp(null);
+    assert.equal(board.length, 8);
+    assert.equal(board[0].length, 8);
+    assert.ok(board.every(row => row.every(cell => cell === null)));
   });
 
-  test('boardFromCpp: undefined input → throws', () => {
-    assert.throws(() => boardFromCpp(undefined), /Cannot read/);
+  test('boardFromCpp: undefined input → returns empty 8x8 board', () => {
+    const board = boardFromCpp(undefined);
+    assert.equal(board.length, 8);
+    assert.equal(board[0].length, 8);
+    assert.ok(board.every(row => row.every(cell => cell === null)));
   });
 
-  test('boardToCpp: null input → throws', () => {
-    assert.throws(() => boardToCpp(null), /Cannot read/);
+  test('boardToCpp: null input → returns 64 zeros', () => {
+    const arr = boardToCpp(null);
+    assert.equal(arr.length, 64);
+    assert.ok(arr.every(v => v === 0));
   });
 
-  test('boardToCpp: undefined input → throws', () => {
-    assert.throws(() => boardToCpp(undefined), /Cannot read/);
+  test('boardToCpp: undefined input → returns 64 zeros', () => {
+    const arr = boardToCpp(undefined);
+    assert.equal(arr.length, 64);
+    assert.ok(arr.every(v => v === 0));
   });
 
-  // ── Invalid input: non-array ─────────────────────────────────────────
+  // ── Invalid input: non-array (graceful defaults) ─────────────────────
 
-  test('boardFromCpp: number input → throws (map is not a function)', () => {
-    assert.throws(() => boardFromCpp(42), /map is not a function/);
+  test('boardFromCpp: number input → returns empty 8x8 board', () => {
+    const board = boardFromCpp(42);
+    assert.equal(board.length, 8);
+    assert.ok(board.every(row => row.every(cell => cell === null)));
   });
 
-  test('boardFromCpp: string input → throws (map is not a function)', () => {
-    assert.throws(() => boardFromCpp("000"), /map is not a function/);
+  test('boardFromCpp: string input → returns empty 8x8 board', () => {
+    const board = boardFromCpp("000");
+    assert.equal(board.length, 8);
+    assert.ok(board.every(row => row.every(cell => cell === null)));
   });
 
-  test('boardToCpp: number input → throws (flat is not a function)', () => {
-    assert.throws(() => boardToCpp(42), /flat is not a function/);
+  test('boardToCpp: number input → returns 64 zeros', () => {
+    const arr = boardToCpp(42);
+    assert.equal(arr.length, 64);
+    assert.ok(arr.every(v => v === 0));
   });
 
   // ── Wrong dimensions ─────────────────────────────────────────────────
@@ -140,20 +156,20 @@ export async function runBoardConvertInvalidTests() {
     assert.equal(result[0], 1);
   });
 
-  test('boardToCpp: piece missing color → undefined === "white" is false → black pawn', () => {
+  test('boardToCpp: piece missing color → returns 0 (unknown)', () => {
     const react = [[{ king: false }]];
     const result = boardToCpp(react);
-    // p.color is undefined, not "white" → falls to black → 3
-    assert.equal(result[0], 3);
+    // p.color is undefined, not "white" or "black" → falls to 0
+    assert.equal(result[0], 0);
   });
 
   // ── Empty arrays / sparse ────────────────────────────────────────────
 
-  test('boardFromCpp: empty array [] → normalized to 8 empty rows', () => {
-    // Normalization loop pushes [].slice(r*8, r*8+8) 8 times → 8 empty arrays
+  test('boardFromCpp: empty array [] → returns 8x8 empty board', () => {
     const board = boardFromCpp([]);
     assert.equal(board.length, 8);
-    board.forEach(row => assert.equal(row.length, 0));
+    board.forEach(row => assert.equal(row.length, 8));
+    board.forEach(row => row.forEach(cell => assert.equal(cell, null)));
   });
 
   test('boardToCpp: empty board [] → returns []', () => {
