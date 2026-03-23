@@ -474,6 +474,7 @@ io.on('connection', async (socket) => {
       .catch(err => {
         console.error('[WS] move error:', err.message);
         socket.emit('error', { message: 'Move failed' });
+        socket._moveQueue = Promise.resolve();
       });
   });
 
