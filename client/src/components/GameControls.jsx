@@ -11,7 +11,6 @@ export default function GameControls({
   speed,
   onSpeed,
 }) {
-  const turnColor = turn === 'white' ? '#f0f0f0' : '#2a2a2a';
   const turnLabel = turn === 'white' ? 'Białe' : 'Czarne';
 
   let statusText;
