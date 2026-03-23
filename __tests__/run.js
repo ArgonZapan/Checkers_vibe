@@ -26,6 +26,7 @@ import { runModelValidationTests } from './modelValidation.test.js';
 import { runTrainerArrayMovesTests } from './trainerArrayMoves.test.js';
 import { runBufferTests } from './buffer.test.js';
 import { runAutoSaveLogicTests } from './autoSaveLogic.test.js';
+import { runAutoSaveTimingTests } from './autoSaveTiming.test.js';
 import { runApiEndpointValidationTests } from './apiEndpointValidation.test.js';
 import { runWsConnectionLifecycleTests } from './wsConnectionLifecycle.test.js';
 import { runProxyLogicTests } from './proxyLogic.test.js';
@@ -34,6 +35,7 @@ import { runIssue129Tests } from './issue129.test.js';
 import { runIssue130Tests } from './issue130.test.js';
 import { runIssue131Tests } from './issue131.test.js';
 import { runBoardConvertAdditionalTests } from './boardConvertAdditional.test.js';
+import { runBoardConvertEdgeTests } from './boardConvertEdge.test.js';
 import { runSetSpeedModeValidationTests } from './setSpeedModeValidation.test.js';
 import { runAiMovePredictionTests } from './aiMovePrediction.test.js';
 import { runCppFetchLogicTests } from './cppFetchLogic.test.js';
@@ -74,6 +76,7 @@ const suites = [
   { name: 'trainerArrayMoves',   run: runTrainerArrayMovesTests },
   { name: 'buffer',              run: runBufferTests },
   { name: 'autoSaveLogic',       run: runAutoSaveLogicTests },
+  { name: 'autoSaveTiming',     run: runAutoSaveTimingTests },
   { name: 'apiEndpointValidation', run: runApiEndpointValidationTests },
   { name: 'wsConnectionLifecycle', run: runWsConnectionLifecycleTests },
   { name: 'proxyLogic',          run: runProxyLogicTests },
@@ -82,6 +85,7 @@ const suites = [
   { name: 'issue130',            run: runIssue130Tests },
   { name: 'issue131',            run: runIssue131Tests },
   { name: 'boardConvertAdditional', run: runBoardConvertAdditionalTests },
+  { name: 'boardConvertEdge',     run: runBoardConvertEdgeTests },
   { name: 'setSpeedModeValidation', run: runSetSpeedModeValidationTests },
   { name: 'aiMovePrediction',    run: runAiMovePredictionTests },
   { name: 'cppFetchLogic',       run: runCppFetchLogicTests },
