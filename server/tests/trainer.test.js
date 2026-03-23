@@ -1,16 +1,13 @@
 import assert from 'node:assert/strict';
 import { SelfPlay } from '../ai/trainer.js';
 
-export async function runTrainerTests() {
-  let passed = 0, failed = 0;
-  const tests = [];
+import { describe, it } from '@jest/globals';
 
-  function test(name, fn) {
-    tests.push({ name, fn });
-  }
+describe('Trainer', () => {
+
 
   // Constructor — default params
-  test('constructor — default parameters', () => {
+  it('constructor — default parameters', () => {
     const trainer = new SelfPlay(null);
     assert.equal(trainer.running, false);
     assert.equal(trainer.epsilonWhite, 0.3);
@@ -23,7 +20,7 @@ export async function runTrainerTests() {
     assert.equal(trainer.stats.gamesPlayed, 0);
   });
 
-  test('constructor — stats object', () => {
+  it('constructor — stats object', () => {
     const trainer = new SelfPlay(null);
     assert.equal(trainer.stats.whiteWins, 0);
     assert.equal(trainer.stats.blackWins, 0);
@@ -32,7 +29,7 @@ export async function runTrainerTests() {
   });
 
   // setParams
-  test('setParams — changes epsilon', () => {
+  it('setParams — changes epsilon', () => {
     const trainer = new SelfPlay(null);
     trainer.setParams(0.1, undefined, 'white');
     assert.equal(trainer.epsilonWhite, 0.1);
@@ -41,14 +38,14 @@ export async function runTrainerTests() {
     assert.equal(trainer.epsilonBlack, 0.05);
   });
 
-  test('setParams — changes epsilon for both', () => {
+  it('setParams — changes epsilon for both', () => {
     const trainer = new SelfPlay(null);
     trainer.setParams(0.2, undefined, 'both');
     assert.equal(trainer.epsilonWhite, 0.2);
     assert.equal(trainer.epsilonBlack, 0.2);
   });
 
-  test('setParams — changes networkSize and creates model', () => {
+  it('setParams — changes networkSize and creates model', () => {
     const trainer = new SelfPlay(null);
     trainer.setParams(undefined, 'medium', 'white');
     assert.equal(trainer.networkSizeWhite, 'medium');
@@ -56,7 +53,7 @@ export async function runTrainerTests() {
     assert.equal(trainer.modelBlack, null);
   });
 
-  test('setParams — updates stats epsilon', () => {
+  it('setParams — updates stats epsilon', () => {
     const trainer = new SelfPlay(null);
     trainer.setParams(0.15, undefined, 'both');
     assert.equal(trainer.stats.epsilonWhite, 0.15);
@@ -64,7 +61,7 @@ export async function runTrainerTests() {
   });
 
   // start / stop
-  test('start — sets running to true', async () => {
+  it('start — sets running to true', async () => {
     const trainer = new SelfPlay(null);
     // Override _loop to prevent actual game loop
     trainer._loop = async () => { /* no-op */ };
@@ -73,7 +70,7 @@ export async function runTrainerTests() {
     trainer.stop();
   });
 
-  test('stop — sets running to false', async () => {
+  it('stop — sets running to false', async () => {
     const trainer = new SelfPlay(null);
     trainer._loop = async () => { /* no-op */ };
     await trainer.start();
@@ -82,7 +79,7 @@ export async function runTrainerTests() {
     assert.equal(trainer.running, false);
   });
 
-  test('start — double start is safe', async () => {
+  it('start — double start is safe', async () => {
     const trainer = new SelfPlay(null);
     let loopCount = 0;
     trainer._loop = async () => { loopCount++; };
@@ -93,7 +90,7 @@ export async function runTrainerTests() {
   });
 
   // getStatus
-  test('getStatus — returns correct structure', () => {
+  it('getStatus — returns correct structure', () => {
     const trainer = new SelfPlay(null);
     const status = trainer.getStatus();
     assert.equal(status.running, false);
@@ -104,7 +101,7 @@ export async function runTrainerTests() {
   });
 
   // restart
-  test('restart — resets stats for "both"', async () => {
+  it('restart — resets stats for "both"', async () => {
     const trainer = new SelfPlay(null);
     trainer.stats.gamesPlayed = 10;
     trainer.stats.draws = 3;
@@ -117,7 +114,7 @@ export async function runTrainerTests() {
     assert.equal(trainer.epsilonBlack, 0.3);
   });
 
-  test('restart — white only resets white wins', async () => {
+  it('restart — white only resets white wins', async () => {
     const trainer = new SelfPlay(null);
     trainer.stats.gamesPlayed = 5;
     trainer.stats.whiteWins = 3;
@@ -129,18 +126,5 @@ export async function runTrainerTests() {
   });
 
   // Run
-  console.log('\n── trainer.test.js ─────────────────────────');
-  for (const t of tests) {
-    try {
-      await t.fn();
-      console.log(`  ✅ ${t.name}`);
-      passed++;
-    } catch (err) {
-      console.log(`  ❌ ${t.name}`);
-      console.log(`     ${err.message}`);
-      failed++;
-    }
-  }
 
-  return { passed, failed };
 }

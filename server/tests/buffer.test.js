@@ -1,16 +1,13 @@
 import assert from 'node:assert/strict';
 import { ReplayBuffer } from '../ai/buffer.js';
 
-export async function runBufferTests() {
-  let passed = 0, failed = 0;
-  const tests = [];
+import { describe, it } from '@jest/globals';
 
-  function test(name, fn) {
-    tests.push({ name, fn });
-  }
+describe('Buffer', () => {
+
 
   // add + size
-  test('add + size', () => {
+  it('add + size', () => {
     const buf = new ReplayBuffer(100);
     assert.equal(buf.size(), 0);
     buf.add({ a: 1 });
@@ -21,7 +18,7 @@ export async function runBufferTests() {
   });
 
   // maxSize (FIFO)
-  test('maxSize — oldest entries removed when full', () => {
+  it('maxSize — oldest entries removed when full', () => {
     const buf = new ReplayBuffer(5);
     for (let i = 0; i < 5; i++) buf.add({ id: i });
     assert.equal(buf.size(), 5);
@@ -34,7 +31,7 @@ export async function runBufferTests() {
   });
 
   // sample
-  test('sample — returns n elements', () => {
+  it('sample — returns n elements', () => {
     const buf = new ReplayBuffer(100);
     for (let i = 0; i < 20; i++) buf.add({ id: i });
     const s = buf.sample(5);
@@ -45,13 +42,13 @@ export async function runBufferTests() {
     }
   });
 
-  test('sample — returns empty on empty buffer', () => {
+  it('sample — returns empty on empty buffer', () => {
     const buf = new ReplayBuffer(100);
     const s = buf.sample(5);
     assert.deepEqual(s, []);
   });
 
-  test('sample — clamps to buffer size', () => {
+  it('sample — clamps to buffer size', () => {
     const buf = new ReplayBuffer(100);
     buf.add('a');
     buf.add('b');
@@ -60,7 +57,7 @@ export async function runBufferTests() {
   });
 
   // save / load
-  test('save + load — roundtrip', async () => {
+  it('save + load — roundtrip', async () => {
     const buf = new ReplayBuffer(100);
     buf.add({ board: [1, 2, 3], result: 1 });
     buf.add({ board: [4, 5, 6], result: -1 });
@@ -74,7 +71,7 @@ export async function runBufferTests() {
     assert.deepEqual(buf2.buffer[1], { board: [4, 5, 6], result: -1 });
   });
 
-  test('load — missing file starts fresh', async () => {
+  it('load — missing file starts fresh', async () => {
     const buf = new ReplayBuffer(100);
     buf.add('old');
     await buf.load('/tmp/test-buffer-nonexistent.json');
@@ -82,7 +79,7 @@ export async function runBufferTests() {
   });
 
   // clear
-  test('clear — empties buffer', () => {
+  it('clear — empties buffer', () => {
     const buf = new ReplayBuffer(100);
     buf.add('x');
     buf.add('y');
@@ -92,18 +89,5 @@ export async function runBufferTests() {
   });
 
   // Run tests
-  console.log('\n── buffer.test.js ──────────────────────────');
-  for (const t of tests) {
-    try {
-      await t.fn();
-      console.log(`  ✅ ${t.name}`);
-      passed++;
-    } catch (err) {
-      console.log(`  ❌ ${t.name}`);
-      console.log(`     ${err.message}`);
-      failed++;
-    }
-  }
 
-  return { passed, failed };
 }
