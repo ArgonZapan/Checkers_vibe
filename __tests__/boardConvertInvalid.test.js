@@ -139,7 +139,9 @@ export async function runBoardConvertInvalidTests() {
   test('boardToCpp: piece with extra property → works', () => {
     const react = [[{ color: 'white', king: false, extra: 'ignored' }]];
     const result = boardToCpp(react);
-    assert.deepEqual(result, [1]);
+    assert.equal(result.length, 64);
+    assert.equal(result[0], 1);
+    assert.equal(result[1], 0);
   });
 
   test('boardToCpp: piece missing king → king is undefined (falsy) → pawn', () => {
@@ -165,9 +167,10 @@ export async function runBoardConvertInvalidTests() {
     board.forEach(row => row.forEach(cell => assert.equal(cell, null)));
   });
 
-  test('boardToCpp: empty board [] → returns []', () => {
+  test('boardToCpp: empty board [] → returns 64 zeros (padded)', () => {
     const result = boardToCpp([]);
-    assert.deepEqual(result, []);
+    assert.equal(result.length, 64);
+    assert.deepEqual(result, new Array(64).fill(0));
   });
 
   // ── Extreme flat array ───────────────────────────────────────────────

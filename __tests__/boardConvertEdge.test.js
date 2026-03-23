@@ -45,14 +45,17 @@ export async function runBoardConvertEdgeTests() {
 
   // ── boardToCpp single element ────────────────────────────────────────
 
-  test('boardToCpp: single white pawn → [1]', () => {
+  test('boardToCpp: single white pawn → [1, 0, ...]', () => {
     const result = boardToCpp([[{ color: 'white', king: false }]]);
-    assert.deepEqual(result, [1]);
+    assert.equal(result.length, 64);
+    assert.equal(result[0], 1);
+    assert.equal(result[1], 0);
   });
 
-  test('boardToCpp: single black king → [4]', () => {
+  test('boardToCpp: single black king → [4, 0, ...]', () => {
     const result = boardToCpp([[{ color: 'black', king: true }]]);
-    assert.deepEqual(result, [4]);
+    assert.equal(result.length, 64);
+    assert.equal(result[0], 4);
   });
 
   // ── Round-trip with promotion-like values ────────────────────────────

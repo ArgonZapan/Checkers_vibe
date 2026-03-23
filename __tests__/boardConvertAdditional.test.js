@@ -33,9 +33,12 @@ export async function runBoardConvertAdditionalTests() {
     assert.equal(result[0], 0);
   });
 
-  test('boardToCpp: mixed row [null, {white pawn}, undefined] → [0, 1, 0]', () => {
+  test('boardToCpp: mixed row [null, {white pawn}, undefined] → [0, 1, 0, ...]', () => {
     const result = boardToCpp([[null, { color: 'white', king: false }, undefined]]);
-    assert.deepEqual(result, [0, 1, 0]);
+    assert.equal(result.length, 64);
+    assert.equal(result[0], 0);
+    assert.equal(result[1], 1);
+    assert.equal(result[2], 0);
   });
 
   test('boardToCpp: false as cell → 0 (falsy)', () => {
@@ -127,9 +130,11 @@ export async function runBoardConvertAdditionalTests() {
   // boardFromCpp / boardToCpp: sparse / unusual arrays
   // ═══════════════════════════════════════════════════════════════════════
 
-  test('boardToCpp: board with single row of 8 nulls → [0,0,0,0,0,0,0,0]', () => {
+  test('boardToCpp: board with single row of 8 nulls → [0,0,...] length 64', () => {
     const result = boardToCpp([[null, null, null, null, null, null, null, null]]);
-    assert.deepEqual(result, [0, 0, 0, 0, 0, 0, 0, 0]);
+    assert.equal(result.length, 64);
+    assert.deepEqual(result.slice(0, 8), [0, 0, 0, 0, 0, 0, 0, 0]);
+    assert.equal(result[63], 0);
   });
 
   test('boardFromCpp: flat array with exactly 8 elements → returns empty board (not 64)', () => {

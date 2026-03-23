@@ -63,10 +63,17 @@ export function boardToCpp(board) {
     return new Array(64).fill(0);
   }
   const flat = board.flat();
-  // Guard against oversized arrays (DoS via memory)
-  if (flat.length > 64) {
-    console.warn('[boardToCpp] Board array too large:', flat.length, '— truncating to 64');
-    flat.length = 64;
+  // Normalize flat array to exactly 64 elements
+  if (flat.length !== 64) {
+    if (flat.length > 64) {
+      console.warn('[boardToCpp] Board array too large:', flat.length, '— truncating to 64');
+      flat.length = 64;
+    } else {
+      console.warn('[boardToCpp] Board array too short:', flat.length, '— padding with zeros to 64');
+      const originalLen = flat.length;
+      flat.length = 64;
+      flat.fill(0, originalLen);
+    }
   }
   return flat.map(p => {
     if (!p || typeof p !== 'object' || Array.isArray(p)) return 0;

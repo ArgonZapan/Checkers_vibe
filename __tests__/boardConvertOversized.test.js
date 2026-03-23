@@ -53,11 +53,11 @@ export async function runBoardConvertOversizedTests() {
     assert.equal(result.length, 64);
   });
 
-  test('boardToCpp: single row with 20 elements truncates to 64 total', () => {
+  test('boardToCpp: single row with 20 elements pads to 64 total', () => {
     const row = new Array(20).fill(null);
     row[0] = { color: 'white', king: false };
     const result = boardToCpp([row]);
-    assert.equal(result.length, 20); // flat = 20, < 64, no truncation
+    assert.equal(result.length, 64); // flat = 20, < 64, pads to 64
     assert.equal(result[0], 1);
   });
 
@@ -232,7 +232,10 @@ export async function runBoardConvertOversizedTests() {
       { color: 'black', king: true },
     ];
     const result = boardToCpp([row]);
-    assert.deepEqual(result, [1, 0, 4]);
+    assert.equal(result.length, 64);
+    assert.equal(result[0], 1);
+    assert.equal(result[1], 0);
+    assert.equal(result[2], 4);
   });
 
   // ═══════════════════════════════════════════════════════════════════════
