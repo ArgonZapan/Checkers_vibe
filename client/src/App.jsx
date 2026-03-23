@@ -64,6 +64,7 @@ export default function App() {
 
   const [modelParams, setModelParams] = useState({ ...DEFAULT_MODEL_PARAMS });
   const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
 
   const [stats, setStats] = useState({ games: 0, whiteWins: 0, blackWins: 0, draws: 0 });
   const [lossHistory, setLossHistory] = useState([]);
@@ -116,8 +117,8 @@ export default function App() {
       setConnected(true);
       setReconnectAttempts(0);
       // Re-subscribe to state on reconnect
-      if (modeRef.current === 'aivai') {
-        s.emit('startGame', { mode: 'aivai' });
+      if (modeRef.current === 'aivai' || modeRef.current === 'pvai') {
+        s.emit('startGame', { mode: modeRef.current });
       }
     });
 
@@ -221,8 +222,9 @@ export default function App() {
     // Server-side error messages (invalid moves, rejected params, etc.)
     s.on('error', (data) => {
       console.warn('[Server error]', data?.message || data);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       setToast(data?.message || 'Błąd serwera');
-      setTimeout(() => setToast(null), 5000);
+      toastTimerRef.current = setTimeout(() => setToast(null), 5000);
     });
 
     return () => {
@@ -319,8 +321,9 @@ export default function App() {
 
   // Toast helper
   const showToast = useCallback((msg, duration = 3000) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast(msg);
-    setTimeout(() => setToast(null), duration);
+    toastTimerRef.current = setTimeout(() => setToast(null), duration);
   }, []);
 
   // Sliders only update local state — no socket emit
