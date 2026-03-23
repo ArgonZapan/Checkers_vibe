@@ -19,8 +19,10 @@ export class ReplayBuffer {
   sample(n) {
     if (this.count === 0) return [];
     const k = Math.min(n, this.count);
+    // BUG FIX: shuffle indices 0..count-1 (valid data range), then map through
+    // ring buffer offset. Old code shuffled 0..count-1 but applied % maxSize,
+    // returning undefined when buffer wasn't full (count < maxSize).
     const start = this.count < this.maxSize ? 0 : this.head;
-    // Fisher-Yates shuffle over all available items, return first k
     const indices = [];
     for (let i = 0; i < this.count; i++) indices.push(i);
     for (let i = indices.length - 1; i > 0; i--) {

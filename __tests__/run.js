@@ -111,6 +111,14 @@ import { runWsSetParamsFullTests } from './hunter-v3-ws-setparams-full.test.js';
 import { runAutoSaveLockEdgeTests } from './hunter-v3-autosave-lock-edge.test.js';
 import { runBoardConvertExoticTests } from './hunter-v3-boardconvert-exotic.test.js';
 import { runWsHandlerEdgeTests } from './hunter-v3-ws-handler-edge.test.js';
+import { runBug0001Tests } from './hunter-alpha-bug-0001.test.js';
+import { runBug0002Tests } from './hunter-alpha-bug-0002.test.js';
+import { runBug0003Tests } from './hunter-alpha-bug-0003.test.js';
+import { runLeakCppExceptionTests } from './hunter-alpha-leak-001-cpp-exception.test.js';
+import { runMinimaxExtendTests } from './hunter-sub-minimax-extend.test.js';
+import { runTrainerRewardEdgeTests } from './hunter-sub-trainer-reward-edge.test.js';
+import { runMinimaxEvalTests as runDynamicMinimaxEvalTests } from './hunter-sub-dynamic-minimax-eval.test.js';
+import { runBufferSampleTests } from './hunter-sub-dynamic-buffer-sample.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -220,6 +228,14 @@ const suites = [
   { name: 'autoSaveLockEdge', run: runAutoSaveLockEdgeTests },
   { name: 'boardConvertExotic', run: runBoardConvertExoticTests },
   { name: 'wsHandlerEdge', run: runWsHandlerEdgeTests },
+  { name: 'bug0001', run: runBug0001Tests },
+  { name: 'bug0002', run: runBug0002Tests },
+  { name: 'bug0003', run: runBug0003Tests },
+  { name: 'leakCppException', run: runLeakCppExceptionTests },
+  { name: 'minimaxExtend', run: runMinimaxExtendTests },
+  { name: 'trainerRewardEdge', run: runTrainerRewardEdgeTests },
+  { name: 'dynamicMinimaxEval', run: runDynamicMinimaxEvalTests },
+  { name: 'dynamicBufferSample', run: runBufferSampleTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;

@@ -27,12 +27,13 @@ function evaluate(flatBoard, turn) {
     const isOwn = (turn === 1 && (val === 1 || val === 2)) || (turn === -1 && (val === 3 || val === 4));
     const pieceVal = PIECE_VALUES[val] || 0;
 
-    // Positional bonus
+    // Positional bonus — compute from THIS piece's owner perspective
+    const pieceSide = (val === 1 || val === 2) ? 1 : -1; // 1=white, -1=black
     let posBonus = 0;
     if (val === 1 || val === 3) {
       // Pawn: advance bonus + center bonus
       // White advances toward row 7, black toward row 0
-      const advance = turn === 1 ? row : (7 - row);
+      const advance = pieceSide === 1 ? row : (7 - row);
       posBonus = advance * 0.05;
       if (col >= 2 && col <= 5 && row >= 2 && row <= 5) posBonus += 0.1;
     } else {
