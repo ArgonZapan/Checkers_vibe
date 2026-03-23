@@ -23,3 +23,15 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Secrets / credentials
+.env
+.env.*
+.env.local
+.env.*.local
+.npmrc
+*.pem
+*.key
+secrets/
+credentials/
+status.json

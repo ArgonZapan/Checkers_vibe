@@ -19,7 +19,7 @@ const BUFFER_FILE = path.join(__dirname, '..', 'data', 'buffer.json');
 const app = express();
 const httpServer = createServer(app);
 const io = new SocketIO(httpServer, {
-  cors: { origin: '*' }
+  cors: { origin: CONFIG.server.corsOrigin || 'http://localhost:3000' }
 });
 
 // ── Middleware ───────────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ app.post('/api/ai/predict', async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('[AI] Predict error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Prediction failed' });
   }
 });
 
@@ -76,7 +76,7 @@ app.post('/api/ai/train', async (req, res) => {
     res.json({ loss: avgLoss });
   } catch (err) {
     console.error('[AI] Train error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Training failed' });
   }
 });
 
@@ -103,7 +103,7 @@ app.post('/api/ai/reset', async (_req, res) => {
     res.json({ ok: true, stats: trainer.getStatus().stats });
   } catch (err) {
     console.error('[AI] Reset error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Reset failed' });
   }
 });
 
@@ -300,7 +300,7 @@ io.on('connection', async (socket) => {
       }
     } catch (err) {
       console.error('[WS] startGame error:', err.message);
-      socket.emit('error', { message: err.message });
+      socket.emit('error', { message: 'Failed to start game' });
     }
   });
 
@@ -314,7 +314,7 @@ io.on('connection', async (socket) => {
       socket.emit('legalMoves', { from, moves: filtered });
     } catch (err) {
       console.error('[WS] getLegalMoves error:', err.message);
-      socket.emit('error', { message: err.message });
+      socket.emit('error', { message: 'Failed to get legal moves' });
     }
   });
 
@@ -343,7 +343,7 @@ io.on('connection', async (socket) => {
       .then(() => handleMove(socket, data))
       .catch(err => {
         console.error('[WS] move error:', err.message);
-        socket.emit('error', { message: err.message || 'Move failed' });
+        socket.emit('error', { message: 'Move failed' });
       });
   });
 
@@ -359,7 +359,7 @@ io.on('connection', async (socket) => {
       io.emit('selfPlayStatus', { active: true, gameNumber: trainer.getStatus().stats.gamesPlayed });
     } catch (err) {
       console.error('[WS] startSelfPlay error:', err.message);
-      socket.emit('error', { message: err.message });
+      socket.emit('error', { message: 'Failed to start self-play' });
     }
   });
 
@@ -426,7 +426,7 @@ io.on('connection', async (socket) => {
       console.log('[WS] setParams complete — model reset');
     } catch (err) {
       console.error('[WS] setParams error:', err.message);
-      socket.emit('error', { message: err.message });
+      socket.emit('error', { message: 'Failed to update parameters' });
     }
   });
 
@@ -464,7 +464,7 @@ io.on('connection', async (socket) => {
       console.log('[WS] Full reset complete');
     } catch (err) {
       console.error('[WS] reset error:', err.message);
-      socket.emit('error', { message: err.message });
+      socket.emit('error', { message: 'Reset failed' });
     }
   });
 });

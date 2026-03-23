@@ -26,6 +26,7 @@ export const CONFIG = {
   // === SERVER ===
   server: {
     port: 3000,
+    corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
     cppBase: 'http://localhost:8080',
     fetchTimeoutMs: 5000,
     aiMoveDelayMs: 0, // 0 = minimal (10ms enforced)
