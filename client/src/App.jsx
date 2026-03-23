@@ -252,6 +252,7 @@ export default function App() {
     setLegalMoves([]);
     setMovePath(null);
     setMoveHistory([]);
+    setGameHistory([]);
     setSelfPlayActive(false); // Clear stale self-play state
     socketRef.current?.emit('startGame', { mode: 'pvai' });
   }, []);
@@ -267,6 +268,7 @@ export default function App() {
     setLegalMoves([]);
     setMovePath(null);
     setMoveHistory([]);
+    setGameHistory([]);
     socketRef.current?.emit('startGame', { mode: 'aivai' });
   }, []);
 
