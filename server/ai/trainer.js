@@ -121,7 +121,7 @@ function calcTempo(prev, next, turn) {
 
 /**
  * Calculate shaped intermediate reward from the perspective of `turn` (the player who just moved).
- * Weighted sum: material (0.4) + position (0.25) + mobility (0.15) + threat (0.1) + tempo (0.1)
+ * Weighted sum (normalised, mobility skipped): material (0.47) + position (0.29) + threat (0.12) + tempo (0.12)
  * @param {number[]|null} prevBoardFlat - flat 64 array before the move (null for first move)
  * @param {number[]} nextBoardFlat - flat 64 array after the move
  * @param {number} turn - 1 (white) or -1 (black)
@@ -132,23 +132,21 @@ function calculateReward(prevBoardFlat, nextBoardFlat, turn) {
 
   let reward = 0;
 
-  // 1. Materiał (0.4)
+  // 1. Materiał (0.47) — was 0.4, re-normalised without mobility
   const matReward = calcMaterial(prevBoardFlat, nextBoardFlat, turn);
-  reward += matReward * 0.4;
+  reward += matReward * 0.47;
 
-  // 2. Pozycja (0.25)
+  // 2. Pozycja (0.29) — was 0.25
   const posReward = calcPosition(nextBoardFlat, turn);
-  reward += posReward * 0.25;
+  reward += posReward * 0.29;
 
-  // 3. Mobilność (0.15) — skipped here (requires MoveGenerator), handled via captures in tempo
-
-  // 4. Zagrożenie (0.1)
+  // 3. Zagrożenie (0.12) — was 0.1
   const threatReward = calcThreat(nextBoardFlat, turn);
-  reward += threatReward * 0.1;
+  reward += threatReward * 0.12;
 
-  // 5. Tempo (0.1)
+  // 4. Tempo (0.12) — was 0.1
   const tempoReward = calcTempo(prevBoardFlat, nextBoardFlat, turn);
-  reward += tempoReward * 0.1;
+  reward += tempoReward * 0.12;
 
   return Math.max(-1, Math.min(1, Math.round(reward * 1000) / 1000));
 }
