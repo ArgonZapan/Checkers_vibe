@@ -76,6 +76,7 @@ import { runEpsilonValidationServerTests } from './epsilonValidationServer.test.
 import { runAutoSaveDirtySnapshotTests } from './autoSaveDirtySnapshot.test.js';
 import { runCspCompletenessTests } from './cspCompleteness.test.js';
 import { runWsHandlerInputGapsTests } from './wsHandlerInputGaps.test.js';
+import { runRateLimitSecurityTests } from './rateLimitSecurity.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -150,6 +151,7 @@ const suites = [
   { name: 'autoSaveDirtySnapshot', run: runAutoSaveDirtySnapshotTests },
   { name: 'cspCompleteness', run: runCspCompletenessTests },
   { name: 'wsHandlerInputGaps', run: runWsHandlerInputGapsTests },
+  { name: 'rateLimitSecurity', run: runRateLimitSecurityTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
