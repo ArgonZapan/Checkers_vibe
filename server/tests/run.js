@@ -2,11 +2,13 @@
 import { runBufferTests } from './buffer.test.js';
 import { runModelTests } from './model.test.js';
 import { runTrainerTests } from './trainer.test.js';
+import { runMoveValidationTests } from './move-validation.test.js';
 
 const suites = [
   { name: 'buffer', run: runBufferTests },
   { name: 'model',  run: runModelTests },
   { name: 'trainer', run: runTrainerTests },
+  { name: 'move-validation', run: runMoveValidationTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;

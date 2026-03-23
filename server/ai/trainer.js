@@ -167,6 +167,53 @@ async function cppFetch(url, opts = {}) {
   }
 }
 
+// ── Move Validation (issue #120) ────────────────────────────────────────────
+
+/**
+ * Validate a move object before sending to C++ engine.
+ * Returns { valid: true, move } or { valid: false, reason }.
+ */
+function validateMove(move) {
+  if (!move || typeof move !== 'object') {
+    return { valid: false, reason: 'move is null/undefined/not an object' };
+  }
+  if (!('from' in move) || !('to' in move)) {
+    return { valid: false, reason: 'move missing from/to fields' };
+  }
+  const { from, to } = move;
+  // from/to should be numbers in range 0-31 (standard checkers board) or 0-63
+  if (typeof from !== 'number' || typeof to !== 'number') {
+    return { valid: false, reason: `from/to not numbers: from=${from} (${typeof from}), to=${to} (${typeof to})` };
+  }
+  if (!Number.isInteger(from) || !Number.isInteger(to)) {
+    return { valid: false, reason: `from/to not integers: from=${from}, to=${to}` };
+  }
+  if (from < 0 || from > 63 || to < 0 || to > 63) {
+    return { valid: false, reason: `from/to out of range 0-63: from=${from}, to=${to}` };
+  }
+  if (from === to) {
+    return { valid: false, reason: `from === to === ${from} (no-op move)` };
+  }
+  return { valid: true, move };
+}
+
+/**
+ * Check if a move is in the list of legal moves.
+ * Compares from/to (and captures if present).
+ */
+function isMoveLegal(move, legalMoves) {
+  if (!move || !Array.isArray(legalMoves) || legalMoves.length === 0) return false;
+  return legalMoves.some(lm => {
+    if (lm.from !== move.from || lm.to !== move.to) return false;
+    // If move has captures, they must match
+    if (move.captures && move.captures.length > 0) {
+      if (!lm.captures || lm.captures.length !== move.captures.length) return false;
+      return move.captures.every((c, i) => c === lm.captures[i]);
+    }
+    return true;
+  });
+}
+
 export class SelfPlay {
   constructor(io) {
     this.io = io;
@@ -214,6 +261,76 @@ export class SelfPlay {
     this.modelWhite = createModel({ ...this.modelParams });
     this.modelBlack = createModel({ ...this.modelParams });
     console.log('[SelfPlay] Models initialized');
+  }
+
+  // ── Engine Health & Recovery (issue #120) ────────────────────────────────
+
+  /**
+   * Check if C++ engine is responsive.
+   */
+  async isEngineUp() {
+    try {
+      const res = await cppFetch(`${CPP_BASE}/api/game/state`);
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Wait for engine to come back up (after crash or restart).
+   * Tries up to `maxAttempts` times with `delayMs` between checks.
+   */
+  async waitForEngine(maxAttempts = 10, delayMs = 1000) {
+    for (let i = 0; i < maxAttempts; i++) {
+      if (await this.isEngineUp()) {
+        console.log(`[SelfPlay] Engine is up (attempt ${i + 1}/${maxAttempts})`);
+        return true;
+      }
+      console.log(`[SelfPlay] Engine not responding, waiting... (${i + 1}/${maxAttempts})`);
+      await this._sleep(delayMs);
+    }
+    console.error('[SelfPlay] Engine did not recover after max attempts');
+    return false;
+  }
+
+  /**
+   * Pick a random legal move from the list.
+   */
+  _randomLegalMove(legalMoves) {
+    if (!legalMoves || legalMoves.length === 0) return null;
+    const idx = Math.floor(Math.random() * legalMoves.length);
+    return legalMoves[idx];
+  }
+
+  /**
+   * Validate and select a move. If the chosen move is invalid, fall back to a random legal move.
+   * Returns a valid move object with { from, to, captures? }.
+   */
+  _validateAndFallback(chosenMove, legalMoves) {
+    // Resolve chosen move to a full move object
+    let selectedMove;
+    if (typeof chosenMove === 'number' || (chosenMove && typeof chosenMove.index === 'number')) {
+      const idx = typeof chosenMove === 'number' ? chosenMove : chosenMove.index;
+      selectedMove = legalMoves[idx] || null;
+    } else if (chosenMove && typeof chosenMove === 'object' && 'from' in chosenMove) {
+      selectedMove = chosenMove;
+    }
+
+    // Validate the selected move
+    const validation = validateMove(selectedMove);
+    if (!validation.valid) {
+      console.warn(`[SelfPlay] Invalid AI move (${validation.reason}), falling back to random`);
+      return this._randomLegalMove(legalMoves);
+    }
+
+    // Check if move is actually legal
+    if (!isMoveLegal(selectedMove, legalMoves)) {
+      console.warn(`[SelfPlay] AI move not in legal moves list (from=${selectedMove.from}, to=${selectedMove.to}), falling back to random`);
+      return this._randomLegalMove(legalMoves);
+    }
+
+    return selectedMove;
   }
 
   setModelParams(newParams) {
@@ -425,6 +542,13 @@ export class SelfPlay {
   async _playGame() {
     const roundStart = Date.now();
 
+    // 0. Health check — ensure engine is up before starting (issue #120)
+    if (!await this.isEngineUp()) {
+      console.warn('[SelfPlay] Engine not responding before game start, waiting for recovery...');
+      const recovered = await this.waitForEngine(10, 1000);
+      if (!recovered) throw new Error('Engine not available — cannot start game');
+    }
+
     // 1. Start new game
     const startRes = await cppFetch(`${CPP_BASE}/api/game/start`, { method: 'POST' });
     if (!startRes.ok) throw new Error(`Game start failed: ${startRes.status}`);
@@ -537,11 +661,17 @@ export class SelfPlay {
       // Save board state before move for reward calculation
       const prevBoardFlat = flattenBoard(boardArray);
 
+      // Validate move and fallback to random if invalid (issue #120)
+      const validatedMove = this._validateAndFallback(chosenMove, legalMoves);
+      if (!validatedMove) {
+        throw new Error('No valid move available — legal moves list is empty');
+      }
+
       // Save sample (result will be assigned later at game end)
       samples.push({
         board: Array.isArray(boardArray) ? boardArray.flat() : boardArray,
         legalMoves,
-        chosenMove,
+        chosenMove: validatedMove,
         turn,
         result: 0, // placeholder — terminal reward assigned at game end
         reward: 0, // placeholder — shaped intermediate reward set below
@@ -549,19 +679,42 @@ export class SelfPlay {
         done: false
       });
 
-      // Make move — send from/to coordinates (C++ engine format)
-      const moveIdx = typeof chosenMove === 'number' ? chosenMove : chosenMove.index ?? chosenMove;
-      const selectedMove = legalMoves[moveIdx] || legalMoves[0];
-      const moveBody = { from: selectedMove.from, to: selectedMove.to };
-      if (selectedMove.captures && selectedMove.captures.length > 0) {
-        moveBody.captures = selectedMove.captures;
+      // Make move with retry on 400 (issue #120)
+      let moveRes;
+      let lastError;
+      const MAX_MOVE_RETRIES = 3;
+      for (let attempt = 0; attempt < MAX_MOVE_RETRIES; attempt++) {
+        const moveBody = { from: validatedMove.from, to: validatedMove.to };
+        if (validatedMove.captures && validatedMove.captures.length > 0) {
+          moveBody.captures = validatedMove.captures;
+        }
+        moveRes = await cppFetch(`${CPP_BASE}/api/move`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(moveBody)
+        });
+        if (moveRes.ok) break; // success
+
+        lastError = `Move failed: ${moveRes.status}`;
+        console.warn(`[SelfPlay] ${lastError} (attempt ${attempt + 1}/${MAX_MOVE_RETRIES})`);
+
+        if (moveRes.status === 400) {
+          // Engine rejected the move — try a different random legal move
+          const altMove = this._randomLegalMove(legalMoves);
+          if (altMove) {
+            validatedMove.from = altMove.from;
+            validatedMove.to = altMove.to;
+            validatedMove.captures = altMove.captures;
+          }
+        }
+
+        // Check if engine is still alive after error
+        if (!await this.isEngineUp()) {
+          console.warn('[SelfPlay] Engine went down after move error, waiting for recovery...');
+          await this.waitForEngine(10, 1000);
+        }
       }
-      const moveRes = await cppFetch(`${CPP_BASE}/api/move`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(moveBody)
-      });
-      if (!moveRes.ok) throw new Error(`Move failed: ${moveRes.status}`);
+      if (!moveRes || !moveRes.ok) throw new Error(lastError || 'Move failed after retries');
 
       // /api/move already returns full game state — no need for extra /api/game/state call
       const newState = await moveRes.json();
