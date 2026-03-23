@@ -71,7 +71,7 @@ function SideTab({
 
       {/* ── Architecture ─────────────────────────────────────────────── */}
       <div className="param-group">
-        <h4>🏗️ Architektura sieci</h4>
+        <h4>🏗️ Architektura sieci <span className="shared-badge">wspólna</span></h4>
         <div className="param-row">
           <label>Sieć:</label>
           <select
@@ -116,7 +116,7 @@ function SideTab({
 
       {/* ── Training ─────────────────────────────────────────────────── */}
       <div className="param-group">
-        <h4>🎓 Szkolenie</h4>
+        <h4>🎓 Szkolenie <span className="shared-badge">wspólne</span></h4>
         <div className="param-row">
           <label>Learning Rate: <strong>{(mp.lr ?? 0.001).toExponential(1)}</strong></label>
           <input
@@ -154,7 +154,7 @@ function SideTab({
 
       {/* ── Reward shaping ───────────────────────────────────────────── */}
       <div className="param-group">
-        <h4>🏆 Nagrody</h4>
+        <h4>🏆 Nagrody <span className="shared-badge">wspólne</span></h4>
         <Slider
           label="Zbicie pionka" value={mp.rewardCapture ?? 0.1}
           min={0} max={0.5} step={0.01}

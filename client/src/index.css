@@ -397,6 +397,16 @@ button:focus-visible, select:focus-visible, input:focus-visible {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+.shared-badge {
+  font-size: 0.6rem;
+  background: var(--accent);
+  color: #fff;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-weight: 400;
+  vertical-align: middle;
+}
 
 .restart-buttons, .selfplay-buttons, .apply-buttons {
   display: flex;
