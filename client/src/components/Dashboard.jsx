@@ -24,6 +24,7 @@ export default function Dashboard({
     if (container) {
       canvas.width = container.clientWidth;
     }
+    canvas.height = 100; // match HTML attribute
 
     const ctx = canvas.getContext('2d');
     const w = canvas.width;
