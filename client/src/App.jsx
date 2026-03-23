@@ -328,7 +328,7 @@ export default function App() {
   }, []);
 
   const handleRestart = useCallback((which) => {
-    socketRef.current?.emit('restart', { which });
+    socketRef.current?.emit('restart', { side: which });
   }, []);
 
   const handleToggleSelfplay = useCallback(() => {
