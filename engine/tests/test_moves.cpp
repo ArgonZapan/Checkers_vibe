@@ -900,6 +900,247 @@ void test_undo_move() {
     std::cout << " OK" << std::endl;
 }
 
+// === Issue #135: King multi-capture undo restores captured pieces' king status ===
+void test_issue135_king_multi_capture_undo() {
+    std::cout << "Test: Issue #135 — king multi-capture undo restores king status..." << std::flush;
+
+    // Setup: white king on (0,0), two black pieces including a king on (2,2) and pawn on (5,5)
+    // White king captures (2,2) -> (3,3), then (5,5) -> (6,6)
+    // After undo, black king on (2,2) should still be a king
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(0, 0);
+        b.blackPieces = squareToMask(5, 5);  // regular pawn
+        b.blackKings = squareToMask(2, 2);   // enemy king
+        b.currentTurn = WHITE;
+
+        Board before = b; // snapshot
+
+        Engine e;
+        e.getBoard() = b;
+        auto moves = e.getLegalMoves(WHITE);
+
+        // Find the multi-capture move
+        Move* multiCap = nullptr;
+        for (auto& m : moves) {
+            if (m.numCaptures >= 2) {
+                multiCap = &m;
+                break;
+            }
+        }
+        assert(multiCap != nullptr);
+
+        bool ok = e.makeMove(*multiCap);
+        assert(ok);
+        assert(e.undoLastMove());
+
+        Board after = e.getBoard();
+
+        // Verify exact board state restoration
+        assert(before.whitePieces == after.whitePieces);
+        assert(before.whiteKings == after.whiteKings);
+        assert(before.blackPieces == after.blackPieces);
+        assert(before.blackKings == after.blackKings);
+        assert(before.currentTurn == after.currentTurn);
+
+        // Specifically: black king at (2,2) must be restored as a king, not a pawn
+        assert(after.getPiece(2, 2) == KING);
+        assert(after.getColor(2, 2) == BLACK);
+        // Black pawn at (5,5) must be restored as a pawn
+        assert(after.getPiece(5, 5) == PAWN);
+        assert(after.getColor(5, 5) == BLACK);
+    }
+
+    // Variant: king captures two enemy kings
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(0, 0);
+        b.blackPieces = 0;
+        b.blackKings = squareToMask(2, 2) | squareToMask(5, 5);
+        b.currentTurn = WHITE;
+
+        Board before = b;
+
+        Engine e;
+        e.getBoard() = b;
+        auto moves = e.getLegalMoves(WHITE);
+
+        Move* multiCap = nullptr;
+        for (auto& m : moves) {
+            if (m.numCaptures >= 2) {
+                multiCap = &m;
+                break;
+            }
+        }
+        assert(multiCap != nullptr);
+
+        assert(e.makeMove(*multiCap));
+        assert(e.undoLastMove());
+
+        Board after = e.getBoard();
+        assert(before.whitePieces == after.whitePieces);
+        assert(before.whiteKings == after.whiteKings);
+        assert(before.blackPieces == after.blackPieces);
+        assert(before.blackKings == after.blackKings);
+
+        // Both enemy kings restored as kings
+        assert(after.getPiece(2, 2) == KING);
+        assert(after.getColor(2, 2) == BLACK);
+        assert(after.getPiece(5, 5) == KING);
+        assert(after.getColor(5, 5) == BLACK);
+    }
+
+    // Variant: king captures pawn + king, undo, verify king not demoted
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(1, 1);
+        b.blackPieces = squareToMask(2, 2);   // pawn (captured first)
+        b.blackKings = squareToMask(4, 4);    // king (captured second)
+        b.currentTurn = WHITE;
+
+        Board before = b;
+
+        Engine e;
+        e.getBoard() = b;
+        auto moves = e.getLegalMoves(WHITE);
+
+        Move* multiCap = nullptr;
+        for (auto& m : moves) {
+            if (m.numCaptures >= 2) {
+                multiCap = &m;
+                break;
+            }
+        }
+        assert(multiCap != nullptr);
+
+        assert(e.makeMove(*multiCap));
+        assert(e.undoLastMove());
+
+        Board after = e.getBoard();
+        assert(before.whitePieces == after.whitePieces);
+        assert(before.whiteKings == after.whiteKings);
+        assert(before.blackPieces == after.blackPieces);
+        assert(before.blackKings == after.blackKings);
+
+        // Pawn at (2,2) stays a pawn, king at (4,4) stays a king
+        assert(after.getPiece(2, 2) == PAWN);
+        assert(after.getColor(2, 2) == BLACK);
+        assert(after.getPiece(4, 4) == KING);
+        assert(after.getColor(4, 4) == BLACK);
+    }
+
+    std::cout << " OK" << std::endl;
+}
+
+// === Issue #136: King non-capture moves have proper path/numPath for animation ===
+void test_issue136_king_move_path() {
+    std::cout << "Test: Issue #136 — king non-capture moves have path/numPath..." << std::flush;
+
+    // White king at (3,3), open board — check all generated moves have path set
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(3, 3);
+        b.blackPieces = 0;
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        auto moves = MoveGenerator::generateKingMoves(b, 3, 3, WHITE);
+        assert(!moves.empty());
+
+        for (auto& m : moves) {
+            assert(m.numPath == 2);
+            assert(m.path[0].row == 3 && m.path[0].col == 3); // from
+            assert(m.path[1].row == m.to.row && m.path[1].col == m.to.col); // to
+        }
+    }
+
+    // Black king at (5,5) — same check
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.blackKings = squareToMask(5, 5);
+        b.blackPieces = 0;
+        b.whiteKings = 0;
+        b.currentTurn = BLACK;
+
+        auto moves = MoveGenerator::generateKingMoves(b, 5, 5, BLACK);
+        assert(!moves.empty());
+
+        for (auto& m : moves) {
+            assert(m.numPath == 2);
+            assert(m.path[0].row == 5 && m.path[0].col == 5);
+            assert(m.path[1].row == m.to.row && m.path[1].col == m.to.col);
+        }
+    }
+
+    // King at edge (0,7) — limited moves, still should have path
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(0, 7);
+        b.blackPieces = 0;
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        auto moves = MoveGenerator::generateKingMoves(b, 0, 7, WHITE);
+        assert(!moves.empty());
+
+        for (auto& m : moves) {
+            assert(m.numPath == 2);
+            assert(m.path[0].row == 0 && m.path[0].col == 7);
+            assert(m.path[1].row == m.to.row && m.path[1].col == m.to.col);
+        }
+    }
+
+    // King blocked partially — ensure moves that DO exist have path
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(3, 3);
+        b.blackPieces = squareToMask(4, 4); // blocks NE direction
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        auto moves = MoveGenerator::generateKingMoves(b, 3, 3, WHITE);
+        assert(!moves.empty());
+
+        for (auto& m : moves) {
+            assert(m.numPath == 2);
+            assert(m.path[0].row == 3 && m.path[0].col == 3);
+            assert(m.path[1].row == m.to.row && m.path[1].col == m.to.col);
+            // Should not land on (4,4) or beyond in NE direction
+            assert(!(m.to.row >= 4 && m.to.col >= 4));
+        }
+    }
+
+    // Via Engine::getLegalMoves (full path through generateAll)
+    {
+        Board b;
+        b.whitePieces = 0;
+        b.whiteKings = squareToMask(3, 3);
+        b.blackPieces = 0;
+        b.blackKings = 0;
+        b.currentTurn = WHITE;
+
+        Engine e;
+        e.getBoard() = b;
+        auto moves = e.getLegalMoves(WHITE);
+        assert(!moves.empty());
+
+        for (auto& m : moves) {
+            assert(m.numPath == 2);
+            assert(m.path[0].row == 3 && m.path[0].col == 3);
+            assert(m.path[1].row == m.to.row && m.path[1].col == m.to.col);
+        }
+    }
+
+    std::cout << " OK" << std::endl;
+}
+
 void test_draw_vs_win() {
     std::cout << "Test: draw vs win — białe wygrywają != remis..." << std::flush;
 
@@ -1022,6 +1263,11 @@ int main() {
     test_full_game_sequence();
     test_no_stall_positions();
     test_undo_move();
+
+    std::cout << "\n--- Regression tests (issues #135, #136) ---\n" << std::endl;
+
+    test_issue135_king_multi_capture_undo();
+    test_issue136_king_move_path();
 
     std::cout << "\n=== Wszystkie testy przeszły ===" << std::endl;
     return 0;
