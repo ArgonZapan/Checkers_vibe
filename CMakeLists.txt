@@ -6,17 +6,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Biblioteka silnika
 add_library(engine STATIC
-    src/board.cpp
-    src/movegen.cpp
-    src/engine.cpp
+    engine/src/board.cpp
+    engine/src/movegen.cpp
+    engine/src/engine.cpp
 )
-target_include_directories(engine PUBLIC src)
+target_include_directories(engine PUBLIC engine/src)
 
-# Testy
-enable_testing()
-add_executable(tests
-    tests/test_moves.cpp
-)
-target_link_libraries(tests engine)
-
-add_test(NAME move_tests COMMAND tests)
+# Testy (disabled — no C++ test source yet)
+# enable_testing()
+# add_executable(tests
+#     tests/test_moves.cpp
+# )
+# target_link_libraries(tests engine)
+# add_test(NAME move_tests COMMAND tests)

@@ -154,7 +154,7 @@ std::vector<Move> MoveGenerator::generateKingMoves(const Board& board, int row, 
 static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
                           Color color, bool isKing, std::vector<Square>& captures,
                           std::vector<Move>& result, std::vector<Square>& path,
-                          Bitboard capturedMask = 0) {
+                          Bitboard capturedMask = 0, Bitboard capturedKingsBB = 0) {
     Bitboard myPieces = board.pieces(color);
     Bitboard oppPieces = board.pieces((color == WHITE) ? BLACK : WHITE);
     bool foundAny = false;
@@ -207,9 +207,11 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
                         captures.push_back(Square{oppR, oppC});
                         path.push_back(Square{nr, nc});
                         capturedMask |= capMask;
+                        if (savedOppKings & capMask) capturedKingsBB |= (1ULL << (captures.size() - 1));
                         foundAny = true;
-                        multiCapture(board, origR, origC, nr, nc, color, true, captures, result, path, capturedMask);
+                        multiCapture(board, origR, origC, nr, nc, color, true, captures, result, path, capturedMask, capturedKingsBB);
                         capturedMask &= ~capMask;
+                        capturedKingsBB &= ~(1ULL << (captures.size() - 1));
                         path.pop_back();
                         captures.pop_back();
 
@@ -288,9 +290,11 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
             captures.push_back(Square{mr, mc});
             path.push_back(Square{nr, nc});
             capturedMask |= midMask;
+            if (savedOppKings & midMask) capturedKingsBB |= (1ULL << (captures.size() - 1));
             foundAny = true;
-            multiCapture(board, origR, origC, nr, nc, color, becameKing, captures, result, path, capturedMask);
+            multiCapture(board, origR, origC, nr, nc, color, becameKing, captures, result, path, capturedMask, capturedKingsBB);
             capturedMask &= ~midMask;
+            capturedKingsBB &= ~(1ULL << (captures.size() - 1));
             path.pop_back();
             captures.pop_back();
 
@@ -319,6 +323,7 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
         for (size_t i = 0; i < path.size() && i < Move::MAX_PATH; i++)
             m.path[i] = path[i];
         m.numPath = static_cast<int>(path.size());
+        m.capturedKingsMask = static_cast<uint16_t>(capturedKingsBB & ((1ULL << Move::MAX_CAPTURES) - 1));
         result.push_back(m);
     }
 }
