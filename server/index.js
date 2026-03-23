@@ -1,3 +1,4 @@
+process.env.TF_ENABLE_ONEDNN_OPTS = process.env.TF_ENABLE_ONEDNN_OPTS || '1';
 import express from 'express';
 import { createServer } from 'node:http';
 import { Server as SocketIO } from 'socket.io';

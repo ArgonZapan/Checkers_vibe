@@ -130,7 +130,7 @@ export function boardToTensor(boardArray, turn) {
       const absVal = Math.abs(val);
       // white pieces: 1 (pawn), 2 (king) — positive
       // black pieces: 3 (pawn), 4 (king) — or negative equivalents
-      const isWhite = val > 0 && (val === 1 || val === 2);
+      const isWhite = val > 0 && (absVal === 1 || absVal === 2);
       const isKing = absVal === 2 || absVal === 4;
       if (isWhite) {
         input[base + 1] = 1;     // white channel
@@ -152,7 +152,7 @@ export async function predict(model, boardArray, legalMoves, turn = 1) {
   const tensor = boardToTensor(boardArray, turn);
   let policyTensor, valueTensor;
   try {
-    [policyTensor, valueTensor] = model.predict(tensor);
+    [policyTensor, valueTensor] = model.predictOnBatch(tensor);
 
     const policy = await policyTensor.data();
     const value = (await valueTensor.data())[0];
