@@ -349,7 +349,7 @@ async function getGameState() {
       gameOver: true,
       winner: null,
       lastMove: null,
-      error: err.message,
+      error: 'Failed to fetch game state',
     };
   }
 }
