@@ -91,6 +91,7 @@ export default function App() {
 
   const socketRef = useRef(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const connectedRef = useRef(false);
 
   // Refs for stable callback access (avoid recreating handleCellClick on every state change)
   const boardRef = useRef(board);
@@ -108,6 +109,10 @@ export default function App() {
     modeRef.current = mode;
     gameOverRef.current = gameOver;
   }, [board, turn, selected, legalMoves, mode, gameOver]);
+
+  useEffect(() => {
+    connectedRef.current = connected;
+  }, [connected]);
 
   useEffect(() => {
     const s = io('/', {
@@ -344,6 +349,12 @@ export default function App() {
   const handleCellClick = useCallback((row, col) => {
     if (gameOverRef.current) return;
     if (modeRef.current === 'aivai') return;
+
+    // Don't accept clicks when disconnected — moves silently fail
+    if (!connectedRef.current) {
+      showToast('⚠️ Brak połączenia z serwerem');
+      return;
+    }
 
     const board = boardRef.current;
     const piece = board[row][col];

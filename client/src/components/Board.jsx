@@ -87,7 +87,8 @@ function Board({
         const dc = Math.sign(c2 - c1);
         let r = r1 + dr, c = c1 + dc;
         while (r !== r2 || c !== c2) {
-          if (prevBoard[r]?.[c] && prevBoard[r][c].color !== movingPiece.color) {
+          const cell = prevBoard?.[r]?.[c];
+          if (cell && cell.color && cell.color !== movingPiece.color) {
             capturedPositions.push([r, c]);
             baseBoard[r][c] = null;
           }
