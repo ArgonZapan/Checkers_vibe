@@ -419,12 +419,20 @@ export async function saveModel(model, dirPath) {
   await rm(tmpDir, { recursive: true, force: true });
   await mkdir(tmpDir, { recursive: true });
   await model.save(`file://${tmpDir}`);
-  // Atomic swap: rename tmp → target (overwrites on Linux)
-  // On Linux, rename(2) atomically replaces the target directory, so we do NOT
-  // rm dirPath first — that would create a window where both old and new are gone.
-  // If we crash between rm and rename, all training progress is permanently lost.
-  // rename() alone handles the swap safely: old stays until new is ready to take over.
-  await rename(tmpDir, dirPath);
+  // Atomic swap: rename tmp → target
+  // rename(2) atomically replaces files on Linux, but may fail with ENOTEMPTY
+  // on some filesystems when replacing non-empty directories. As a fallback,
+  // try rename first, then rm+rename if needed.
+  try {
+    await rename(tmpDir, dirPath);
+  } catch (e) {
+    if (e.code === 'ENOTEMPTY' || e.code === 'EEXIST') {
+      await rm(dirPath, { recursive: true, force: true });
+      await rename(tmpDir, dirPath);
+    } else {
+      throw e;
+    }
+  }
   console.log(`[Model] Saved to ${dirPath}`);
 }
 
