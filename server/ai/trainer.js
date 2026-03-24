@@ -349,6 +349,10 @@ export class SelfPlay {
     // Race condition guard (#133)
     this.paramsVersion = 0;
 
+    // Model dispose mutex (#160) — prevents dispose during active predictions
+    this._modelLock = Promise.resolve();
+    this._modelLockResolve = null;
+
     // Timing
     this.roundTimes = []; // last 10 round times in ms
     this.totalTimeMs = 0; // cumulative training time
@@ -454,8 +458,32 @@ export class SelfPlay {
     console.log('[SelfPlay] Model params updated:', this.modelParams);
   }
 
+  // ── Model dispose mutex (#160) ─────────────────────────────────────────
+  // Acquire exclusive lock on models — waits for any existing lock holder.
+  // Returns a release() function that must be called (preferably in finally).
+  async acquireModelLock() {
+    const prev = this._modelLock;
+    let release;
+    this._modelLock = new Promise(resolve => { release = resolve; });
+    await prev; // wait for previous holder to release
+    return release;
+  }
+
   _replaceModel(old, ...createArgs) {
-    if (old) { try { old.dispose(); } catch {} }
+    // Sync dispose with the model lock chain — if predictions are running,
+    // queue the dispose after them to prevent use-after-dispose crashes.
+    const prevLock = this._modelLock;
+    let release;
+    this._modelLock = new Promise(resolve => { release = resolve; });
+    // Chain the actual dispose onto the previous lock
+    const doDispose = async () => {
+      await prevLock; // wait for in-flight predictions to finish
+      if (old) { try { old.dispose(); } catch {} }
+      release();
+    };
+    // Start dispose in background (non-blocking for caller)
+    doDispose();
+    // Return new model immediately so caller can assign it
     return createModel(...createArgs);
   }
 
@@ -858,7 +886,6 @@ export class SelfPlay {
         }
       } else {
         // ── DQN path (existing) ──────────────────────────────────────
-        const model = turn === 1 ? this.modelWhite : this.modelBlack;
         const epsilon = turn === 1 ? this.epsilonWhite : this.epsilonBlack;
 
         // Epsilon-greedy: explore or exploit
@@ -867,9 +894,23 @@ export class SelfPlay {
           const randomIdx = Math.floor(Math.random() * legalMoves.length);
           chosenMove = legalMoves[randomIdx];
         } else {
-          const pred = await predict(model, boardArray, movesWithIndex, turn);
-          // pred.move is the selected move object from movesWithIndex
-          chosenMove = pred.move;
+          // Acquire model lock — prevent dispose during prediction (#160)
+          let modelRelease;
+          try {
+            modelRelease = await this.acquireModelLock();
+            const model = turn === 1 ? this.modelWhite : this.modelBlack;
+            if (!model) {
+              // Model was disposed while we were waiting — fallback to random
+              const randomIdx = Math.floor(Math.random() * legalMoves.length);
+              chosenMove = legalMoves[randomIdx];
+            } else {
+              const pred = await predict(model, boardArray, movesWithIndex, turn);
+              // pred.move is the selected move object from movesWithIndex
+              chosenMove = pred.move;
+            }
+          } finally {
+            if (modelRelease) modelRelease();
+          }
         }
       }
 
@@ -973,12 +1014,18 @@ export class SelfPlay {
         if (s.turn === 1) batchWhite.push(s);
         else batchBlack.push(s);
       }
-      const lw = batchWhite.length > 0 ? await train(this.modelWhite, batchWhite, 1) : { loss: 0 };
-      const lb = batchBlack.length > 0 ? await train(this.modelBlack, batchBlack, 1) : { loss: 0 };
-      const avgLoss = ((lw.loss || 0) + (lb.loss || 0)) / 2;
-      this.stats.lastLoss = avgLoss;
+      let trainRelease;
+      try {
+        trainRelease = await this.acquireModelLock();
+        const lw = batchWhite.length > 0 ? await train(this.modelWhite, batchWhite, 1) : { loss: 0 };
+        const lb = batchBlack.length > 0 ? await train(this.modelBlack, batchBlack, 1) : { loss: 0 };
+        const avgLoss = ((lw.loss || 0) + (lb.loss || 0)) / 2;
+        this.stats.lastLoss = avgLoss;
+      } finally {
+        if (trainRelease) trainRelease();
+      }
       this.dirty = true; // model trained (#102)
-      this.io?.emit('loss', { loss: avgLoss });
+      this.io?.emit('loss', { loss: this.stats.lastLoss });
     }
 
     // 3. Decay epsilon after each game (skip if params changed mid-game, #133)
