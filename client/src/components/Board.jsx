@@ -105,14 +105,24 @@ function Board({
     // Schedule each step
     for (let i = 1; i < path.length; i++) {
       const timer = setTimeout(() => {
-        setAnimStep(i);
-        // After last step, clear animation state so final board shows
         if (i === path.length - 1) {
+          // Last step: place piece at landing position on animBoard, hide overlay (#150)
+          const landingR = path[i][0];
+          const landingC = path[i][1];
+          setAnimBoard(prev => {
+            if (!prev) return prev;
+            const next = prev.map(row => row.map(cell => cell ? { ...cell } : null));
+            next[landingR][landingC] = { ...movingPiece };
+            return next;
+          });
+          setAnimStep(i);
           const clearTimer = setTimeout(() => {
             setAnimStep(-1);
             setAnimBoard(null);
           }, STEP_DURATION_MS);
           timersRef.current.push(clearTimer);
+        } else {
+          setAnimStep(i);
         }
       }, i * STEP_DURATION_MS);
       timersRef.current.push(timer);
@@ -377,7 +387,7 @@ function Board({
   }, [board, selected, legalMoves, lastMove, animStep, animBoard, onCellClick]);
 
   // Moving piece info for multi-capture animation overlay
-  const movingPieceInfo = (animStep >= 0 && animBoard && path && animStep < path.length) ? (() => {
+  const movingPieceInfo = (animStep >= 0 && animBoard && path && animStep < path.length - 1) ? (() => {
     const prevBoard = animPrevBoardRef.current;
     if (!prevBoard) return null;
     const mp = prevBoard[path[0][0]]?.[path[0][1]];

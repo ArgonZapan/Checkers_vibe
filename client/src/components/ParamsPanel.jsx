@@ -22,6 +22,7 @@ function Slider({ label, value, min, max, step, onChange, format }) {
         max={max}
         step={step}
         value={value}
+        aria-label={label}
         onChange={(e) => onChange(parseFloat(e.target.value))}
       />
     </div>
@@ -66,6 +67,7 @@ function SideTab({
             <input
               type="range" min="1" max="8" step="1"
               value={mp.minimaxDepth ?? 4}
+              aria-label="Głębokość minimax"
               onChange={(e) => onModelParamsChange({ minimaxDepth: parseInt(e.target.value) })}
             />
           </div>
@@ -84,6 +86,7 @@ function SideTab({
           <input
             type="range" min="0" max="0.2" step="0.005"
             value={mp.minEpsilon ?? config.minEpsilon ?? 0.01}
+            aria-label="Min epsilon"
             onChange={(e) => onModelParamsChange({ minEpsilon: parseFloat(e.target.value) })}
           />
         </div>
@@ -92,6 +95,7 @@ function SideTab({
           <input
             type="range" min="0" max="0.05" step="0.001"
             value={mp.epsilonDecay ?? config.epsilonDecay ?? 0.01}
+            aria-label="Decay na grę"
             onChange={(e) => onModelParamsChange({ epsilonDecay: parseFloat(e.target.value) })}
           />
         </div>
@@ -150,6 +154,7 @@ function SideTab({
           <input
             type="range" min="0" max="100" step="1"
             value={lrToSlider(mp.lr ?? 0.001)}
+            aria-label="Learning Rate"
             onChange={(e) => onModelParamsChange({ lr: sliderToLr(parseFloat(e.target.value)) })}
           />
         </div>
@@ -158,6 +163,7 @@ function SideTab({
           <input
             type="range" min="0" max={BATCH_SIZES.length - 1} step="1"
             value={BATCH_SIZES.indexOf(mp.batchSize ?? 64)}
+            aria-label="Batch size"
             onChange={(e) => onModelParamsChange({ batchSize: BATCH_SIZES[parseInt(e.target.value)] })}
           />
         </div>
@@ -247,7 +253,12 @@ export default function ParamsPanel({
           aria-selected={activeTab === 'white'}
           aria-controls="panel-white"
           tabIndex={activeTab === 'white' ? 0 : -1}
-          onKeyDown={(e) => { if (e.key === 'ArrowRight') setActiveTab('black'); if (e.key === 'ArrowLeft') setActiveTab('general'); }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowRight') setActiveTab('black');
+            if (e.key === 'ArrowLeft') setActiveTab('general');
+            if (e.key === 'Home') setActiveTab('white');
+            if (e.key === 'End') setActiveTab('general');
+          }}
         >
           ⚪ Białe
         </button>
@@ -258,7 +269,12 @@ export default function ParamsPanel({
           aria-selected={activeTab === 'black'}
           aria-controls="panel-black"
           tabIndex={activeTab === 'black' ? 0 : -1}
-          onKeyDown={(e) => { if (e.key === 'ArrowRight') setActiveTab('general'); if (e.key === 'ArrowLeft') setActiveTab('white'); }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowRight') setActiveTab('general');
+            if (e.key === 'ArrowLeft') setActiveTab('white');
+            if (e.key === 'Home') setActiveTab('white');
+            if (e.key === 'End') setActiveTab('general');
+          }}
         >
           ⚫ Czarne
         </button>
@@ -269,7 +285,12 @@ export default function ParamsPanel({
           aria-selected={activeTab === 'general'}
           aria-controls="panel-general"
           tabIndex={activeTab === 'general' ? 0 : -1}
-          onKeyDown={(e) => { if (e.key === 'ArrowRight') setActiveTab('white'); if (e.key === 'ArrowLeft') setActiveTab('black'); }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowRight') setActiveTab('white');
+            if (e.key === 'ArrowLeft') setActiveTab('black');
+            if (e.key === 'Home') setActiveTab('white');
+            if (e.key === 'End') setActiveTab('general');
+          }}
         >
           🔧 Ogólne
         </button>
