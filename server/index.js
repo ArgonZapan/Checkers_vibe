@@ -114,7 +114,7 @@ function requireApiToken(req, res, next) {
   const provided = req.headers['authorization']?.replace(/^Bearer\s+/i, '')
     || req.query?.token;
   if (provided !== token) {
-    return res.status(401).json({ error: 'Unauthorized — valid API_TOKEN required' });
+    return res.status(401).json({ error: 'Unauthorized — valid token required' });
   }
   next();
 }
@@ -319,7 +319,7 @@ app.post('/api/selfplay/stop', requireApiToken, (_req, res) => {
   res.json({ ok: true, running: false });
 });
 
-app.get('/api/selfplay/status', (_req, res) => {
+app.get('/api/selfplay/status', requireApiToken, (_req, res) => {
   res.json(trainer.getStatus());
 });
 
@@ -849,6 +849,25 @@ io.on('connection', async (socket) => {
     } catch (err) {
       console.error('[WS] reset error:', err.message);
       socket.emit('error', { message: 'Reset failed' });
+    }
+  });
+
+  // ── Model restart (white/black/both) — resets model weights without clearing game state ──
+  socket.on('restart', async ({ side }) => {
+    // Throttle: max 1 restart per 2s per socket
+    if (!wsThrottle(socket, 'restart', 2000)) return;
+    // Validate side
+    if (!['white', 'black', 'both'].includes(side)) {
+      socket.emit('error', { message: 'Invalid side — expected white|black|both' });
+      return;
+    }
+    try {
+      console.log(`[WS] restart (${side}) from ${socket.id}`);
+      await trainer.restart(side);
+      io.emit('modelRestart', { side });
+    } catch (err) {
+      console.error('[WS] restart error:', err.message);
+      socket.emit('error', { message: 'Restart failed' });
     }
   });
 });
