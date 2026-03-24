@@ -260,33 +260,34 @@ export async function predict(model, boardArray, legalMoves, turn = 1) {
     let maskedPolicy = Array.from(policy);
 
     // Compute softmax probabilities for legal moves (temperature=1.0)
-    const expProbs = {};
-    let maxLogit = -Infinity;
-    for (const idx of legalIndices) {
-      const val = maskedPolicy[idx] || 0;
-      if (val > maxLogit) maxLogit = val;
-    }
-    let totalExp = 0;
-    for (const idx of legalIndices) {
-      expProbs[idx] = Math.exp((maskedPolicy[idx] || 0) - maxLogit);
-      totalExp += expProbs[idx];
-    }
+    // BUG-FIX: Multiple moves can share the same policyIndex (e.g., king moving 1 vs 3
+    // squares in same direction). Use per-move softmax to avoid overwriting probabilities.
+    const moveLogits = legalMoves.map(m => {
+      const idx = typeof m === 'number' ? m : (m.policyIndex ?? m.index ?? m);
+      return maskedPolicy[idx] || 0;
+    });
+    const maxLogit = Math.max(...moveLogits);
+    const moveExps = moveLogits.map(l => Math.exp(l - maxLogit));
+    const totalExp = moveExps.reduce((a, b) => a + b, 0);
     const normalizedProbs = {};
-    for (const idx of legalIndices) {
-      normalizedProbs[idx] = expProbs[idx] / totalExp;
+    for (let i = 0; i < legalMoves.length; i++) {
+      const idx = legalIndices[i];
+      // Sum probabilities for moves sharing the same policyIndex
+      normalizedProbs[idx] = (normalizedProbs[idx] || 0) + moveExps[i] / totalExp;
     }
 
-    // Sample from distribution instead of argmax (prevents determinism with fresh models)
+    // Sample from distribution using unique policy indices (avoid double-counting shared indices)
+    const uniqueIndices = [...new Set(legalIndices)];
     let r = Math.random();
-    let bestIdx = legalIndices[0];
+    let bestIdx = uniqueIndices[0];
     let cumulative = 0;
-    for (const idx of legalIndices) {
+    for (const idx of uniqueIndices) {
       cumulative += normalizedProbs[idx];
       if (r <= cumulative) { bestIdx = idx; break; }
     }
     // Guard: if r == 1.0 and floating-point cumulative < 1.0, loop never triggers
-    if (bestIdx === legalIndices[0] && r > cumulative) {
-      bestIdx = legalIndices[legalIndices.length - 1];
+    if (r > cumulative) {
+      bestIdx = uniqueIndices[uniqueIndices.length - 1];
     }
 
     // Return the full move object from legalMoves, not just the policy index.

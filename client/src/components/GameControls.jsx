@@ -11,7 +11,7 @@ export default function GameControls({
   speed,
   onSpeed,
 }) {
-  const turnLabel = turn === 'white' ? 'Białe' : 'Czarne';
+  const turnLabel = turn === 'white' ? 'Białe' : turn === 'black' ? 'Czarne' : '';
 
   let statusText;
   if (gameOver) {
@@ -20,6 +20,8 @@ export default function GameControls({
     } else {
       statusText = `🏆 ${winner === 'white' ? 'Białe' : 'Czarne'} wygrywają!`;
     }
+  } else if (turn === 'draw') {
+    statusText = '🤝 Remis!';
   } else {
     statusText = `Tura: ${turnLabel}`;
   }

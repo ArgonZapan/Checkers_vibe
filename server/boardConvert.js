@@ -62,6 +62,9 @@ export function boardToCpp(board) {
     console.warn('[boardToCpp] Invalid input:', typeof board);
     return new Array(64).fill(0);
   }
+  if (board.length === 0) {
+    return new Array(64).fill(0);
+  }
   const flat = board.flat();
   // Normalize flat array to exactly 64 elements
   if (flat.length !== 64) {
