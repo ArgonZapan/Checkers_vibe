@@ -189,11 +189,17 @@ app.post('/api/ai/predict', async (req, res) => {
       ...m,
       policyIndex: computePolicyIndex(m.from, m.to),
     }));
-    const model = turn === 1 ? trainer.modelWhite : trainer.modelBlack;
-    if (!model) return res.status(503).json({ error: 'Model not initialized' });
-
-    const result = await predict(model, board, movesWithPolicy, turn);
-    res.json(result);
+    // Acquire model lock — prevent dispose during prediction (#160)
+    let modelRelease;
+    try {
+      modelRelease = await trainer.acquireModelLock();
+      const model = turn === 1 ? trainer.modelWhite : trainer.modelBlack;
+      if (!model) return res.status(503).json({ error: 'Model not initialized' });
+      const result = await predict(model, board, movesWithPolicy, turn);
+      res.json(result);
+    } finally {
+      if (modelRelease) modelRelease();
+    }
   } catch (err) {
     console.error('[AI] Predict error:', err.message);
     res.status(500).json({ error: 'Prediction failed' });
@@ -231,11 +237,18 @@ app.post('/api/ai/train', requireApiToken, async (req, res) => {
     // Filter batch by turn — each model should only train on its own samples
     const batchWhite = batch.filter(s => s.turn === 1);
     const batchBlack = batch.filter(s => s.turn === -1);
-    const lossWhite = batchWhite.length > 0 ? await train(trainer.modelWhite, batchWhite, CONFIG.ai.trainEpochs) : { loss: 0 };
-    const lossBlack = batchBlack.length > 0 ? await train(trainer.modelBlack, batchBlack, CONFIG.ai.trainEpochs) : { loss: 0 };
-    const avgLoss = ((lossWhite.loss || 0) + (lossBlack.loss || 0)) / 2;
-    io.emit('train', { loss: avgLoss });
-    res.json({ loss: avgLoss });
+    // Acquire model lock — prevent dispose during training (#160)
+    let trainRelease;
+    try {
+      trainRelease = await trainer.acquireModelLock();
+      const lossWhite = batchWhite.length > 0 ? await train(trainer.modelWhite, batchWhite, CONFIG.ai.trainEpochs) : { loss: 0 };
+      const lossBlack = batchBlack.length > 0 ? await train(trainer.modelBlack, batchBlack, CONFIG.ai.trainEpochs) : { loss: 0 };
+      const avgLoss = ((lossWhite.loss || 0) + (lossBlack.loss || 0)) / 2;
+      io.emit('train', { loss: avgLoss });
+      res.json({ loss: avgLoss });
+    } finally {
+      if (trainRelease) trainRelease();
+    }
   } catch (err) {
     console.error('[AI] Train error:', err.message);
     res.status(500).json({ error: 'Training failed' });
@@ -279,7 +292,7 @@ app.post('/api/ai/reset', requireApiToken, async (_req, res) => {
   }
 });
 
-app.post('/api/ai/restart', async (req, res) => {
+app.post('/api/ai/restart', requireApiToken, async (req, res) => {
   if (!req.body || typeof req.body !== 'object') {
     return res.status(400).json({ error: 'Bad request: expected JSON body' });
   }
@@ -296,12 +309,12 @@ app.get('/api/ai/stats', (_req, res) => {
 });
 
 // ── SelfPlay endpoints ──────────────────────────────────────────────────────
-app.post('/api/selfplay/start', async (_req, res) => {
+app.post('/api/selfplay/start', requireApiToken, async (_req, res) => {
   await trainer.start();
   res.json({ ok: true, running: true });
 });
 
-app.post('/api/selfplay/stop', (_req, res) => {
+app.post('/api/selfplay/stop', requireApiToken, (_req, res) => {
   trainer.stop();
   res.json({ ok: true, running: false });
 });
@@ -717,15 +730,16 @@ io.on('connection', async (socket) => {
       trainer.stop();
       // 2. Increment params version to invalidate in-flight _playGame (#133)
       trainer.paramsVersion++;
-      // 3. Update params — also track networkSize so status reports correct value
+      // 3. Update non-model params (epsilon, etc.) — don't trigger model recreation here
       trainer.setModelParams(newParams);
       if (newParams.networkSize != null) {
         trainer.networkSizeWhite = newParams.networkSize;
         trainer.networkSizeBlack = newParams.networkSize;
       }
-      // 4. Create fresh models with new architecture
-      trainer.modelWhite = createModel({ ...trainer.modelParams });
-      trainer.modelBlack = createModel({ ...trainer.modelParams });
+      // 4. Create fresh models with new architecture (use _replaceModel for proper lock chaining, #160)
+      //    This unconditionally recreates — avoids double-creation with setModelParams above
+      trainer.modelWhite = trainer._replaceModel(trainer.modelWhite, { ...trainer.modelParams });
+      trainer.modelBlack = trainer._replaceModel(trainer.modelBlack, { ...trainer.modelParams });
       // 5. Clear buffer
       trainer.buffer.clear();
       // 6. Reset stats
@@ -859,7 +873,10 @@ async function aiMove(currentState) {
     const boardFlat = boardToCpp(currentState.board);
 
     let prediction;
+    let aiMoveRelease;
     try {
+      // Acquire model lock — prevent dispose during prediction (#160)
+      aiMoveRelease = await trainer.acquireModelLock();
       const model = turn === 1 ? trainer.modelWhite : trainer.modelBlack;
       if (!model) throw new Error('Model not initialized');
       prediction = await predict(model, boardFlat, movesWithIndex, turn);
@@ -877,6 +894,8 @@ async function aiMove(currentState) {
         body: JSON.stringify(fallbackBody),
       });
       return;
+    } finally {
+      if (aiMoveRelease) aiMoveRelease();
     }
 
     // predict() returns { move: moveObject, ... } — use it directly
@@ -973,6 +992,7 @@ const _autoSaveInterval = setInterval(async () => {
     }
   } catch (err) {
     console.error('[AutoSave] Save error:', err.message);
+    trainer.dirty = true; // restore dirty so next cycle retries the save
   } finally {
     _saving = false;
     release();
