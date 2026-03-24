@@ -400,7 +400,8 @@ async function getGameState() {
       turn: turnToColor(state.turn ?? state.currentTurn ?? 1),
       legalMoves: moves,
       gameOver: state.gameOver ?? false,
-      winner: state.winner != null ? turnToColor(state.winner) : null,
+      // winner: 0 = draw (C++ engine convention), 1 = white wins, -1 = black wins
+      winner: state.winner != null ? (state.winner === 0 ? 'draw' : turnToColor(state.winner)) : null,
       lastMove: state.lastMove || null,
     };
   } catch (err) {
@@ -474,7 +475,7 @@ async function handleMove(socket, { from, to, captures }) {
           turn: turnToColor(aiMoveResult.turn ?? aiMoveResult.currentTurn ?? 1),
           legalMoves: [],
           gameOver: aiMoveResult.gameOver ?? false,
-          winner: aiMoveResult.winner != null ? turnToColor(aiMoveResult.winner) : null,
+          winner: aiMoveResult.winner != null ? (aiMoveResult.winner === 0 ? 'draw' : turnToColor(aiMoveResult.winner)) : null,
           lastMove: aiLastMove || state.lastMove,
           path: aiPath,
         };
