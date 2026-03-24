@@ -123,13 +123,18 @@ function Board({
             return next;
           });
           setAnimStep(i);
+          // Fix #150: only clear animStep here, keep animBoard until board prop updates
+          // Board effect will clear animBoard when board changes; fallback timeout as safety
           const clearTimer = setTimeout(() => {
             if (mounted) {
               setAnimStep(-1);
-              setAnimBoard(null);
             }
           }, STEP_DURATION_MS);
           timersRef.current.push(clearTimer);
+          const fallbackTimer = setTimeout(() => {
+            if (mounted) setAnimBoard(null);
+          }, STEP_DURATION_MS * 4);
+          timersRef.current.push(fallbackTimer);
         } else {
           setAnimStep(i);
         }
@@ -165,6 +170,11 @@ function Board({
     if (animFlagRef.current || animStep >= 0) {
       prevBoardRef.current = board.map(row => row.map(cell => cell ? { ...cell } : null));
       return;
+    }
+
+    // Fix #150: board changed after animation — clear animBoard so display switches to new board
+    if (animBoard) {
+      setAnimBoard(null);
     }
 
     // Only animate if board actually changed
@@ -264,7 +274,20 @@ function Board({
     const _pieces = [];
 
     // Determine board to display: animBoard during multi-capture, normal board otherwise
-    const displayBoard = (animStep >= 0 && animBoard) ? animBoard : board;
+    // Fix #150: keep animBoard visible after animation ends until board prop updates to
+    // post-move state — prevents duplicate piece at old+new positions during transition
+    let displayBoard;
+    if (animStep >= 0 && animBoard) {
+      // During animation: use animBoard
+      displayBoard = animBoard;
+    } else if (animBoard && board === prevBoardRef.current) {
+      // After animation cleared but board prop hasn't updated yet — keep showing animBoard
+      // This prevents the piece from appearing at the old position after animation ends
+      displayBoard = animBoard;
+    } else {
+      // Normal display or board has updated — clear animBoard reference
+      displayBoard = board;
+    }
 
     // Build Set for O(1) valid-move lookup instead of 64*len comparisons per render (#35)
     const validTargets = new Set(legalMoves.map(m => `${m.to[0]},${m.to[1]}`));

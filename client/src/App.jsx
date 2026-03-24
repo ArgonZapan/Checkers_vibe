@@ -434,11 +434,16 @@ export default function App() {
   }, []);
 
   const handleToggleSelfplay = useCallback(() => {
-    if (selfPlayActiveRef.current) {
+    // Fix #156: use ref for current value and update immediately after emit
+    // to prevent stale closure on rapid toggle clicks
+    const isActive = selfPlayActiveRef.current;
+    if (isActive) {
       socketRef.current?.emit('stopSelfPlay');
     } else {
       socketRef.current?.emit('startSelfPlay');
     }
+    selfPlayActiveRef.current = !isActive;
+    setSelfPlayActive(!isActive);
   }, []);
 
   if (mode === 'menu') {
