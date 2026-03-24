@@ -299,11 +299,13 @@ export async function runTrainerRewardBoundaryTests() {
 
   test('calcThreat: kings can capture in any direction', () => {
     const board = emptyBoard();
-    board[4 * 8 + 4] = 4; // black king at (4,4)
-    board[3 * 8 + 3] = 1; // white pawn at (3,3) — above-left of black king
-    // Black king at (4,4) can capture white at (3,3) by jumping to (2,2)
+    board[4 * 8 + 4] = 2; // white king at (4,4)
+    board[3 * 8 + 3] = 4; // black king at (3,3)
+    // White king at (4,4) can capture black king via dir [-1,-1]: adj(3,3)=4, jump(2,2)=0 → valid
+    // Black king at (3,3) can capture white king via dir [1,1]: adj(4,4)=2, jump(5,5)=0 → valid
+    // Both are kings → no direction restriction → symmetric threats
     const threat = calcThreat(board, 1); // from white's perspective
-    assert.ok(threat >= 0, 'white should feel threatened');
+    assert.equal(threat, 0, 'symmetric king threats should balance out');
   });
 
   // ── calcAdvance edge cases ─────────────────────────────────────────────

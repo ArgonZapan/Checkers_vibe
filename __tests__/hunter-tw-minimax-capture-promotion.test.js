@@ -314,10 +314,17 @@ export async function runMinimaxCapturePromotionTests() {
     board[3 * 8 + 3] = 2; // white king
     board[4 * 8 + 4] = 1; // white pawn blocks diagonal
     const moves = generateLegalMoves(board, 1);
-    // King can move to (2,2), (2,4), (4,2) but NOT through own pawn to (5,5)
+    // King at (3,3) has 3 open diagonals (NW, NE, SW) and SE blocked by own pawn at (4,4)
+    // The pawn at (4,4) can also move to (5,5) — valid forward diagonal for white pawn
     assert.ok(moves.length > 0);
-    const targets = moves.map(m => m.to[0] * 8 + m.to[1]);
-    assert.ok(!targets.includes(5 * 8 + 5), 'should not capture own piece');
+    const kingMoves = moves.filter(m => m.from[0] === 3 && m.from[1] === 3);
+    const kingTargets = kingMoves.map(m => m.to[0] * 8 + m.to[1]);
+    // King should NOT be able to move to (5,5) through own pawn at (4,4)
+    assert.ok(!kingTargets.includes(5 * 8 + 5), 'king should not move through own piece');
+    // But the pawn at (4,4) CAN move to (5,5) — it's a valid forward diagonal
+    const pawnMoves = moves.filter(m => m.from[0] === 4 && m.from[1] === 4);
+    const pawnTargets = pawnMoves.map(m => m.to[0] * 8 + m.to[1]);
+    assert.ok(pawnTargets.includes(5 * 8 + 5), 'pawn can move forward to (5,5)');
   });
 
   // ── Promotion during capture stops multi-jump ─────────────────────────
