@@ -105,8 +105,8 @@ bool Engine::undoLastMove() {
 
     // Rebuild movesWithoutCapture_ from remaining history
     movesWithoutCapture_ = 0;
-    for (int i = history_.size() - 1; i >= 0; i--) {
-        if (history_[i].isCapture()) break;
+    for (size_t i = history_.size(); i > 0; i--) {
+        if (history_[i - 1].isCapture()) break;
         movesWithoutCapture_++;
     }
 

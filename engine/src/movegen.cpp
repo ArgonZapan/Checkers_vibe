@@ -62,21 +62,42 @@ std::vector<Move> MoveGenerator::generateCaptures(const Board& board, Color colo
     return allCaptures;
 }
 
+// Forward declaration for early-exit capture check (Issue #147)
+static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
+                          Color color, bool isKing, std::vector<Square>& captures,
+                          std::vector<Move>& result, std::vector<Square>& path,
+                          Bitboard capturedMask, Bitboard capturedKingsBB,
+                          bool* foundFirst);
 bool MoveGenerator::hasMoves(const Board& board, Color color) {
     return !generateAll(board, color).empty();
 }
 
 bool MoveGenerator::hasAnyMove(const Board& board, Color color) {
-    // 1. Captures are mandatory — if any exist, there's a move
-    auto captures = generateCaptures(board, color);
-    if (!captures.empty()) return true;
-
-    // 2. Check if any piece has at least one regular move
+    // 1. Captures are mandatory — short-circuit on first found (Issue #147)
     Bitboard myPieces = board.pieces(color);
     Bitboard pawns = (color == WHITE) ? board.whitePieces : board.blackPieces;
-    Bitboard kings = (color == WHITE) ? board.whiteKings : board.blackKings;
 
     Bitboard remaining = myPieces;
+    while (remaining) {
+        int sq = __builtin_ctzll(remaining);
+        int row = sq / 8;
+        int col = sq % 8;
+        remaining &= remaining - 1;
+        Board temp = board;
+        std::vector<Move> result;
+        std::vector<Square> capVec;
+        std::vector<Square> path;
+        path.push_back(Square{row, col});
+        bool isKing = ((color == WHITE) ? temp.whiteKings : temp.blackKings) & squareToMask(row, col);
+        bool found = false;
+        multiCapture(temp, row, col, row, col, color, isKing, capVec, result, path, 0, 0, &found);
+        if (found) return true;
+    }
+
+    // 2. Check if any piece has at least one regular move
+    Bitboard kings = (color == WHITE) ? board.whiteKings : board.blackKings;
+
+    remaining = myPieces;
     while (remaining) {
         int sq = __builtin_ctzll(remaining);
         int row = sq / 8;
@@ -160,15 +181,18 @@ std::vector<Move> MoveGenerator::generateKingMoves(const Board& board, int row, 
 }
 
 // Helper: rekurencyjne bicie wielokrotne z oryginalną pozycją startową
+// foundFirst: if non-null, set to true and return early on first valid capture (Issue #147)
 static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
                           Color color, bool isKing, std::vector<Square>& captures,
                           std::vector<Move>& result, std::vector<Square>& path,
-                          Bitboard capturedMask = 0, Bitboard capturedKingsBB = 0) {
+                          Bitboard capturedMask = 0, Bitboard capturedKingsBB = 0,
+                          bool* foundFirst = nullptr) {
     Bitboard myPieces = board.pieces(color);
     Bitboard oppPieces = board.pieces((color == WHITE) ? BLACK : WHITE);
     bool foundAny = false;
 
     for (auto& d : MoveGenerator::ALL_DIRS) {
+        if (foundFirst && *foundFirst) return;
         if (isKing) {
             // Damka: szukaj przeciwnika po drodze, potem puste pole za nim
             int nr = curR + d[0];
@@ -218,7 +242,8 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
                         capturedMask |= capMask;
                         if (savedOppKings & capMask) capturedKingsBB |= (1ULL << (captures.size() - 1));
                         foundAny = true;
-                        multiCapture(board, origR, origC, nr, nc, color, true, captures, result, path, capturedMask, capturedKingsBB);
+                        multiCapture(board, origR, origC, nr, nc, color, true, captures, result, path, capturedMask, capturedKingsBB, foundFirst);
+                        if (foundFirst && *foundFirst) return;
                         capturedMask &= ~capMask;
                         capturedKingsBB &= ~(1ULL << (captures.size() - 1));
                         path.pop_back();
@@ -301,7 +326,8 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
             capturedMask |= midMask;
             if (savedOppKings & midMask) capturedKingsBB |= (1ULL << (captures.size() - 1));
             foundAny = true;
-            multiCapture(board, origR, origC, nr, nc, color, becameKing, captures, result, path, capturedMask, capturedKingsBB);
+            multiCapture(board, origR, origC, nr, nc, color, becameKing, captures, result, path, capturedMask, capturedKingsBB, foundFirst);
+            if (foundFirst && *foundFirst) return;
             capturedMask &= ~midMask;
             capturedKingsBB &= ~(1ULL << (captures.size() - 1));
             path.pop_back();
@@ -323,15 +349,19 @@ static void multiCapture(Board& board, int origR, int origC, int curR, int curC,
     }
 
     if (!foundAny && !captures.empty()) {
+        if (foundFirst) { *foundFirst = true; return; }
         Move m;
         m.from = Square(origR, origC);
         m.to = Square(curR, curC);
-        for (size_t i = 0; i < captures.size() && i < Move::MAX_CAPTURES; i++)
+        // Issue #151: clamp to MAX_CAPTURES to prevent buffer overflow
+        size_t capCount = std::min(captures.size(), (size_t)Move::MAX_CAPTURES);
+        for (size_t i = 0; i < capCount; i++)
             m.captures[i] = captures[i];
-        m.numCaptures = static_cast<int>(captures.size());
-        for (size_t i = 0; i < path.size() && i < Move::MAX_PATH; i++)
+        m.numCaptures = static_cast<int>(capCount);
+        size_t pathCount = std::min(path.size(), (size_t)Move::MAX_PATH);
+        for (size_t i = 0; i < pathCount; i++)
             m.path[i] = path[i];
-        m.numPath = static_cast<int>(path.size());
+        m.numPath = static_cast<int>(pathCount);
         m.capturedKingsMask = static_cast<uint16_t>(capturedKingsBB & ((1ULL << Move::MAX_CAPTURES) - 1));
         result.push_back(m);
     }
