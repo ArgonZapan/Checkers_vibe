@@ -363,9 +363,9 @@ export default function App() {
     }
 
     // In PvAI, human controls white pieces — allow selecting white pieces
-    // regardless of current turn (to handle race conditions with AI)
+    // only when it's white's turn (prevents clicking during AI turn)
     const isHumanPiece = modeRef.current === 'pvai'
-      ? piece && piece.color === 'white'
+      ? piece && piece.color === 'white' && turnRef.current === 'white'
       : piece && piece.color === turnRef.current;
 
     if (isHumanPiece) {

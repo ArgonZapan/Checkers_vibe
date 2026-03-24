@@ -69,24 +69,31 @@ function Board({
     const baseBoard = prevBoard.map(row => row.map(cell => cell ? { ...cell } : null));
     baseBoard[startR][startC] = null;
 
-    // Determine captured positions: squares between consecutive path steps
-    // that contain opponent pieces in the prev board
+    // Determine captured positions: prefer captures prop (accurate for king multi-capture),
+    // fall back to geometry-based detection (only checking opponent pieces)
     const capturedPositions = [];
-    for (let i = 0; i < path.length - 1; i++) {
-      const [r1, c1] = path[i];
-      const [r2, c2] = path[i + 1];
-      // Check cells between r1,c1 and r2,c2 for captured pieces
-      const dr = Math.sign(r2 - r1);
-      const dc = Math.sign(c2 - c1);
-      let r = r1 + dr, c = c1 + dc;
-      while (r !== r2 || c !== c2) {
-        if (prevBoard[r]?.[c] && prevBoard[r][c].color !== movingPiece.color) {
-          capturedPositions.push([r, c]);
-          // Remove captured piece from base board
-          baseBoard[r][c] = null;
+    if (captures && captures.length > 0) {
+      for (const cap of captures) {
+        capturedPositions.push([cap[0], cap[1]]);
+        baseBoard[cap[0]][cap[1]] = null;
+      }
+    } else {
+      // Fallback: check cells between consecutive path steps,
+      // but only mark opponent pieces as captured (not friendly pieces)
+      for (let i = 0; i < path.length - 1; i++) {
+        const [r1, c1] = path[i];
+        const [r2, c2] = path[i + 1];
+        const dr = Math.sign(r2 - r1);
+        const dc = Math.sign(c2 - c1);
+        let r = r1 + dr, c = c1 + dc;
+        while (r !== r2 || c !== c2) {
+          if (prevBoard[r]?.[c] && prevBoard[r][c].color !== movingPiece.color) {
+            capturedPositions.push([r, c]);
+            baseBoard[r][c] = null;
+          }
+          r += dr;
+          c += dc;
         }
-        r += dr;
-        c += dc;
       }
     }
 
@@ -114,7 +121,7 @@ function Board({
       timersRef.current.forEach(clearTimeout);
       timersRef.current = [];
     };
-  }, [path]);
+  }, [path, captures]);
 
   // Detect moved pieces and animate — effect handles all side effects (#FBUG-004)
   useEffect(() => {
@@ -122,7 +129,7 @@ function Board({
 
     // First render — no animation, just save state
     if (!prev) {
-      prevBoardRef.current = board.map((row) => [...row]);
+      prevBoardRef.current = board.map(row => row.map(cell => cell ? { ...cell } : null));
       return;
     }
 
@@ -135,7 +142,7 @@ function Board({
 
     // Skip animation during multi-capture or if already animating
     if (animFlagRef.current || animStep >= 0) {
-      prevBoardRef.current = board.map((row) => [...row]);
+      prevBoardRef.current = board.map(row => row.map(cell => cell ? { ...cell } : null));
       return;
     }
 
@@ -152,7 +159,7 @@ function Board({
     animPrevBoardRef.current = prev.map(row => row.map(cell => cell ? { ...cell } : null));
 
     if (!boardChanged) {
-      prevBoardRef.current = board.map((row) => [...row]);
+      prevBoardRef.current = board.map(row => row.map(cell => cell ? { ...cell } : null));
       return;
     }
 
@@ -190,7 +197,7 @@ function Board({
     }
 
     // Update prevBoardRef AFTER using prev for animation
-    prevBoardRef.current = board.map((row) => [...row]);
+    prevBoardRef.current = board.map(row => row.map(cell => cell ? { ...cell } : null));
 
     if (Object.keys(animOffsets).length > 0) {
       animFromRef.current = { ...animOffsets };
