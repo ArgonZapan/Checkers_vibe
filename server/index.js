@@ -156,39 +156,39 @@ app.post('/api/ai/predict', async (req, res) => {
   try {
     const { board, legalMoves, turn = 1 } = req.body;
     if (!board || !legalMoves) {
-      return res.status(400).json({ error: 'Missing board or legalMoves' });
+      return res.status(400).json({ error: 'Invalid request: missing required fields' });
     }
     if (!Array.isArray(board) || board.length !== 64) {
-      return res.status(400).json({ error: 'board must be an array of 64 elements' });
+      return res.status(400).json({ error: 'Invalid request: bad board format' });
     }
     for (let i = 0; i < board.length; i++) {
       if (typeof board[i] !== 'number' || !Number.isInteger(board[i]) || board[i] < 0 || board[i] > 4) {
-        return res.status(400).json({ error: `Invalid board element at index ${i}: expected integer 0-4` });
+        return res.status(400).json({ error: 'Invalid request: bad board data' });
       }
     }
     if (!Array.isArray(legalMoves)) {
-      return res.status(400).json({ error: 'legalMoves must be an array' });
+      return res.status(400).json({ error: 'Invalid request: bad moves format' });
     }
     // Validate each legal move has valid from/to coordinates
     for (let i = 0; i < legalMoves.length; i++) {
       const m = legalMoves[i];
       if (!m || typeof m !== 'object') {
-        return res.status(400).json({ error: `Invalid move at index ${i}: expected object` });
+        return res.status(400).json({ error: 'Invalid request: bad move data' });
       }
       const isValidCoord = (c) => Array.isArray(c) && c.length === 2 && Number.isInteger(c[0]) && Number.isInteger(c[1]) && c[0] >= 0 && c[0] <= 7 && c[1] >= 0 && c[1] <= 7;
       if (!isValidCoord(m.from)) {
-        return res.status(400).json({ error: `Invalid move at index ${i}: bad "from" coordinate` });
+        return res.status(400).json({ error: 'Invalid request: bad move data' });
       }
       if (!isValidCoord(m.to)) {
-        return res.status(400).json({ error: `Invalid move at index ${i}: bad "to" coordinate` });
+        return res.status(400).json({ error: 'Invalid request: bad move data' });
       }
       if (m.captures != null) {
         if (!Array.isArray(m.captures)) {
-          return res.status(400).json({ error: `Invalid move at index ${i}: captures must be an array` });
+          return res.status(400).json({ error: 'Invalid request: bad move data' });
         }
         for (let j = 0; j < m.captures.length; j++) {
           if (!isValidCoord(m.captures[j])) {
-            return res.status(400).json({ error: `Invalid move at index ${i}: bad capture at ${j}` });
+            return res.status(400).json({ error: 'Invalid request: bad move data' });
           }
         }
       }
@@ -219,28 +219,28 @@ app.post('/api/ai/train', requireApiToken, async (req, res) => {
   try {
     const batch = req.body.batch || [];
     if (batch.length === 0) {
-      return res.status(400).json({ error: 'Empty batch' });
+      return res.status(400).json({ error: 'Invalid request: empty batch' });
     }
     if (batch.length > 10000) {
-      return res.status(400).json({ error: 'Batch too large — max 10000 samples' });
+      return res.status(400).json({ error: 'Invalid request: batch too large' });
     }
     // Validate batch structure (LEAK-007) — validate ALL samples
     for (let i = 0; i < batch.length; i++) {
       const s = batch[i];
       if (!s || typeof s !== 'object') {
-        return res.status(400).json({ error: `Invalid sample at index ${i}: expected object` });
+        return res.status(400).json({ error: 'Invalid request: bad sample data' });
       }
       if (!Array.isArray(s.board) || s.board.length !== 64) {
-        return res.status(400).json({ error: `Invalid sample at index ${i}: board must be an array of 64 elements` });
+        return res.status(400).json({ error: 'Invalid request: bad sample data' });
       }
       // Validate board element values — prevent NaN/string corruption in training
       for (let j = 0; j < s.board.length; j++) {
         if (typeof s.board[j] !== 'number' || !Number.isInteger(s.board[j]) || s.board[j] < 0 || s.board[j] > 4) {
-          return res.status(400).json({ error: `Invalid sample at index ${i}: board[${j}] must be integer 0-4` });
+          return res.status(400).json({ error: 'Invalid request: bad sample data' });
         }
       }
       if (s.turn !== 1 && s.turn !== -1) {
-        return res.status(400).json({ error: `Invalid sample at index ${i}: turn must be 1 or -1` });
+        return res.status(400).json({ error: 'Invalid request: bad sample data' });
       }
     }
     // Filter batch by turn — each model should only train on its own samples
@@ -583,7 +583,7 @@ io.on('connection', async (socket) => {
     if (!Array.isArray(from) || from.length !== 2
       || !Number.isInteger(from[0]) || !Number.isInteger(from[1])
       || from[0] < 0 || from[0] > 7 || from[1] < 0 || from[1] > 7) {
-      socket.emit('error', { message: 'Invalid "from" coordinate — expected [row, col] with values 0-7' });
+      socket.emit('error', { message: 'Invalid request data' });
       return;
     }
     try {
@@ -609,22 +609,22 @@ io.on('connection', async (socket) => {
       && c[0] >= 0 && c[0] <= 7 && c[1] >= 0 && c[1] <= 7;
 
     if (!isValidCoord(from)) {
-      socket.emit('error', { message: 'Invalid "from" coordinate — expected [row, col] with values 0-7' });
+      socket.emit('error', { message: 'Invalid move data' });
       return;
     }
     if (!isValidCoord(to)) {
-      socket.emit('error', { message: 'Invalid "to" coordinate — expected [row, col] with values 0-7' });
+      socket.emit('error', { message: 'Invalid move data' });
       return;
     }
     if (captures != null && !Array.isArray(captures)) {
-      socket.emit('error', { message: 'Invalid "captures" — expected an array' });
+      socket.emit('error', { message: 'Invalid move data' });
       return;
     }
     // Validate captures elements are valid coordinates (LEAK-010)
     if (Array.isArray(captures)) {
       for (let i = 0; i < captures.length; i++) {
         if (!isValidCoord(captures[i])) {
-          socket.emit('error', { message: `Invalid capture at index ${i} — expected [row, col] with values 0-7` });
+          socket.emit('error', { message: 'Invalid move data' });
           return;
         }
       }
