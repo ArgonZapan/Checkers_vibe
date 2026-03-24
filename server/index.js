@@ -119,6 +119,15 @@ function requireApiToken(req, res, next) {
   next();
 }
 
+// ── WS auth helper (SEC #157) ───────────────────────────────────────────────
+function wsAuth(socket) {
+  const token = process.env.API_TOKEN;
+  if (!token) return true; // dev mode — no token set
+  const provided = socket.handshake.auth?.token
+    || socket.handshake.headers?.authorization?.replace(/^Bearer\s+/i, '').trim();
+  return provided === token;
+}
+
 // ── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }));
 

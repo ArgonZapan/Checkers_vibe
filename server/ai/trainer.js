@@ -100,21 +100,34 @@ function calcThreat(board, turn) {
       if (jumpR < 0 || jumpR > 7 || jumpC < 0 || jumpC > 7) continue;
       const adjIdx = adjR * 8 + adjC;
       const jumpIdx = jumpR * 8 + jumpC;
-      if (board[adjIdx] && !isOwnPiece(board[adjIdx], turn) && !board[jumpIdx]) {
-        // Check if opponent pawn can actually capture in this direction
-        // Pawns can only capture forward: white captures downward (+row), black captures upward (-row)
-        // dr is direction from us to opponent; opponent captures toward us if direction matches
-        const oppVal = board[adjIdx];
-        const oppAbsVal = Math.abs(oppVal);
-        const oppIsKing = oppAbsVal === 2 || oppAbsVal === 4;
-        if (!oppIsKing) {
-          const oppIsWhite = oppVal > 0 && (oppAbsVal === 1 || oppAbsVal === 2);
-          // White captures downward: must be above us (dr = -1) to jump over us
-          // Black captures upward: must be below us (dr = 1) to jump over us
-          if (oppIsWhite && dr !== -1) continue;
-          if (!oppIsWhite && dr !== 1) continue;
+      if (isMy) {
+        // My piece at i — check if opponent at adjIdx can capture me (jump over me into jumpIdx)
+        if (board[adjIdx] && !isOwnPiece(board[adjIdx], turn) && !board[jumpIdx]) {
+          const oppVal = board[adjIdx];
+          const oppAbsVal = Math.abs(oppVal);
+          const oppIsKing = oppAbsVal === 2 || oppAbsVal === 4;
+          if (!oppIsKing) {
+            const oppIsWhite = oppVal > 0 && (oppAbsVal === 1 || oppAbsVal === 2);
+            // White captures downward: must be above us (dr = -1) to jump over us
+            if (oppIsWhite && dr !== -1) continue;
+            if (!oppIsWhite && dr !== 1) continue;
+          }
+          myThreats++;
         }
-        if (isMy) myThreats++; else oppThreats++;
+      } else {
+        // Opponent piece at i — check if my piece at adjIdx can capture it (jump over it into jumpIdx)
+        if (board[adjIdx] && isOwnPiece(board[adjIdx], turn) && !board[jumpIdx]) {
+          const myVal = board[adjIdx];
+          const myAbsVal = Math.abs(myVal);
+          const myIsKing = myAbsVal === 2 || myAbsVal === 4;
+          if (!myIsKing) {
+            const myIsWhite = myVal > 0 && (myAbsVal === 1 || myAbsVal === 2);
+            // My white pawn captures downward: must be below opponent (dr = 1) to jump over it
+            if (myIsWhite && dr !== 1) continue;
+            if (!myIsWhite && dr !== -1) continue;
+          }
+          oppThreats++;
+        }
       }
     }
   }

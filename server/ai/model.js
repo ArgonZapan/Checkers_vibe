@@ -395,8 +395,8 @@ export async function train(model, batch, epochs = 5) {
       const done = sample.done ? 1 : 0;
       // nextQValues[i] is from opponent's perspective — negate for zero-sum
       valueTarget = sample.reward + GAMMA * (-nextQValues[i]) * (1 - done);
-      // Clamp to [-1, 1] (matches tanh output range)
-      valueTarget = Math.max(-1, Math.min(1, valueTarget));
+      // Clamp to [-3, 3] (matches Q-value range with GAMMA=0.95 and rewardWin=1.0)
+      valueTarget = Math.max(-3, Math.min(3, valueTarget));
     } else {
       valueTarget = result;
     }
