@@ -256,6 +256,8 @@ export default function ParamsPanel({
           onKeyDown={(e) => {
             if (e.key === 'ArrowRight') setActiveTab('black');
             if (e.key === 'ArrowLeft') setActiveTab('general');
+            if (e.key === 'ArrowUp') setActiveTab('general');
+            if (e.key === 'ArrowDown') setActiveTab('black');
             if (e.key === 'Home') setActiveTab('white');
             if (e.key === 'End') setActiveTab('general');
           }}
@@ -272,6 +274,8 @@ export default function ParamsPanel({
           onKeyDown={(e) => {
             if (e.key === 'ArrowRight') setActiveTab('general');
             if (e.key === 'ArrowLeft') setActiveTab('white');
+            if (e.key === 'ArrowUp') setActiveTab('white');
+            if (e.key === 'ArrowDown') setActiveTab('general');
             if (e.key === 'Home') setActiveTab('white');
             if (e.key === 'End') setActiveTab('general');
           }}
@@ -288,6 +292,8 @@ export default function ParamsPanel({
           onKeyDown={(e) => {
             if (e.key === 'ArrowRight') setActiveTab('white');
             if (e.key === 'ArrowLeft') setActiveTab('black');
+            if (e.key === 'ArrowUp') setActiveTab('black');
+            if (e.key === 'ArrowDown') setActiveTab('white');
             if (e.key === 'Home') setActiveTab('white');
             if (e.key === 'End') setActiveTab('general');
           }}
