@@ -469,7 +469,7 @@ export async function runHunterTwIssues163to144Tests() {
     for (const file of appFiles) {
       if (existsSync(file)) {
         const content = readFileSync(file, 'utf-8');
-        if (content.includes('MoveHistory')) {
+        if (content.match(/import\s+.*MoveHistory.*from\s+['"].*MoveHistory/)) {
           foundImport = true;
           console.log(`   ⚠️  #144: MoveHistory imported in ${file}`);
         }
