@@ -128,6 +128,7 @@ import { runSaveModelEnotemptyFallbackTests } from './saveModel-enotempty-fallba
 import { runEpsilonValidateNonnumericTests } from './epsilon-validate-nonnumeric.test.js';
 import { runAutoSaveRapidDirtyTests } from './autoSave-rapid-dirty.test.js';
 import { runRateLimitSpoofedXffTests } from './rateLimit-spoofed-xff.test.js';
+import { runHunterTwIssuesTests } from './hunter-tw-issues154-146-156-151-142.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -254,6 +255,7 @@ const suites = [
   { name: 'epsilonValidateNonnumeric', run: runEpsilonValidateNonnumericTests },
   { name: 'autoSaveRapidDirty', run: runAutoSaveRapidDirtyTests },
   { name: 'rateLimitSpoofedXff', run: runRateLimitSpoofedXffTests },
+  { name: 'hunterTwIssues154-146-156-151-142', run: runHunterTwIssuesTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
