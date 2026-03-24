@@ -177,10 +177,12 @@ export async function runSaveModelEnotemptyFallbackTests() {
   });
 
   test('EEXIST error code also triggers fallback', async () => {
+    let rmCalled = false;
     const fs = {
-      async rm() {},
+      async rm() { rmCalled = true; },
       async mkdir() {},
       async rename(src, dst) {
+        if (rmCalled) return; // succeed after rm
         const err = new Error('EEXIST');
         err.code = 'EEXIST';
         throw err;
@@ -197,6 +199,7 @@ export async function runSaveModelEnotemptyFallbackTests() {
       threw = true;
     }
     assert.equal(threw, false, 'EEXIST should be handled gracefully');
+    assert.equal(rmCalled, true, 'rm should be called as fallback');
   });
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -353,13 +356,13 @@ export async function runSaveModelEnotemptyFallbackTests() {
   test('server code: fallback does rm + rename', () => {
     const notEmptyIdx = modelSource.indexOf('ENOTEMPTY');
     if (notEmptyIdx === -1) return;
-    const fallbackSection = modelSource.slice(notEmptyIdx, notEmptyIdx + 200);
+    const fallbackSection = modelSource.slice(notEmptyIdx, notEmptyIdx + 300);
     assert.ok(
-      fallbackSection.includes('rm('),
+      fallbackSection.includes('rm(dirPath'),
       'ENOTEMPTY fallback should rm the target dir'
     );
     assert.ok(
-      fallbackSection.includes('rename('),
+      fallbackSection.includes('rename(tmpDir'),
       'ENOTEMPTY fallback should retry rename after rm'
     );
   });

@@ -131,7 +131,7 @@ export async function runGetGameStateSanitizeInternalsTests() {
         fen: 'W:W27,19,18:B12,4,3',
       };
       const state = sanitizeGameState(cppState, []);
-      assert.equal(field in state, false, `Field "${field}" leaked to client`);
+      assert.equal(Object.hasOwn(state, field), false, `Field "${field}" leaked to client`);
     });
   }
 
@@ -227,7 +227,7 @@ export async function runGetGameStateSanitizeInternalsTests() {
       constructor: { name: 'Injected' },
     };
     const state = sanitizeGameState(malicious, []);
-    assert.equal('constructor' in state, false, 'constructor should be stripped');
+    assert.equal(Object.hasOwn(state, 'constructor'), false, 'constructor should be stripped');
   });
 
   // ═══════════════════════════════════════════════════════════════════════

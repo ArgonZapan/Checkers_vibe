@@ -123,6 +123,11 @@ import { runIsHumanPieceLogicTests } from './isHumanPieceLogic.test.js';
 import { runHandleMoveExtendedTests } from './handleMoveExtended.test.js';
 import { runWsAuthGuardsExtendedTests } from './wsAuthGuardsExtended.test.js';
 import { runProxyContentTypeTests } from './proxyContentType.test.js';
+import { runGetGameStateSanitizeInternalsTests } from './getGameState-sanitize-internals.test.js';
+import { runSaveModelEnotemptyFallbackTests } from './saveModel-enotempty-fallback.test.js';
+import { runEpsilonValidateNonnumericTests } from './epsilon-validate-nonnumeric.test.js';
+import { runAutoSaveRapidDirtyTests } from './autoSave-rapid-dirty.test.js';
+import { runRateLimitSpoofedXffTests } from './rateLimit-spoofed-xff.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -244,6 +249,11 @@ const suites = [
   { name: 'handleMoveExtended', run: runHandleMoveExtendedTests },
   { name: 'wsAuthGuardsExtended', run: runWsAuthGuardsExtendedTests },
   { name: 'proxyContentType', run: runProxyContentTypeTests },
+  { name: 'getGameStateSanitizeInternals', run: runGetGameStateSanitizeInternalsTests },
+  { name: 'saveModelEnotemptyFallback', run: runSaveModelEnotemptyFallbackTests },
+  { name: 'epsilonValidateNonnumeric', run: runEpsilonValidateNonnumericTests },
+  { name: 'autoSaveRapidDirty', run: runAutoSaveRapidDirtyTests },
+  { name: 'rateLimitSpoofedXff', run: runRateLimitSpoofedXffTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
