@@ -460,10 +460,12 @@ async function handleMove(socket, { from, to, captures }) {
 
   // 5. If game over, emit gameOver event and resume self-play (only in aivai mode)
   if (state.gameOver) {
-    io.emit('gameOver', {
-      winner: state.winner,
-      moves: 0,
-    });
+    const gameOverPayload = { winner: state.winner, moves: 0 };
+    if (socket.gameMode === 'pvp') {
+      io.emit('gameOver', gameOverPayload);
+    } else {
+      socket.emit('gameOver', gameOverPayload);
+    }
     // Only restart self-play for aivai mode, not after player games
     if (socket.gameMode === 'aivai') {
       setTimeout(() => trainer.start(), 3000);
@@ -812,6 +814,7 @@ io.on('connection', async (socket) => {
     }
     if (mode === 'fast' || mode === 'normal') {
       CONFIG.server.speedMode = mode;
+      socket.emit('speedUpdate', { speedMode: mode, confirmed: true });
       io.emit('speedUpdate', { speedMode: mode });
       console.log(`[WS] Speed mode set to: ${mode}`);
     } else {
