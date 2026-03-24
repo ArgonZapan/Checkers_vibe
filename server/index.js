@@ -322,7 +322,7 @@ const turnToColor = (turn) => {
   if (typeof turn === 'string') return turn; // already a color string (C++ engine format)
   if (turn === 1) return 'white';
   if (turn === -1) return 'black';
-  return 'white'; // default fallback (e.g., turn === 0 for draw — game over prevents further moves)
+  return null; // 0 = draw/no turn — don't misleadingly return 'white'
 };
 
 // Helper: fetch JSON from C++ backend with timeout
