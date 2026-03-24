@@ -354,9 +354,10 @@ export async function runSaveModelEnotemptyFallbackTests() {
   });
 
   test('server code: fallback does rm + rename', () => {
-    const notEmptyIdx = modelSource.indexOf('ENOTEMPTY');
-    if (notEmptyIdx === -1) return;
-    const fallbackSection = modelSource.slice(notEmptyIdx, notEmptyIdx + 300);
+    // Find the CATCH block occurrence (not the comment)
+    const catchIdx = modelSource.indexOf("e.code === 'ENOTEMPTY'");
+    if (catchIdx === -1) return;
+    const fallbackSection = modelSource.slice(catchIdx, catchIdx + 400);
     assert.ok(
       fallbackSection.includes('rm(dirPath'),
       'ENOTEMPTY fallback should rm the target dir'
