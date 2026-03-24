@@ -496,31 +496,35 @@ io.on('connection', async (socket) => {
     socket.emit('loss', { loss: trainer.stats.lastLoss });
   }
 
-  // ── Start game ─────────────────────────────────────────────────────────
+  // ── Start game — serialized per-socket to avoid C++ state conflict with ongoing move (#159) ──
   socket.on('startGame', async ({ mode }) => {
     // Throttle: max 1 startGame per 1s per socket
     if (!wsThrottle(socket, 'startGame', 1000)) return;
-    const validModes = ['pvai', 'pvp', 'aivai'];
-    socket.gameMode = validModes.includes(mode) ? mode : 'pvai';
-    // Stop self-play when starting a player game (C++ handles one game at a time)
-    if (trainer.running && socket.gameMode !== 'aivai') {
-      trainer.stop();
-      // Invalidate any in-flight self-play game to prevent C++ state conflict
-      trainer.paramsVersion++;
-    }
-    try {
-      await cppFetch('/api/game/start', { method: 'POST', body: '{}' });
-      const state = await getGameState();
-      socket.emit('state', state);
-      console.log(`[WS] Game started (${socket.gameMode}) for ${socket.id}`);
-      // Auto-start trainer for aivai mode
-      if (socket.gameMode === 'aivai') {
-        await trainer.start();
-      }
-    } catch (err) {
-      console.error('[WS] startGame error:', err.message);
-      socket.emit('error', { message: 'Failed to start game' });
-    }
+    // Queue onto move queue — wait for any in-flight move to finish before starting new game
+    socket._moveQueue = (socket._moveQueue || Promise.resolve())
+      .then(async () => {
+        const validModes = ['pvai', 'pvp', 'aivai'];
+        socket.gameMode = validModes.includes(mode) ? mode : 'pvai';
+        // Stop self-play when starting a player game (C++ handles one game at a time)
+        if (trainer.running && socket.gameMode !== 'aivai') {
+          trainer.stop();
+          // Invalidate any in-flight self-play game to prevent C++ state conflict
+          trainer.paramsVersion++;
+        }
+        await cppFetch('/api/game/start', { method: 'POST', body: '{}' });
+        const state = await getGameState();
+        socket.emit('state', state);
+        console.log(`[WS] Game started (${socket.gameMode}) for ${socket.id}`);
+        // Auto-start trainer for aivai mode
+        if (socket.gameMode === 'aivai') {
+          await trainer.start();
+        }
+      })
+      .catch(err => {
+        console.error('[WS] startGame error:', err.message);
+        socket.emit('error', { message: 'Failed to start game' });
+        socket._moveQueue = Promise.resolve();
+      });
   });
 
   // ── Get legal moves for a piece ────────────────────────────────────────
