@@ -1,4 +1,4 @@
-import { createModel, predict, train, saveModel, computePolicyIndex } from './model.js';
+import { createModel, predict, train, saveModel, computePolicyIndex, disposeModel } from './model.js';
 import { ReplayBuffer } from './buffer.js';
 import { minimaxSearch, applyMove, generateLegalMoves, evaluate } from './minimax.js';
 import { writeFile, readFile, mkdir, rename } from 'node:fs/promises';
@@ -469,25 +469,18 @@ export class SelfPlay {
     return release;
   }
 
-  _replaceModel(old, ...createArgs) {
-    // Sync dispose with the model lock chain — if predictions are running,
-    // queue the dispose after them to prevent use-after-dispose crashes.
-    const prevLock = this._modelLock;
-    let release;
-    this._modelLock = new Promise(resolve => { release = resolve; });
-    // Chain the actual dispose onto the previous lock
-    const doDispose = async () => {
-      await prevLock; // wait for in-flight predictions to finish
-      if (old) { try { old.dispose(); } catch {} }
+  async _replaceModel(old, ...createArgs) {
+    // Acquire lock — waits for any in-flight prediction/train to finish
+    const release = await this.acquireModelLock();
+    try {
+      if (old) { disposeModel(old); }
+    } finally {
       release();
-    };
-    // Start dispose in background (non-blocking for caller)
-    doDispose();
-    // Return new model immediately so caller can assign it
+    }
     return createModel(...createArgs);
   }
 
-  setParams(epsilon, networkSize, side) {
+  async setParams(epsilon, networkSize, side) {
     // Guard: reject NaN/Infinity epsilon to prevent corrupt training state
     if (epsilon !== undefined && (typeof epsilon !== 'number' || !Number.isFinite(epsilon) || epsilon < 0 || epsilon > 1)) {
       console.warn(`[Trainer] Ignoring invalid epsilon: ${epsilon}`);
@@ -497,14 +490,14 @@ export class SelfPlay {
       if (epsilon !== undefined) this.epsilonWhite = epsilon;
       if (networkSize !== undefined) {
         this.networkSizeWhite = networkSize;
-        this.modelWhite = this._replaceModel(this.modelWhite, { ...this.modelParams });
+        this.modelWhite = await this._replaceModel(this.modelWhite, { ...this.modelParams });
       }
     }
     if (side === 'black' || side === 'both') {
       if (epsilon !== undefined) this.epsilonBlack = epsilon;
       if (networkSize !== undefined) {
         this.networkSizeBlack = networkSize;
-        this.modelBlack = this._replaceModel(this.modelBlack, { ...this.modelParams });
+        this.modelBlack = await this._replaceModel(this.modelBlack, { ...this.modelParams });
       }
     }
     this.stats.epsilonWhite = this.epsilonWhite;
@@ -535,8 +528,8 @@ export class SelfPlay {
     this.stats.epsilonBlack = this.epsilonBlack;
 
     // 5. Create fresh models
-    this.modelWhite = this._replaceModel(this.modelWhite, { ...this.modelParams });
-    this.modelBlack = this._replaceModel(this.modelBlack, { ...this.modelParams });
+    this.modelWhite = await this._replaceModel(this.modelWhite, { ...this.modelParams });
+    this.modelBlack = await this._replaceModel(this.modelBlack, { ...this.modelParams });
 
     // 6. Save reset state
     await this.saveState();
@@ -567,11 +560,11 @@ export class SelfPlay {
 
   async restart(side) {
     if (side === 'white' || side === 'both') {
-      this.modelWhite = this._replaceModel(this.modelWhite, { ...this.modelParams });
+      this.modelWhite = await this._replaceModel(this.modelWhite, { ...this.modelParams });
       this.stats.whiteWins = 0;
     }
     if (side === 'black' || side === 'both') {
-      this.modelBlack = this._replaceModel(this.modelBlack, { ...this.modelParams });
+      this.modelBlack = await this._replaceModel(this.modelBlack, { ...this.modelParams });
       this.stats.blackWins = 0;
     }
     if (side === 'both') {

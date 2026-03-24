@@ -219,8 +219,18 @@ export function computePolicyIndex(fromSquare, toSquare) {
   return darkFrom * 4 + dirIdx;
 }
 
+// ── Safe dispose — sets flag before disposing (#160) ────────────────────────
+export function disposeModel(model) {
+  if (!model) return;
+  model.isDisposed = true;
+  try { model.dispose(); } catch { /* already disposed — safe to ignore */ }
+}
+
 // ── Predict ─────────────────────────────────────────────────────────────────
 export async function predict(model, boardArray, legalMoves, turn = 1) {
+  if (model?.isDisposed) {
+    throw new Error('predict() called on disposed model');
+  }
   // Validate turn — prevent NaN/invalid values from silently corrupting inference
   if (turn !== 1 && turn !== -1) {
     console.warn(`[predict] Invalid turn=${turn} (type ${typeof turn}), defaulting to 1`);
@@ -316,6 +326,9 @@ import { CONFIG } from '../../config.js';
 const GAMMA = CONFIG.ai.gamma; // discount factor for Bellman equation
 
 export async function train(model, batch, epochs = 5) {
+  if (model?.isDisposed) {
+    throw new Error('train() called on disposed model');
+  }
   if (batch.length === 0) return { loss: 0 };
 
   // Pre-compute next-state Q-values for Bellman targets (batch prediction)
