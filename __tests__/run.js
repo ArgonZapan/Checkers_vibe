@@ -133,6 +133,10 @@ import { runHunterTwIssues160to158Tests } from './hunter-tw-issues160-159-158.te
 import { runHunterTwIssues163to144Tests } from './hunter-tw-issues163-164-144.test.js';
 import { runA11yRegressionTests } from './a11yRegression.test.js';
 import { runIssue150MultiCaptureDuplicateTests } from './issue150-multi-capture-duplicate.test.js';
+import { runHunterTwMinimaxEdgeTests } from './hunter-tw-minimax-edge.test.js';
+import { runHunterTwModelEdgeTests } from './hunter-tw-model-edge.test.js';
+import { runHunterTwTrainerEdgeTests } from './hunter-tw-trainer-edge.test.js';
+import { runHunterTwWsOriginRateTests } from './hunter-tw-ws-origin-rate.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -264,6 +268,10 @@ const suites = [
   { name: 'hunterTwIssues163-164-144', run: runHunterTwIssues163to144Tests },
   { name: 'a11yRegression', run: runA11yRegressionTests },
   { name: 'issue150MultiCaptureDuplicate', run: runIssue150MultiCaptureDuplicateTests },
+  { name: 'hunterTwMinimaxEdge', run: runHunterTwMinimaxEdgeTests },
+  { name: 'hunterTwModelEdge', run: runHunterTwModelEdgeTests },
+  { name: 'hunterTwTrainerEdge', run: runHunterTwTrainerEdgeTests },
+  { name: 'hunterTwWsOriginRate', run: runHunterTwWsOriginRateTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;

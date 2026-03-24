@@ -147,6 +147,8 @@ export default function App() {
       if (data.source === 'selfPlay' && (modeRef.current === 'pvai' || modeRef.current === 'pvp')) return;
       if (data.board) setBoard(data.board);
       if (data.turn) setTurn(data.turn);
+      // When game ends in draw, server sends turn=null — still update turn to avoid stale state
+      else if (data.gameOver && data.winner === 'draw') setTurn('draw');
       if (data.gameOver !== undefined) setGameOver(data.gameOver);
       if (data.winner !== undefined) setWinner(data.winner);
       if (data.lastMove) {

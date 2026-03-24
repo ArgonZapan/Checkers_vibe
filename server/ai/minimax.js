@@ -25,7 +25,7 @@ function evaluate(flatBoard, turn) {
     const row = Math.floor(i / 8);
     const col = i % 8;
     const isOwn = (turn === 1 && (val === 1 || val === 2)) || (turn === -1 && (val === 3 || val === 4));
-    const pieceVal = PIECE_VALUES[val] || 0;
+    const pieceVal = PIECE_VALUES[val];
 
     // Positional bonus — compute from THIS piece's owner perspective
     const pieceSide = (val === 1 || val === 2) ? 1 : -1; // 1=white, -1=black

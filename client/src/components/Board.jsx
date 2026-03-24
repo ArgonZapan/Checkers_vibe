@@ -131,9 +131,11 @@ function Board({
             }
           }, STEP_DURATION_MS);
           timersRef.current.push(clearTimer);
+          // BUG-DBF-005: generous timeout — server state may arrive late on slow connections
+          // Board effect clears animBoard when board prop updates; this is just a safety net
           const fallbackTimer = setTimeout(() => {
             if (mounted) setAnimBoard(null);
-          }, STEP_DURATION_MS * 4);
+          }, 3000);
           timersRef.current.push(fallbackTimer);
         } else {
           setAnimStep(i);

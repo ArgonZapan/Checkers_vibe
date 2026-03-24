@@ -671,7 +671,7 @@ io.on('connection', async (socket) => {
       const ALLOWED_PARAMS = new Set([
         'layers', 'neurons', 'activation', 'lr', 'batchSize', 'dropout',
         'minEpsilon', 'epsilonDecay', 'gamma', 'bufferSize', 'epochs',
-        'rewardCapture', 'rewardLosePiece', 'rewardPromotion', 'rewardWin', 'rewardLose',
+        'rewardCapture', 'rewardLosePiece', 'rewardAdvance', 'rewardPromotion', 'rewardWin', 'rewardLose',
         'speedMode', 'aiMoveDelayMs', // speed settings (applied to CONFIG, not model)
         'whiteStrategy', 'blackStrategy', // strategy selection (DQN vs minimax)
         'minimaxDepth', // minimax search depth
@@ -749,6 +749,22 @@ io.on('connection', async (socket) => {
         if (CONFIG.ai.strategies.minimax) {
           const depth = Math.max(1, Math.min(8, Math.round(newParams.minimaxDepth)));
           CONFIG.ai.strategies.minimax = Object.freeze({ ...CONFIG.ai.strategies.minimax, depth });
+        }
+      }
+
+      // Handle per-strategy reward weight updates (rewardAdvance, etc.)
+      // These modify the active strategy config so calculateReward() uses new values.
+      // Copy-on-write since strategies are deeply frozen.
+      const STRATEGY_WEIGHT_KEYS = ['rewardCapture', 'rewardLosePiece', 'rewardAdvance', 'rewardPromotion', 'rewardWin', 'rewardLose'];
+      for (const key of STRATEGY_WEIGHT_KEYS) {
+        if (newParams[key] != null && typeof newParams[key] === 'number' && Number.isFinite(newParams[key])) {
+          // Apply to both active strategies
+          for (const stratName of [CONFIG.ai.strategy.white, CONFIG.ai.strategy.black]) {
+            const strat = CONFIG.ai.strategies[stratName];
+            if (strat && Object.hasOwn(strat, key)) {
+              CONFIG.ai.strategies[stratName] = Object.freeze({ ...strat, [key]: newParams[key] });
+            }
+          }
         }
       }
 
