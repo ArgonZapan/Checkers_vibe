@@ -255,6 +255,16 @@ function _extendCapture(board, cap, turn, result) {
   const isKing = piece === 2 || piece === 4;
   const isWhiteTurn = turn === 1;
 
+  // BUG-DBF-002: If pawn was promoted during this capture, turn must end.
+  // In standard checkers, promotion during a capture stops the multi-jump sequence.
+  const origPiece = board[cap.from[0] * 8 + cap.from[1]];
+  const wasPawn = origPiece === 1 || origPiece === 3;
+  const promoted = wasPawn && isKing;
+  if (promoted) {
+    result.push(cap);
+    return;
+  }
+
   let foundMore = false;
 
   if (!isKing) {

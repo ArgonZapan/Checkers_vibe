@@ -443,7 +443,31 @@ async function handleMove(socket, { from, to, captures }) {
       ? playerPath.length * animStepMs + CONFIG.moveDelayMs
       : CONFIG.moveDelayMs;
     await new Promise(r => setTimeout(r, animDelay));
-    await aiMove(state);
+    const aiMoveResult = await aiMove(state);
+
+    // BUG-DBF-003: Use AI move response for animation path instead of snapping board
+    if (aiMoveResult && aiMoveResult.path && aiMoveResult.path.length > 2) {
+      const aiPath = aiMoveResult.path;
+      const aiAnimDelay = aiPath.length * animStepMs + CONFIG.moveDelayMs;
+      // Emit intermediate state with animation path for AI move
+      const aiBoard = boardFromCpp(aiMoveResult.board);
+      const aiStatePayload = {
+        board: aiBoard,
+        turn: turnToColor(aiMoveResult.turn ?? aiMoveResult.currentTurn ?? 1),
+        legalMoves: [],
+        gameOver: aiMoveResult.gameOver ?? false,
+        winner: aiMoveResult.winner != null ? turnToColor(aiMoveResult.winner) : null,
+        lastMove: state.lastMove,
+        path: aiPath,
+      };
+      socket.emit('state', aiStatePayload);
+      await new Promise(r => setTimeout(r, aiAnimDelay));
+    } else {
+      // Fallback: no path data, add move delay for consistency
+      if (CONFIG.moveDelayMs > 0) await new Promise(r => setTimeout(r, CONFIG.moveDelayMs));
+    }
+
+    // BUG-DBF-004: Fetch final state (avoids using stale state from before AI move)
     state = await getGameState();
   }
 
@@ -911,11 +935,11 @@ async function aiMove(currentState) {
       if (randomMove.captures && randomMove.captures.length > 0) {
         fallbackBody.captures = randomMove.captures;
       }
-      await cppFetch('/api/move', {
+      const fbRes = await cppFetch('/api/move', {
         method: 'POST',
         body: JSON.stringify(fallbackBody),
       });
-      return;
+      return fbRes;
     } finally {
       if (aiMoveRelease) aiMoveRelease();
     }
@@ -933,17 +957,19 @@ async function aiMove(currentState) {
       selectedMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
     }
 
-    // Execute AI move via C++
+      // Execute AI move via C++
     const aiMoveBody = { from: selectedMove.from, to: selectedMove.to };
     if (selectedMove.captures && selectedMove.captures.length > 0) {
       aiMoveBody.captures = selectedMove.captures;
     }
-    await cppFetch('/api/move', {
+    const aiMoveRes = await cppFetch('/api/move', {
       method: 'POST',
       body: JSON.stringify(aiMoveBody),
     });
 
     console.log(`[AI] Played move: ${JSON.stringify(selectedMove.from)} → ${JSON.stringify(selectedMove.to)}`);
+    // Return move result so handleMove can emit animation path
+    return aiMoveRes;
   } catch (err) {
     console.error('[AI] Move error:', err.message);
     // Fallback: try random move
@@ -955,12 +981,14 @@ async function aiMove(currentState) {
         if (randomMove.captures && randomMove.captures.length > 0) {
           fbBody.captures = randomMove.captures;
         }
-        await cppFetch('/api/move', {
+        const fbRes = await cppFetch('/api/move', {
           method: 'POST',
           body: JSON.stringify(fbBody),
         });
+        return fbRes;
       }
     } catch (_) { /* give up */ }
+    return null;
   }
 }
 
