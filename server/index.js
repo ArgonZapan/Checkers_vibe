@@ -974,3 +974,8 @@ function shutdown() {
 }
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
+
+// ── Global unhandledRejection handler (Node 15+ crashes on unhandled rejections) ──
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[UnhandledRejection]', reason instanceof Error ? reason.stack || reason.message : reason);
+});
