@@ -42,28 +42,32 @@ function Board({
 
   // Detect multi-capture path and animate step by step
   useEffect(() => {
+    let mounted = true;
+
     // Clear any pending timers
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
 
     if (!path || path.length <= 2) {
-      setAnimStep(-1);
-      setAnimBoard(null);
+      if (mounted) {
+        setAnimStep(-1);
+        setAnimBoard(null);
+      }
       prevPathRef.current = path;
-      return;
+      return () => { mounted = false; };
     }
 
     // Prevent re-triggering on same path
     const pathKey = JSON.stringify(path);
-    if (JSON.stringify(prevPathRef.current) === pathKey) return;
+    if (JSON.stringify(prevPathRef.current) === pathKey) return () => { mounted = false; };
     prevPathRef.current = path;
 
     const prevBoard = animPrevBoardRef.current;
-    if (!prevBoard) return;
+    if (!prevBoard) return () => { mounted = false; };
 
     const startR = path[0][0], startC = path[0][1];
     const movingPiece = prevBoard[startR]?.[startC];
-    if (!movingPiece) return;
+    if (!movingPiece) return () => { mounted = false; };
 
     // Build base board: prev board minus the moving piece, minus captured pieces
     const baseBoard = prevBoard.map(row => row.map(cell => cell ? { ...cell } : null));
@@ -99,12 +103,15 @@ function Board({
     }
 
     // Set step 0: piece at start position, base board without captures
-    setAnimStep(0);
-    setAnimBoard(baseBoard);
+    if (mounted) {
+      setAnimStep(0);
+      setAnimBoard(baseBoard);
+    }
 
     // Schedule each step
     for (let i = 1; i < path.length; i++) {
       const timer = setTimeout(() => {
+        if (!mounted) return;
         if (i === path.length - 1) {
           // Last step: place piece at landing position on animBoard, hide overlay (#150)
           const landingR = path[i][0];
@@ -117,8 +124,10 @@ function Board({
           });
           setAnimStep(i);
           const clearTimer = setTimeout(() => {
-            setAnimStep(-1);
-            setAnimBoard(null);
+            if (mounted) {
+              setAnimStep(-1);
+              setAnimBoard(null);
+            }
           }, STEP_DURATION_MS);
           timersRef.current.push(clearTimer);
         } else {
@@ -129,6 +138,7 @@ function Board({
     }
 
     return () => {
+      mounted = false;
       timersRef.current.forEach(clearTimeout);
       timersRef.current = [];
     };
