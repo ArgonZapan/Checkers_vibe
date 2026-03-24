@@ -647,6 +647,8 @@ io.on('connection', async (socket) => {
   socket.on('startSelfPlay', async () => {
     // Throttle: max 1 startSelfPlay per 1s per socket
     if (!wsThrottle(socket, 'startSelfPlay', 1000)) return;
+    // Auth (SEC #157)
+    if (!wsAuth(socket)) { socket.emit('error', { message: 'Unauthorized' }); return; }
     try {
       console.log(`[WS] startSelfPlay from ${socket.id}`);
       await trainer.start();
@@ -660,6 +662,8 @@ io.on('connection', async (socket) => {
   socket.on('stopSelfPlay', () => {
     // Throttle: max 1 stopSelfPlay per 1s per socket
     if (!wsThrottle(socket, 'stopSelfPlay', 1000)) return;
+    // Auth (SEC #157)
+    if (!wsAuth(socket)) { socket.emit('error', { message: 'Unauthorized' }); return; }
     console.log(`[WS] stopSelfPlay from ${socket.id}`);
     trainer.stop();
     io.emit('selfPlayStatus', { active: false });
@@ -669,6 +673,8 @@ io.on('connection', async (socket) => {
   socket.on('setParams', async (newParams) => {
     // Throttle: max 1 setParams per 1s per socket
     if (!wsThrottle(socket, 'setParams', 1000)) return;
+    // Auth (SEC #157)
+    if (!wsAuth(socket)) { socket.emit('error', { message: 'Unauthorized' }); return; }
     try {
       // Type-check input (LEAK-005)
       if (!newParams || typeof newParams !== 'object' || Array.isArray(newParams)) {
@@ -827,6 +833,8 @@ io.on('connection', async (socket) => {
   socket.on('setSpeed', (ms) => {
     // Throttle: max 1 per 1s per socket
     if (!wsThrottle(socket, 'setSpeed', 1000)) return;
+    // Auth (SEC #157)
+    if (!wsAuth(socket)) { socket.emit('error', { message: 'Unauthorized' }); return; }
     // Auth: only allow in aivai mode (LEAK-006)
     if (socket.gameMode !== 'aivai') {
       console.warn(`[WS] setSpeed rejected — mode is '${socket.gameMode}', not 'aivai'`);
@@ -850,6 +858,8 @@ io.on('connection', async (socket) => {
   socket.on('setSpeedMode', (mode) => {
     // Throttle: max 1 per 1s per socket
     if (!wsThrottle(socket, 'setSpeedMode', 1000)) return;
+    // Auth (SEC #157)
+    if (!wsAuth(socket)) { socket.emit('error', { message: 'Unauthorized' }); return; }
     // Auth: only allow in aivai mode (LEAK-006)
     if (socket.gameMode !== 'aivai') {
       console.warn(`[WS] setSpeedMode rejected — mode is '${socket.gameMode}', not 'aivai'`);
@@ -874,6 +884,8 @@ io.on('connection', async (socket) => {
 
   // ── Full reset (model + stats + buffer + game) ─────────────────────────
   socket.on('reset', async () => {
+    // Auth (SEC #157)
+    if (!wsAuth(socket)) { socket.emit('error', { message: 'Unauthorized' }); return; }
     try {
       console.log(`[WS] reset from ${socket.id}`);
       // BUG-008: Acquire lock so resetModel waits for any in-progress save
@@ -905,6 +917,8 @@ io.on('connection', async (socket) => {
   socket.on('restart', async ({ side }) => {
     // Throttle: max 1 restart per 2s per socket
     if (!wsThrottle(socket, 'restart', 2000)) return;
+    // Auth (SEC #157)
+    if (!wsAuth(socket)) { socket.emit('error', { message: 'Unauthorized' }); return; }
     // Validate side
     if (!['white', 'black', 'both'].includes(side)) {
       socket.emit('error', { message: 'Invalid side — expected white|black|both' });

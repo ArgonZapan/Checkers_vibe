@@ -258,6 +258,12 @@ export default function App() {
       // Clear stale selection — valid-move highlights are misleading after error
       setSelected(null);
       setLegalMoves([]);
+      // BUG-V3: Revert optimistic self-play toggle if error is self-play related
+      const msg = (data?.message || '').toLowerCase();
+      if (msg.includes('self-play') || msg.includes('selfplay')) {
+        selfPlayActiveRef.current = false;
+        setSelfPlayActive(false);
+      }
       // BUG-V3-002: Cancel pending success toast if server rejects
       if (pendingModelParamsToast.current) {
         clearTimeout(pendingModelParamsToast.current);
