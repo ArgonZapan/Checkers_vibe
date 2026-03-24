@@ -119,6 +119,10 @@ import { runMinimaxExtendTests } from './hunter-sub-minimax-extend.test.js';
 import { runTrainerRewardEdgeTests } from './hunter-sub-trainer-reward-edge.test.js';
 import { runMinimaxEvalTests as runDynamicMinimaxEvalTests } from './hunter-sub-dynamic-minimax-eval.test.js';
 import { runBufferSampleTests } from './hunter-sub-dynamic-buffer-sample.test.js';
+import { runIsHumanPieceLogicTests } from './isHumanPieceLogic.test.js';
+import { runHandleMoveExtendedTests } from './handleMoveExtended.test.js';
+import { runWsAuthGuardsExtendedTests } from './wsAuthGuardsExtended.test.js';
+import { runProxyContentTypeTests } from './proxyContentType.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -236,6 +240,10 @@ const suites = [
   { name: 'trainerRewardEdge', run: runTrainerRewardEdgeTests },
   { name: 'dynamicMinimaxEval', run: runDynamicMinimaxEvalTests },
   { name: 'dynamicBufferSample', run: runBufferSampleTests },
+  { name: 'isHumanPieceLogic', run: runIsHumanPieceLogicTests },
+  { name: 'handleMoveExtended', run: runHandleMoveExtendedTests },
+  { name: 'wsAuthGuardsExtended', run: runWsAuthGuardsExtendedTests },
+  { name: 'proxyContentType', run: runProxyContentTypeTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
