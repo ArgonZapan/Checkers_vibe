@@ -3,6 +3,7 @@
 #include "engine.h"
 
 #include <atomic>
+#include <mutex>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -284,6 +285,26 @@ void registerRoutes(httplib::Server& svr) {
                     if (v < 0 || v > 4) {
                         json err; err["error"] = "board values must be 0-4";
                         res.status = 400; res.set_content(err.dump(), "application/json"); return;
+                    }
+                    // Validate: pieces only on dark squares (row+col must be odd)
+                    if (v > 0 && (r + c) % 2 == 0) {
+                        json err; err["error"] = "pieces must be on dark squares (row+col must be odd)";
+                        res.status = 400; res.set_content(err.dump(), "application/json"); return;
+                    }
+                }
+            }
+            // Validate board consistency: track occupancy via bitboard to detect overlapping pieces
+            uint64_t occupied = 0;
+            for (int r = 0; r < 8; r++) {
+                for (int c = 0; c < 8; c++) {
+                    int v = boardArr[r][c].get<int>();
+                    if (v > 0) {
+                        uint64_t mask = 1ULL << (r * 8 + c);
+                        if (occupied & mask) {
+                            json err; err["error"] = "overlapping pieces detected at row " + std::to_string(r) + " col " + std::to_string(c);
+                            res.status = 400; res.set_content(err.dump(), "application/json"); return;
+                        }
+                        occupied |= mask;
                     }
                 }
             }

@@ -85,6 +85,7 @@ export default function App() {
   const [lossHistory, setLossHistory] = useState([]);
   const [gameHistory, setGameHistory] = useState([]);
   const [selfPlayActive, setSelfPlayActive] = useState(false);
+  const selfPlayActiveRef = useRef(false);
   const [avgTime, setAvgTime] = useState(0);
   const [totalTimeMs, setTotalTimeMs] = useState(0);
   const [lastRoundTime, setLastRoundTime] = useState(0);
@@ -108,6 +109,7 @@ export default function App() {
     legalMovesRef.current = legalMoves;
     modeRef.current = mode;
     gameOverRef.current = gameOver;
+    selfPlayActiveRef.current = selfPlayActive;
   }, [board, turn, selected, legalMoves, mode, gameOver]);
 
   useEffect(() => {
@@ -198,6 +200,7 @@ export default function App() {
     });
 
     s.on('selfPlayStatus', (data) => {
+      selfPlayActiveRef.current = data.active;
       setSelfPlayActive(data.active);
       if (data.gameNumber !== undefined) setGameNumber(data.gameNumber);
       if (data.stats) {
@@ -431,12 +434,12 @@ export default function App() {
   }, []);
 
   const handleToggleSelfplay = useCallback(() => {
-    if (selfPlayActive) {
+    if (selfPlayActiveRef.current) {
       socketRef.current?.emit('stopSelfPlay');
     } else {
       socketRef.current?.emit('startSelfPlay');
     }
-  }, [selfPlayActive]);
+  }, []);
 
   if (mode === 'menu') {
     return (
