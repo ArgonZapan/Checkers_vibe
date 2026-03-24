@@ -423,10 +423,15 @@ export async function saveModel(model, dirPath) {
   // rename(2) atomically replaces files on Linux, but may fail with ENOTEMPTY
   // on some filesystems when replacing non-empty directories. As a fallback,
   // try rename first, then rm+rename if needed.
+  // RISK: rm+rename is non-atomic — a crash between rm and rename loses all model data.
+  // On Linux, rename(2) should never return ENOTEMPTY for directories; this fallback
+  // only triggers on non-Linux platforms (e.g., Windows with some FS drivers).
   try {
     await rename(tmpDir, dirPath);
   } catch (e) {
     if (e.code === 'ENOTEMPTY' || e.code === 'EEXIST') {
+      // WARNING: Non-atomic fallback — data loss window on crash
+      console.warn('[Model] rename returned ENOTEMPTY — attempting force rename (non-atomic fallback)');
       await rm(dirPath, { recursive: true, force: true });
       await rename(tmpDir, dirPath);
     } else {
