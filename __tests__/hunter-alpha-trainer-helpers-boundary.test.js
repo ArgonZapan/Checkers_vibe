@@ -146,8 +146,11 @@ function isMoveLegal(move, legalMoves) {
     const sameFrom = Array.isArray(lm.from) ? lm.from[0] === move.from?.[0] && lm.from[1] === move.from?.[1] : lm.from === move.from;
     const sameTo = Array.isArray(lm.to) ? lm.to[0] === move.to?.[0] && lm.to[1] === move.to?.[1] : lm.to === move.to;
     if (!sameFrom || !sameTo) return false;
-    if (move.captures && move.captures.length > 0) {
-      if (!lm.captures || lm.captures.length !== move.captures.length) return false;
+    const moveHasCaps = !!(move.captures && move.captures.length > 0);
+    const lmHasCaps = !!(lm.captures && lm.captures.length > 0);
+    if (moveHasCaps !== lmHasCaps) return false;
+    if (moveHasCaps) {
+      if (move.captures.length !== lm.captures.length) return false;
       return move.captures.every((c, i) => c[0] === lm.captures[i]?.[0] && c[1] === lm.captures[i]?.[1]);
     }
     return true;
@@ -446,7 +449,7 @@ export async function runHunterAlphaTrainerHelpersBoundaryTests() {
   test('isMoveLegal: legal move has captures but move does not', () => {
     const move = { from: [2, 1], to: [4, 3] };
     const legalMoves = [{ from: [2, 1], to: [4, 3], captures: [[3, 2]] }];
-    assert.equal(isMoveLegal(move, legalMoves), true); // move without captures still matches
+    assert.equal(isMoveLegal(move, legalMoves), false); // captures type mismatch
   });
 
   // ── Run ────────────────────────────────────────────────────────────

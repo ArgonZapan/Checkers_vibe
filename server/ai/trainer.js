@@ -309,9 +309,12 @@ function isMoveLegal(move, legalMoves) {
     const sameFrom = Array.isArray(lm.from) ? lm.from[0] === move.from?.[0] && lm.from[1] === move.from?.[1] : lm.from === move.from;
     const sameTo = Array.isArray(lm.to) ? lm.to[0] === move.to?.[0] && lm.to[1] === move.to?.[1] : lm.to === move.to;
     if (!sameFrom || !sameTo) return false;
-    // If move has captures, they must match
-    if (move.captures && move.captures.length > 0) {
-      if (!lm.captures || lm.captures.length !== move.captures.length) return false;
+    // Captures must match exactly — a simple move (no captures) cannot match a capture move
+    const moveHasCaps = !!(move.captures && move.captures.length > 0);
+    const lmHasCaps = !!(lm.captures && lm.captures.length > 0);
+    if (moveHasCaps !== lmHasCaps) return false; // types must match
+    if (moveHasCaps) {
+      if (move.captures.length !== lm.captures.length) return false;
       return move.captures.every((c, i) => c[0] === lm.captures[i]?.[0] && c[1] === lm.captures[i]?.[1]);
     }
     return true;

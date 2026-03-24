@@ -64,8 +64,11 @@ function isMoveLegal(move, legalMoves) {
     const sameFrom = Array.isArray(lm.from) ? lm.from[0] === move.from?.[0] && lm.from[1] === move.from?.[1] : lm.from === move.from;
     const sameTo = Array.isArray(lm.to) ? lm.to[0] === move.to?.[0] && lm.to[1] === move.to?.[1] : lm.to === move.to;
     if (!sameFrom || !sameTo) return false;
-    if (move.captures && move.captures.length > 0) {
-      if (!lm.captures || lm.captures.length !== move.captures.length) return false;
+    const moveHasCaps = !!(move.captures && move.captures.length > 0);
+    const lmHasCaps = !!(lm.captures && lm.captures.length > 0);
+    if (moveHasCaps !== lmHasCaps) return false;
+    if (moveHasCaps) {
+      if (move.captures.length !== lm.captures.length) return false;
       return move.captures.every((c, i) => c[0] === lm.captures[i]?.[0] && c[1] === lm.captures[i]?.[1]);
     }
     return true;
@@ -354,12 +357,11 @@ export async function runHunterAlphaValidateMoveTests() {
     assert.equal(isMoveLegal({ from: [5, 5], to: [3, 3], captures: [[4, 6]] }, legal), false);
   });
 
-  test('isMoveLegal: capture vs no-capture — code allows match (potential bug)', () => {
-    // BUG: isMoveLegal returns true when move has no captures but legal has captures.
-    // The code only checks captures when move.captures exists and is non-empty.
+  test('isMoveLegal: capture vs no-capture — rejects mismatch', () => {
+    // FIXED: isMoveLegal now rejects when capture types don't match
     const legal = [{ from: [5, 5], to: [3, 3], captures: [[4, 4]] }];
     const result = isMoveLegal({ from: [5, 5], to: [3, 3] }, legal);
-    assert.equal(result, true, 'BUG: should be false but code allows it');
+    assert.equal(result, false, 'simple move should not match capture move');
   });
 
   test('isMoveLegal: scalar from/to matching', () => {

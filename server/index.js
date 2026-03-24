@@ -437,6 +437,7 @@ async function handleMove(socket, { from, to, captures }) {
   const playerBoard = state.board;
 
   // 3. If PvAI and game not over → first emit player's move, then AI makes its move
+  let aiLastMove = null; // track AI move for lastMove in final state
   if (isPvAI && !state.gameOver) {
     // Emit player's state first (with animation path)
     const playerPayload = {
@@ -454,36 +455,50 @@ async function handleMove(socket, { from, to, captures }) {
     await new Promise(r => setTimeout(r, animDelay));
     const aiMoveResult = await aiMove(state);
 
-    // BUG-DBF-003: Use AI move response for animation path instead of snapping board
-    if (aiMoveResult && aiMoveResult.path && aiMoveResult.path.length > 2) {
-      const aiPath = aiMoveResult.path;
-      const aiAnimDelay = aiPath.length * animStepMs + CONFIG.moveDelayMs;
-      // Emit intermediate state with animation path for AI move
-      const aiBoard = boardFromCpp(aiMoveResult.board);
-      const aiStatePayload = {
-        board: aiBoard,
-        turn: turnToColor(aiMoveResult.turn ?? aiMoveResult.currentTurn ?? 1),
-        legalMoves: [],
-        gameOver: aiMoveResult.gameOver ?? false,
-        winner: aiMoveResult.winner != null ? turnToColor(aiMoveResult.winner) : null,
-        lastMove: state.lastMove,
-        path: aiPath,
-      };
-      socket.emit('state', aiStatePayload);
-      await new Promise(r => setTimeout(r, aiAnimDelay));
-    } else {
-      // Fallback: no path data, add move delay for consistency
-      if (CONFIG.moveDelayMs > 0) await new Promise(r => setTimeout(r, CONFIG.moveDelayMs));
+    // Use AI move response for animation path and lastMove tracking
+    if (aiMoveResult) {
+      // Extract AI's move from the C++ response for lastMove
+      if (aiMoveResult.from && aiMoveResult.to) {
+        aiLastMove = {
+          from: Array.isArray(aiMoveResult.from) ? aiMoveResult.from : [Math.floor(aiMoveResult.from / 8), aiMoveResult.from % 8],
+          to: Array.isArray(aiMoveResult.to) ? aiMoveResult.to : [Math.floor(aiMoveResult.to / 8), aiMoveResult.to % 8],
+          captures: aiMoveResult.captures || [],
+        };
+      }
+      if (aiMoveResult.path && aiMoveResult.path.length > 2) {
+        const aiPath = aiMoveResult.path;
+        const aiAnimDelay = aiPath.length * animStepMs + CONFIG.moveDelayMs;
+        // Emit intermediate state with animation path for AI move
+        const aiBoard = boardFromCpp(aiMoveResult.board);
+        const aiStatePayload = {
+          board: aiBoard,
+          turn: turnToColor(aiMoveResult.turn ?? aiMoveResult.currentTurn ?? 1),
+          legalMoves: [],
+          gameOver: aiMoveResult.gameOver ?? false,
+          winner: aiMoveResult.winner != null ? turnToColor(aiMoveResult.winner) : null,
+          lastMove: aiLastMove || state.lastMove,
+          path: aiPath,
+        };
+        socket.emit('state', aiStatePayload);
+        await new Promise(r => setTimeout(r, aiAnimDelay));
+      } else {
+        // Fallback: no path data, add move delay for consistency
+        if (CONFIG.moveDelayMs > 0) await new Promise(r => setTimeout(r, CONFIG.moveDelayMs));
+      }
     }
 
-    // BUG-DBF-004: Fetch final state (avoids using stale state from before AI move)
+    // Fetch final state after AI move
     state = await getGameState();
   }
 
   // 4. Emit new state — in PvP broadcast to all, in PvAI emit to requesting client
+  // In PvAI, use AI's lastMove if available, otherwise fall back to player's move
+  const finalLastMove = isPvAI && aiLastMove
+    ? aiLastMove
+    : (state.lastMove || { from, to, captures: moveCaptures });
   const statePayload = {
     ...state,
-    lastMove: state.lastMove || { from, to, captures: moveCaptures },
+    lastMove: finalLastMove,
   };
   if (socket.gameMode === 'pvp') {
     io.emit('state', statePayload);
