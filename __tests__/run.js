@@ -130,6 +130,7 @@ import { runAutoSaveRapidDirtyTests } from './autoSave-rapid-dirty.test.js';
 import { runRateLimitSpoofedXffTests } from './rateLimit-spoofed-xff.test.js';
 import { runHunterTwIssuesTests } from './hunter-tw-issues154-146-156-151-142.test.js';
 import { runHunterTwIssues160to158Tests } from './hunter-tw-issues160-159-158.test.js';
+import { runHunterTwIssues163to144Tests } from './hunter-tw-issues163-164-144.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -258,6 +259,7 @@ const suites = [
   { name: 'rateLimitSpoofedXff', run: runRateLimitSpoofedXffTests },
   { name: 'hunterTwIssues154-146-156-151-142', run: runHunterTwIssuesTests },
   { name: 'hunterTwIssues160-159-158', run: runHunterTwIssues160to158Tests },
+  { name: 'hunterTwIssues163-164-144', run: runHunterTwIssues163to144Tests },
 ];
 
 let totalPassed = 0, totalFailed = 0;
