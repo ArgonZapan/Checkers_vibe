@@ -20,8 +20,25 @@ const app = express();
 app.set('trust proxy', false); // SEC: prevent IP spoofing via X-Forwarded-For
 app.disable('X-Powered-By'); // SEC-001: prevent framework disclosure
 const httpServer = createServer(app);
+// SEC #158: WebSocket origin validation — if CORS_ORIGIN=* don't allow any origin on WS upgrade
+const CORS_ORIGIN = CONFIG.server.corsOrigin || 'http://localhost:3000';
+const _corsOriginList = CORS_ORIGIN === '*' ? [] : CORS_ORIGIN.split(',').map(s => s.trim());
+
+function _isAllowedWsOrigin(origin) {
+  if (!origin) return true; // same-origin or non-browser (no Origin header)
+  if (CORS_ORIGIN === '*') return false; // wildcard CORS ≠ wildcard WS — block unknown origins
+  return _corsOriginList.some(allowed => origin === allowed);
+}
+
 const io = new SocketIO(httpServer, {
-  cors: { origin: CONFIG.server.corsOrigin || 'http://localhost:3000' }
+  cors: { origin: CORS_ORIGIN },
+  allowRequest: (req, callback) => {
+    const origin = req.headers.origin;
+    if (!_isAllowedWsOrigin(origin)) {
+      return callback(null, false); // reject handshake
+    }
+    callback(null, true);
+  },
 });
 
 // ── Security Headers (LEAK-001) ─────────────────────────────────────────────
