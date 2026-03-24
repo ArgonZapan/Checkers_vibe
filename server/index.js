@@ -84,6 +84,19 @@ app.use((req, res, next) => {
   const now = Date.now();
   let entry = _rateLimitMap.get(ip);
   if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    // SEC #161: guard against OOM — if map is full and this is a new IP, evict oldest or reject
+    if (!entry && _rateLimitMap.size >= RATE_LIMIT_MAX_ENTRIES) {
+      // Evict oldest entry (smallest windowStart)
+      let oldestIp = null;
+      let oldestTime = Infinity;
+      for (const [k, v] of _rateLimitMap) {
+        if (v.windowStart < oldestTime) {
+          oldestTime = v.windowStart;
+          oldestIp = k;
+        }
+      }
+      if (oldestIp) _rateLimitMap.delete(oldestIp);
+    }
     entry = { windowStart: now, count: 0 };
     _rateLimitMap.set(ip, entry);
   }
