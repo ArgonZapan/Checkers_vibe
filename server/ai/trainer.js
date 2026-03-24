@@ -638,7 +638,9 @@ export class SelfPlay {
       this.epsilonBlack = (typeof state.epsilonBlack === 'number' && Number.isFinite(state.epsilonBlack)) ? state.epsilonBlack : CONFIG.ai.defaultEpsilon;
       this.stats.epsilonWhite = this.epsilonWhite;
       this.stats.epsilonBlack = this.epsilonBlack;
-      console.log(`[SelfPlay] Loaded state: ${this.stats.gamesPlayed} games played, εW=${this.epsilonWhite}, εB=${this.epsilonBlack}`);
+      // Restore running flag so self-play resumes correctly after restart
+      this.running = !!state.running;
+      console.log(`[SelfPlay] Loaded state: ${this.stats.gamesPlayed} games played, εW=${this.epsilonWhite}, εB=${this.epsilonBlack}, running=${this.running}`);
       this.dirty = true; // loaded state should be persisted on next save cycle
     } catch (err) {
       console.log('[SelfPlay] No previous state found, starting fresh');

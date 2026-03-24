@@ -754,6 +754,9 @@ io.on('connection', async (socket) => {
       CONFIG.server.speedMode = mode;
       io.emit('speedUpdate', { speedMode: mode });
       console.log(`[WS] Speed mode set to: ${mode}`);
+    } else {
+      socket.emit('error', { message: `Invalid speed mode '${mode}' — expected 'fast' or 'normal'` });
+      console.warn(`[WS] setSpeedMode rejected — invalid value: '${mode}'`);
     }
   });
 
