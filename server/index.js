@@ -111,8 +111,7 @@ app.use((req, res, next) => {
 function requireApiToken(req, res, next) {
   const token = process.env.API_TOKEN;
   if (!token) return next(); // dev mode — no token set
-  const provided = req.headers['authorization']?.replace(/^Bearer\s+/i, '')
-    || req.query?.token;
+  const provided = req.headers['authorization']?.replace(/^Bearer\s+/i, '') || null;
   if (provided !== token) {
     return res.status(401).json({ error: 'Unauthorized — valid token required' });
   }
