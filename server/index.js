@@ -77,6 +77,18 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── Auth middleware (SEC #157) ───────────────────────────────────────────────
+function requireApiToken(req, res, next) {
+  const token = process.env.API_TOKEN;
+  if (!token) return next(); // dev mode — no token set
+  const provided = req.headers['authorization']?.replace(/^Bearer\s+/i, '')
+    || req.query?.token;
+  if (provided !== token) {
+    return res.status(401).json({ error: 'Unauthorized — valid API_TOKEN required' });
+  }
+  next();
+}
+
 // ── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }));
 
@@ -158,7 +170,7 @@ app.post('/api/ai/predict', async (req, res) => {
   }
 });
 
-app.post('/api/ai/train', async (req, res) => {
+app.post('/api/ai/train', requireApiToken, async (req, res) => {
   try {
     const batch = req.body.batch || [];
     if (batch.length === 0) {
@@ -200,7 +212,7 @@ app.post('/api/ai/train', async (req, res) => {
   }
 });
 
-app.post('/api/ai/params', (req, res) => {
+app.post('/api/ai/params', requireApiToken, (req, res) => {
   const { epsilon, networkSize, side = 'both' } = req.body;
   // Validate epsilon — reject NaN, Infinity, and out-of-range values
   if (epsilon != null && (typeof epsilon !== 'number' || !Number.isFinite(epsilon) || epsilon < 0 || epsilon > 1)) {
@@ -215,7 +227,7 @@ app.post('/api/ai/params', (req, res) => {
   res.json({ ok: true, ...trainer.getStatus() });
 });
 
-app.post('/api/ai/reset', async (_req, res) => {
+app.post('/api/ai/reset', requireApiToken, async (_req, res) => {
   try {
     // BUG-008: Acquire lock so resetModel waits for any in-progress save
     let release;
@@ -949,12 +961,14 @@ async function main() {
     console.log(`[Server] Checkers server running on http://${HOST}:${PORT}`);
   });
 
-  // Auto-start self-play
-  try {
-    await trainer.start();
-    console.log('[Server] Self-play auto-started');
-  } catch (err) {
-    console.error('[Server] Self-play auto-start failed:', err.message);
+  // Auto-start self-play only if it was running before restart
+  if (trainer.running) {
+    try {
+      await trainer.start();
+      console.log('[Server] Self-play auto-started (resumed from saved state)');
+    } catch (err) {
+      console.error('[Server] Self-play auto-start failed:', err.message);
+    }
   }
 }
 
