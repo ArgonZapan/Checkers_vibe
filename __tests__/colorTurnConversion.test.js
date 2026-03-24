@@ -17,7 +17,7 @@ function turnToColor(turn) {
   if (typeof turn === 'string') return turn;
   if (turn === 1) return 'white';
   if (turn === -1) return 'black';
-  return 'white'; // default fallback (e.g., turn === 0 for draw)
+  return null; // 0 = draw/no turn — don't misleadingly return 'white'
 }
 
 // ── Test runner ─────────────────────────────────────────────────────────────
@@ -70,12 +70,12 @@ export async function runColorTurnConversionTests() {
     assert.equal(turnToColor(-1), 'black');
   });
 
-  test('turnToColor: 0 → "white" (default/fallback)', () => {
-    assert.equal(turnToColor(0), 'white');
+  test('turnToColor: 0 → null (draw/no turn)', () => {
+    assert.equal(turnToColor(0), null);
   });
 
-  test('turnToColor: 2 → "white" (default)', () => {
-    assert.equal(turnToColor(2), 'white');
+  test('turnToColor: 2 → null (unknown turn)', () => {
+    assert.equal(turnToColor(2), null);
   });
 
   test('turnToColor: "white" string passthrough', () => {
@@ -90,20 +90,20 @@ export async function runColorTurnConversionTests() {
     assert.equal(turnToColor('draw'), 'draw');
   });
 
-  test('turnToColor: null → "white" (default fallback)', () => {
-    assert.equal(turnToColor(null), 'white');
+  test('turnToColor: null → null (fallback)', () => {
+    assert.equal(turnToColor(null), null);
   });
 
-  test('turnToColor: undefined → "white" (default fallback)', () => {
-    assert.equal(turnToColor(undefined), 'white');
+  test('turnToColor: undefined → null (fallback)', () => {
+    assert.equal(turnToColor(undefined), null);
   });
 
-  test('turnToColor: NaN → "white" (default fallback)', () => {
-    assert.equal(turnToColor(NaN), 'white');
+  test('turnToColor: NaN → null (fallback)', () => {
+    assert.equal(turnToColor(NaN), null);
   });
 
-  test('turnToColor: false → "white" (default fallback)', () => {
-    assert.equal(turnToColor(false), 'white');
+  test('turnToColor: false → null (fallback)', () => {
+    assert.equal(turnToColor(false), null);
   });
 
   test('turnToColor: "DRAW" passthrough (no normalization)', () => {
@@ -118,16 +118,16 @@ export async function runColorTurnConversionTests() {
     assert.equal(turnToColor(''), '');
   });
 
-  test('turnToColor: 2 → "white" (default, only 1 maps to white)', () => {
-    assert.equal(turnToColor(2), 'white');
+  test('turnToColor: 2 → null (unknown, only 1 maps to white)', () => {
+    assert.equal(turnToColor(2), null);
   });
 
-  test('turnToColor: -2 → "white" (default, only -1 maps to black)', () => {
-    assert.equal(turnToColor(-2), 'white');
+  test('turnToColor: -2 → null (unknown, only -1 maps to black)', () => {
+    assert.equal(turnToColor(-2), null);
   });
 
-  test('turnToColor: 0.5 → "white" (default fallback)', () => {
-    assert.equal(turnToColor(0.5), 'white');
+  test('turnToColor: 0.5 → null (non-integer)', () => {
+    assert.equal(turnToColor(0.5), null);
   });
 
   // ═══════════════════════════════════════════════════════════════════════

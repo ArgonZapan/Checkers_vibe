@@ -135,6 +135,12 @@ import { runA11yRegressionTests } from './a11yRegression.test.js';
 import { runIssue150MultiCaptureDuplicateTests } from './issue150-multi-capture-duplicate.test.js';
 import { runHunterTwModelEdgeTests } from './hunter-tw-model-edge.test.js';
 import { runHunterTwTrainerEdgeTests } from './hunter-tw-trainer-edge.test.js';
+import { runMinimaxCapturePromotionTests } from './hunter-tw-minimax-capture-promotion.test.js';
+import { runTrainerRewardBoundaryTests } from './hunter-tw-trainer-reward-boundary.test.js';
+import { runModelInputEdgeTests } from './hunter-tw-model-input-edge.test.js';
+import { runBufferIoEdgeTests } from './hunter-tw-buffer-io-edge.test.js';
+import { runBoardconvertRoundtripMixedTests } from './hunter-tw-boardconvert-roundtrip-mixed.test.js';
+import { runHunterTwCoverageGapsTests } from './hunter-tw-coverage-gaps.test.js';
 
 const suites = [
   { name: 'boardConvert',        run: runBoardConvertTests },
@@ -268,6 +274,12 @@ const suites = [
   { name: 'issue150MultiCaptureDuplicate', run: runIssue150MultiCaptureDuplicateTests },
   { name: 'hunterTwModelEdge', run: runHunterTwModelEdgeTests },
   { name: 'hunterTwTrainerEdge', run: runHunterTwTrainerEdgeTests },
+  { name: 'minimaxCapturePromotion', run: runMinimaxCapturePromotionTests },
+  { name: 'trainerRewardBoundary', run: runTrainerRewardBoundaryTests },
+  { name: 'modelInputEdge', run: runModelInputEdgeTests },
+  { name: 'bufferIoEdge', run: runBufferIoEdgeTests },
+  { name: 'boardconvertRoundtripMixed', run: runBoardconvertRoundtripMixedTests },
+  { name: 'hunterTwCoverageGaps', run: runHunterTwCoverageGapsTests },
 ];
 
 let totalPassed = 0, totalFailed = 0;

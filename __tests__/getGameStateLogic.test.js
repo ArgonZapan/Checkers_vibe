@@ -16,7 +16,7 @@ function turnToColor(turn) {
   if (typeof turn === 'string') return turn;
   if (turn === 1) return 'white';
   if (turn === -1) return 'black';
-  return 'white';
+  return null; // 0 = draw/no turn — don't misleadingly return 'white'
 }
 
 // ── Extracted: move mapping logic (mirrors getGameState) ────────────────────
@@ -99,12 +99,12 @@ export async function runGetGameStateLogicTests() {
     assert.equal(state.turn, 'white');
   });
 
-  test('state turn=0 defaults to "white" (draw state)', () => {
+  test('state turn=0 returns null (draw state — no misleading turn)', () => {
     const state = assembleGameState(
       { board: new Array(64).fill(0), turn: 0, gameOver: true },
       []
     );
-    assert.equal(state.turn, 'white');
+    assert.equal(state.turn, null);
   });
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -151,12 +151,12 @@ export async function runGetGameStateLogicTests() {
     assert.equal(state.winner, 'black');
   });
 
-  test('winner=0 (draw) becomes "white" (turnToColor fallback)', () => {
+  test('winner=0 (draw) → turnToColor returns null (no misleading color)', () => {
     const state = assembleGameState(
       { board: new Array(64).fill(0), gameOver: true, winner: 0 },
       []
     );
-    assert.equal(state.winner, 'white');
+    assert.equal(state.winner, null);
   });
 
   test('winner as string passes through', () => {

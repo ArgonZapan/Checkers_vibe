@@ -16,7 +16,7 @@ const turnToColor = (turn) => {
   if (typeof turn === 'string') return turn;
   if (turn === 1) return 'white';
   if (turn === -1) return 'black';
-  return 'white'; // default fallback
+  return null; // 0 = draw/no turn — don't misleadingly return 'white'
 };
 
 // ── Inline wsThrottle (from server/index.js) ─────────────────────────
@@ -75,16 +75,16 @@ export async function runHunterAlphaTurnThrottleTests() {
     assert.equal(turnToColor(-1), 'black');
   });
 
-  test('turnToColor: 0 → "white" (draw fallback)', () => {
-    assert.equal(turnToColor(0), 'white');
+  test('turnToColor: 0 → null (draw — no misleading "white")', () => {
+    assert.equal(turnToColor(0), null);
   });
 
-  test('turnToColor: 2 → "white" (unknown fallback)', () => {
-    assert.equal(turnToColor(2), 'white');
+  test('turnToColor: 2 → null (unknown turn)', () => {
+    assert.equal(turnToColor(2), null);
   });
 
-  test('turnToColor: -999 → "white" (fallback)', () => {
-    assert.equal(turnToColor(-999), 'white');
+  test('turnToColor: -999 → null (unknown turn)', () => {
+    assert.equal(turnToColor(-999), null);
   });
 
   test('turnToColor: "white" string passthrough', () => {
@@ -103,12 +103,12 @@ export async function runHunterAlphaTurnThrottleTests() {
     assert.equal(turnToColor('whatever'), 'whatever');
   });
 
-  test('turnToColor: null → "white" (fallback)', () => {
-    assert.equal(turnToColor(null), 'white');
+  test('turnToColor: null → null (not a valid turn)', () => {
+    assert.equal(turnToColor(null), null);
   });
 
-  test('turnToColor: NaN → "white" (NaN !== 1, NaN !== -1)', () => {
-    assert.equal(turnToColor(NaN), 'white');
+  test('turnToColor: NaN → null (NaN is not 1 or -1)', () => {
+    assert.equal(turnToColor(NaN), null);
   });
 
   // ── wsThrottle ─────────────────────────────────────────────────────

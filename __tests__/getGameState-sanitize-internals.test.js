@@ -34,7 +34,7 @@ function turnToColor(turn) {
   if (typeof turn === 'string') return turn;
   if (turn === 1) return 'white';
   if (turn === -1) return 'black';
-  return 'white';
+  return null; // 0 = draw/no turn — don't misleadingly return 'white'
 }
 
 function sanitizeGameState(cppState, cppLegalMoves) {
