@@ -7,6 +7,8 @@
  * Move format: { from: [row,col], to: [row,col], captures?: [[row,col],...] }
  */
 
+import { shouldPromote, promotePiece } from '../boardConvert.js';
+
 // ── Piece Values ─────────────────────────────────────────────────────────────
 const PIECE_VALUES = { 0: 0, 1: 1, 2: 3, 3: 1, 4: 3 };
 
@@ -84,12 +86,8 @@ function applyMove(board, move, turn) {
   newBoard[toIdx] = piece;
 
   // Promotion: pawn reaches last row
-  // White starts rows 0-2, promotes at row 7; Black starts rows 5-7, promotes at row 0
-  const isPawn = piece === 1 || piece === 3;
-  if (isPawn) {
-    if ((turn === 1 && toRow === 7) || (turn === -1 && toRow === 0)) {
-      newBoard[toIdx] = turn === 1 ? 2 : 4; // promote to king
-    }
+  if (shouldPromote(piece, toRow, turn)) {
+    newBoard[toIdx] = promotePiece(piece);
   }
 
   return newBoard;

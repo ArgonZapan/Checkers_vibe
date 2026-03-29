@@ -88,3 +88,27 @@ export function boardToCpp(board) {
     return 0;
   });
 }
+
+/**
+ * Check if a piece should be promoted based on its position.
+ * @param {number} piece - C++ piece encoding: 1=white pawn, 2=white king, 3=black pawn, 4=black king
+ * @param {number} toRow - Destination row (0-7)
+ * @param {number} turn - 1 (white) or -1 (black) — player who just moved
+ * @returns {boolean} true if the piece should be promoted
+ */
+export function shouldPromote(piece, toRow, turn) {
+  const isPawn = piece === 1 || piece === 3;
+  if (!isPawn) return false;
+  return (turn === 1 && toRow === 7) || (turn === -1 && toRow === 0);
+}
+
+/**
+ * Get the promoted piece value.
+ * @param {number} piece - C++ piece encoding
+ * @returns {number} Promoted piece (2 for white, 4 for black), or unchanged piece if not a pawn
+ */
+export function promotePiece(piece) {
+  if (piece === 1) return 2;
+  if (piece === 3) return 4;
+  return piece;
+}
