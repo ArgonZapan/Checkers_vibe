@@ -52,7 +52,7 @@ Sieć neuronowa (ten sam model dla obu stron). Różne parametry = różne style
 
 ## Status
 
-🏗️ Planowanie — silnik C++ gotowy (10 testów ✅)
+✅ Dojrzały projekt — 130+ testów (3,281 testów przechodzących), pełny frontend React, serwer WebSocket + TensorFlow.js + SelfPlay
 
 ## Uruchomienie
 
