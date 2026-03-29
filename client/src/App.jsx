@@ -4,6 +4,10 @@ import Board from './components/Board';
 import GameControls from './components/GameControls';
 import Dashboard from './components/Dashboard';
 import ParamsPanel from './components/ParamsPanel';
+import Menu from './components/Menu';
+import GameView from './components/GameView';
+import Toast from './components/Toast';
+import StatsPanel from './components/StatsPanel';
 
 const EMPTY_BOARD = () => {
   const b = Array.from({ length: 8 }, () => Array(8).fill(null));
@@ -455,113 +459,45 @@ export default function App() {
   }, []);
 
   if (mode === 'menu') {
-    return (
-      <div className="app">
-        <header className="app-header">
-          <h1>♟ Checkers AI</h1>
-        </header>
-        <div className="menu">
-          <h2>Wybierz tryb gry</h2>
-          <div className="menu-buttons">
-            <button className="btn-primary" onClick={handleStartPvai} style={{ fontSize: '1.2rem', padding: '1rem 2rem' }}>
-              🎮 Gracz vs AI
-            </button>
-            <button className="btn-secondary" onClick={handleStartAivai} style={{ fontSize: '1.2rem', padding: '1rem 2rem' }}>
-              🤖 AI vs AI
-            </button>
-          </div>
-          <p style={{ color: 'var(--text-dim)', marginTop: '1rem' }}>
-            {connected ? '🟢 Połączono z serwerem' : '🔴 Brak połączenia'}
-          </p>
-        </div>
-      </div>
-    );
+    return <Menu connected={connected} onStartPvai={handleStartPvai} onStartAivai={handleStartAivai} />;
   }
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>♟ Checkers AI</h1>
-        <span style={{ fontSize: '0.75rem', color: connected ? 'var(--green)' : 'var(--red)' }} role="status" aria-live="polite">
-          {connected ? '🟢 Online' : '🔴 Offline — reconnecting...'}
-        </span>
-      </header>
-      <div className="game-layout">
-        <div className="game-main">
-          <Board
-            board={board}
-            turn={turn}
-            onCellClick={handleCellClick}
-            legalMoves={legalMoves}
-            selected={selected}
-            lastMove={lastMove}
-            gameOver={gameOver}
-            winner={winner}
-            path={movePath}
-            captures={lastMove?.captures}
-            onReset={handleReset}
-          />
-          <GameControls
-            mode={mode}
-            turn={turn}
-            gameOver={gameOver}
-            winner={winner}
-            onStartPvai={handleStartPvai}
-            onStartAivai={handleStartAivai}
-            onReset={handleReset}
-            speed={speed}
-            onSpeed={handleSpeed}
-          />
-        </div>
-        <div className="game-side">
-          {moveHistory.length > 0 && (
-            <div className="move-history">
-              <h3>📜 Historia ruchów</h3>
-              <ul className="move-list">
-                {moveHistory.map((m, i) => (
-                  <li key={i}>
-                    <span className="move-number">{Math.floor(i / 2) + 1}{i % 2 === 0 ? '.' : '...'}</span>
-                    <span className={m.turn === 'white' ? 'move-white' : 'move-black'}>
-                      {m.capture ? <><span aria-label="zbicie">⚔️</span>{' '}</> : ''}{m.from}-{m.to}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {mode === 'aivai' && (
-            <Dashboard
-              stats={stats}
-              lossHistory={lossHistory}
-              gameHistory={gameHistory}
-              currentGame={gameNumber}
-              active={selfPlayActive}
-              avgTime={avgTime}
-              totalTimeMs={totalTimeMs}
-              lastRoundTime={lastRoundTime}
-              whiteEpsilon={params.whiteEpsilon}
-              blackEpsilon={params.blackEpsilon}
-              connected={connected}
-              whiteStrategy={params.whiteStrategy}
-              blackStrategy={params.blackStrategy}
-            />
-          )}
-          <ParamsPanel
-            params={params}
-            onParamsChange={handleParamsChange}
-            onRestart={handleRestart}
-            active={selfPlayActive}
-            onToggleSelfplay={handleToggleSelfplay}
-            modelParams={modelParams}
-            onModelParamsChange={handleModelParamsChange}
-            onApplyModelParams={handleApplyModelParams}
-            onResetModelParams={handleResetModelParams}
-          />
-          {toast && (
-            <div className={`toast-notification ${toast.type === 'error' ? 'toast-error' : ''}`} role="alert" aria-live="assertive">{toast.message || toast}</div>
-          )}
-        </div>
-      </div>
-    </div>
+    <GameView
+      board={board}
+      turn={turn}
+      mode={mode}
+      gameOver={gameOver}
+      winner={winner}
+      legalMoves={legalMoves}
+      selected={selected}
+      lastMove={lastMove}
+      movePath={movePath}
+      speed={speed}
+      connected={connected}
+      moveHistory={moveHistory}
+      stats={stats}
+      lossHistory={lossHistory}
+      gameHistory={gameHistory}
+      gameNumber={gameNumber}
+      selfPlayActive={selfPlayActive}
+      avgTime={avgTime}
+      totalTimeMs={totalTimeMs}
+      lastRoundTime={lastRoundTime}
+      params={params}
+      modelParams={modelParams}
+      toast={toast}
+      onCellClick={handleCellClick}
+      onReset={handleReset}
+      onStartPvai={handleStartPvai}
+      onStartAivai={handleStartAivai}
+      onSpeed={handleSpeed}
+      onParamsChange={handleParamsChange}
+      onRestart={handleRestart}
+      onToggleSelfplay={handleToggleSelfplay}
+      onModelParamsChange={handleModelParamsChange}
+      onApplyModelParams={handleApplyModelParams}
+      onResetModelParams={handleResetModelParams}
+    />
   );
 }
