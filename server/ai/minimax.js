@@ -122,10 +122,10 @@ function generateLegalMoves(board, turn) {
     if (!isKing) {
       // Pawn: single-step capture (jump over adjacent opponent)
       for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
-        // White starts rows 0-2, forward = increasing row (toward row 7)
-        // Black starts rows 5-7, forward = decreasing row (toward row 0)
-        if (isWhiteTurn && dr < 0) continue;
-        if (!isWhiteTurn && dr > 0) continue;
+        // White starts rows 0-2, forward = decreasing row (toward row 0)
+        // Black starts rows 5-7, forward = increasing row (toward row 7)
+        if (isWhiteTurn && dr > 0) continue;
+        if (!isWhiteTurn && dr < 0) continue;
 
         const adjR = row + dr, adjC = col + dc;
         const landR = row + dr * 2, landC = col + dc * 2;
@@ -205,8 +205,8 @@ function generateLegalMoves(board, turn) {
     if (!isKing) {
       // Pawn: single-step forward
       for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
-        if (isWhiteTurn && dr < 0) continue;
-        if (!isWhiteTurn && dr > 0) continue;
+        if (isWhiteTurn && dr > 0) continue;
+        if (!isWhiteTurn && dr < 0) continue;
 
         const newR = row + dr, newC = col + dc;
         if (newR < 0 || newR > 7 || newC < 0 || newC > 7) continue;
