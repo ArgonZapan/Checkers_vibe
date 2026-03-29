@@ -1,6 +1,5 @@
 import { createModel, predict, train, saveModel, computePolicyIndex, disposeModel } from './model.js';
 import { ReplayBuffer } from './buffer.js';
-import { minimaxSearch, applyMove, generateLegalMoves, evaluate } from './minimax.js';
 import { writeFile, readFile, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -878,16 +877,22 @@ export class SelfPlay {
       let chosenMove;
 
       if (strategyConfig && strategyConfig.type === 'minimax') {
-        // ── Minimax path: pure JS search, no DQN ─────────────────────
+        // ── Minimax path: C++ engine API ──────────────────────────────
         const depth = strategyConfig.depth || 4;
-        const flatBoard = flattenBoard(boardArray);
-        if (!flatBoard) throw new Error('minimax: invalid board');
-        const result = minimaxSearch(flatBoard, turn, depth);
-        chosenMove = result.move;
-        if (!chosenMove) {
-          // Fallback to random if minimax returns nothing
+        const turnStr = turn === 1 ? 'white' : 'black';
+        const engineRes = await cppFetch(`${CPP_BASE}/api/engine/best-move`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ board: boardArray, turn: turnStr, depth }),
+        });
+        if (!engineRes.ok) throw new Error(`Engine best-move failed: ${engineRes.status}`);
+        const engineData = await engineRes.json();
+        if (!engineData.hasMove || !engineData.move) {
+          // Fallback to random if engine returns nothing
           const randomIdx = Math.floor(Math.random() * legalMoves.length);
           chosenMove = legalMoves[randomIdx];
+        } else {
+          chosenMove = engineData.move;
         }
         // Ensure policyIndex is set for training — without it, policy target is all zeros
         if (chosenMove && chosenMove.policyIndex == null) {
