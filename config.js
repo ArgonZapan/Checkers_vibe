@@ -56,7 +56,7 @@ export const CONFIG = {
     minEpsilon: 0.01,
     epsilonDecay: 0.01,
     gamma: 0.95,
-    bufferSize: 10000,
+    bufferSize: 500000,
     trainEpochs: 5,
     modelParams: {
       layers: 3,

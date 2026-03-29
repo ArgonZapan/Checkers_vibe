@@ -151,8 +151,8 @@ export async function runConfigAiBoardTests() {
     assert.equal(CONFIG.ai.gamma, 0.95);
   });
 
-  test('ai.bufferSize is 10000', () => {
-    assert.equal(CONFIG.ai.bufferSize, 10000);
+  test('ai.bufferSize is 500000', () => {
+    assert.equal(CONFIG.ai.bufferSize, 500000);
   });
 
   test('ai.trainEpochs is 5', () => {
