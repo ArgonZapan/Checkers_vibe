@@ -113,4 +113,8 @@ bool Engine::undoLastMove() {
     return true;
 }
 
+MinimaxResult Engine::getBestMove(Color turn, int depth) {
+    return minimaxSearch(board_, turn, depth);
+}
+
 } // namespace checkers

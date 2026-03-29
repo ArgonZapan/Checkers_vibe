@@ -1,6 +1,7 @@
 #pragma once
 #include "board.h"
 #include "movegen.h"
+#include "minimax.h"
 
 namespace checkers {
 
@@ -45,6 +46,9 @@ public:
 
     // Debug: get moves without capture counter
     int getMovesWithoutCapture() const { return movesWithoutCapture_; }
+
+    // Get best move using minimax search
+    MinimaxResult getBestMove(Color turn, int depth = 4);
 
 private:
     Board board_;

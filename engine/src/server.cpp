@@ -250,6 +250,53 @@ void registerRoutes(httplib::Server& svr) {
         res.set_content(gameStateJson(engine).dump(), "application/json");
     });
 
+    // POST /api/engine/best-move  body: {"board":[[...]],"turn":"white|black","depth":4}
+    svr.Post("/api/engine/best-move", [](const httplib::Request& req, httplib::Response& res) {
+        try {
+            auto body = json::parse(req.body);
+            // Validate turn
+            if (!body.contains("turn") || !body["turn"].is_string()) {
+                json err; err["error"] = "missing or invalid 'turn' field";
+                res.status = 400; res.set_content(err.dump(), "application/json"); return;
+            }
+            std::string turnStr = body["turn"].get<std::string>();
+            if (turnStr != "white" && turnStr != "black") {
+                json err; err["error"] = "'turn' must be 'white' or 'black'";
+                res.status = 400; res.set_content(err.dump(), "application/json"); return;
+            }
+            Color turn = (turnStr == "white") ? WHITE : BLACK;
+            int depth = 4;
+            if (body.contains("depth") && body["depth"].is_number()) {
+                depth = body["depth"].get<int>();
+                if (depth < 1 || depth > 8) {
+                    json err; err["error"] = "depth must be between 1 and 8";
+                    res.status = 400; res.set_content(err.dump(), "application/json"); return;
+                }
+            }
+            // Validate board
+            if (!body.contains("board") || !body["board"].is_array() || body["board"].size() != 8) {
+                json err; err["error"] = "missing or invalid 'board' field";
+                res.status = 400; res.set_content(err.dump(), "application/json"); return;
+            }
+            Board b = arrayToBoard(body["board"], turn);
+            engine.getBoard() = b;
+            auto result = engine.getBestMove(turn, depth);
+            json j;
+            j["score"] = result.score;
+            j["hasMove"] = result.hasMove;
+            if (result.hasMove) {
+                j["move"] = moveToJson(result.move);
+            }
+            res.set_content(j.dump(), "application/json");
+        } catch (json::parse_error&) {
+            json err; err["error"] = "invalid json in request";
+            res.status = 400; res.set_content(err.dump(), "application/json");
+        } catch (std::exception&) {
+            json err; err["error"] = "internal error";
+            res.status = 500; res.set_content(err.dump(), "application/json");
+        }
+    });
+
     // POST /api/board/set  body: {"board":[[...]],"turn":"white|black"}
     svr.Post("/api/board/set", [](const httplib::Request& req, httplib::Response& res) {
         try {
