@@ -11,6 +11,7 @@ add_library(engine STATIC
     src/board.cpp
     src/movegen.cpp
     src/engine.cpp
+    src/minimax.cpp
 )
 target_include_directories(engine PUBLIC src)
 
