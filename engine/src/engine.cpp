@@ -1,10 +1,10 @@
 #include "engine.h"
 #include <algorithm>
 #include <cstring>
+#include <sstream>
 
 namespace checkers {
 
-// Helper: compare two Move captures arrays
 static bool capturesEqual(const Move& a, const Move& b) {
     if (a.numCaptures != b.numCaptures) return false;
     for (int i = 0; i < a.numCaptures; i++) {
@@ -21,6 +21,32 @@ void Engine::reset() {
     board_.reset();
     history_.clear();
     movesWithoutCapture_ = 0;
+    positionHistory_.clear();
+    positionHistory_[getBoardHash()] = 1;
+}
+
+std::string Engine::getBoardHash() const {
+    std::ostringstream os;
+    os << board_.whitePieces << "," << board_.whiteKings << ","
+       << board_.blackPieces << "," << board_.blackKings << ","
+       << board_.currentTurn;
+    return os.str();
+}
+
+bool Engine::hasInsufficientMaterial() const {
+    int whiteKings = __builtin_popcountll(board_.whiteKings);
+    int blackKings = __builtin_popcountll(board_.blackKings);
+    int whitePawns = __builtin_popcountll(board_.whitePieces);
+    int blackPawns = __builtin_popcountll(board_.blackPieces);
+
+    if (whitePawns > 0 || blackPawns > 0) return false;
+
+    if (whiteKings == 1 && blackKings == 1) return true;
+    if (whiteKings == 2 && blackKings == 1) return false;
+    if (whiteKings == 1 && blackKings == 2) return false;
+    if (whiteKings == 2 && blackKings == 2) return false;
+
+    return false;
 }
 
 const Board& Engine::getBoard() const {
@@ -40,7 +66,6 @@ std::vector<Move> Engine::getLegalMoves(Color color) const {
 }
 
 bool Engine::makeMove(Move& move) {
-    // Sprawdź czy ruch jest legalny
     auto legalMoves = getLegalMoves();
     bool found = false;
     for (auto& m : legalMoves) {
@@ -51,10 +76,12 @@ bool Engine::makeMove(Move& move) {
     }
     if (!found) return false;
 
-    // Wykonaj
     board_.makeMove(move);
     history_.push_back(move);
     if (move.numCaptures == 0) movesWithoutCapture_++; else movesWithoutCapture_ = 0;
+
+    std::string hash = getBoardHash();
+    positionHistory_[hash]++;
 
     return true;
 }
@@ -63,6 +90,9 @@ void Engine::makeMoveUnchecked(Move& move) {
     board_.makeMove(move);
     history_.push_back(move);
     if (move.numCaptures == 0) movesWithoutCapture_++; else movesWithoutCapture_ = 0;
+
+    std::string hash = getBoardHash();
+    positionHistory_[hash]++;
 }
 
 bool Engine::isLegal(const Move& move) const {
@@ -77,12 +107,20 @@ bool Engine::isLegal(const Move& move) const {
 
 GameResult Engine::getResult() const {
     if (!MoveGenerator::hasAnyMove(board_, board_.currentTurn)) {
-        // Obecny gracz nie ma ruchów — przegrywa
         return (board_.currentTurn == WHITE) ? BLACK_WIN : WHITE_WIN;
     }
 
-    // Sprawdź remis: 20 ruchów bez bicia (O(1) zamiast O(n))
-    if (movesWithoutCapture_ >= 40) { // 40 pół-ruchów = 20 pełnych ruchów
+    if (movesWithoutCapture_ >= 50) {
+        return DRAW;
+    }
+
+    std::string hash = getBoardHash();
+    auto it = positionHistory_.find(hash);
+    if (it != positionHistory_.end() && it->second >= 3) {
+        return DRAW;
+    }
+
+    if (hasInsufficientMaterial()) {
         return DRAW;
     }
 
@@ -100,10 +138,19 @@ const std::vector<Move>& Engine::getHistory() const {
 bool Engine::undoLastMove() {
     if (history_.empty()) return false;
 
+    std::string hash = getBoardHash();
+    auto it = positionHistory_.find(hash);
+    if (it != positionHistory_.end()) {
+        if (it->second <= 1) {
+            positionHistory_.erase(it);
+        } else {
+            it->second--;
+        }
+    }
+
     board_.undoMove(history_.back());
     history_.pop_back();
 
-    // Rebuild movesWithoutCapture_ from remaining history
     movesWithoutCapture_ = 0;
     for (size_t i = history_.size(); i > 0; i--) {
         if (history_[i - 1].isCapture()) break;
