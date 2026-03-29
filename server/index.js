@@ -9,7 +9,7 @@ import { saveModel, computePolicyIndex } from './ai/model.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG } from '../config.js';
-import { boardFromCpp, boardToCpp } from './boardConvert.js';
+import { boardFromCpp, boardToCpp, sanitizeStatePayload } from './boardConvert.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || CONFIG.server.port;
@@ -440,11 +440,11 @@ async function handleMove(socket, { from, to, captures }) {
   let aiLastMove = null; // track AI move for lastMove in final state
   if (isPvAI && !state.gameOver) {
     // Emit player's state first (with animation path)
-    const playerPayload = {
+    const playerPayload = sanitizeStatePayload({
       ...state,
       lastMove: { from, to, captures: moveCaptures },
       path: playerPath,
-    };
+    }, 'playerPayload');
     socket.emit('state', playerPayload);
 
     // Wait for animation, then AI makes its move
@@ -470,7 +470,7 @@ async function handleMove(socket, { from, to, captures }) {
         const aiAnimDelay = aiPath.length * animStepMs + CONFIG.moveDelayMs;
         // Emit intermediate state with animation path for AI move
         const aiBoard = boardFromCpp(aiMoveResult.board);
-        const aiStatePayload = {
+        const aiStatePayload = sanitizeStatePayload({
           board: aiBoard,
           turn: turnToColor(aiMoveResult.turn ?? aiMoveResult.currentTurn ?? 1),
           legalMoves: [],
@@ -478,7 +478,7 @@ async function handleMove(socket, { from, to, captures }) {
           winner: aiMoveResult.winner != null ? (aiMoveResult.winner === 0 ? 'draw' : turnToColor(aiMoveResult.winner)) : null,
           lastMove: aiLastMove || state.lastMove,
           path: aiPath,
-        };
+        }, 'aiMove intermediate state');
         socket.emit('state', aiStatePayload);
         await new Promise(r => setTimeout(r, aiAnimDelay));
       } else {
@@ -496,10 +496,10 @@ async function handleMove(socket, { from, to, captures }) {
   const finalLastMove = isPvAI && aiLastMove
     ? aiLastMove
     : (state.lastMove || { from, to, captures: moveCaptures });
-  const statePayload = {
+  const statePayload = sanitizeStatePayload({
     ...state,
     lastMove: finalLastMove,
-  };
+  }, 'handleMove final state');
   if (socket.gameMode === 'pvp') {
     io.emit('state', statePayload);
   } else {
@@ -538,7 +538,7 @@ io.on('connection', async (socket) => {
   // Send current state to new client
   try {
     const state = await getGameState();
-    socket.emit('state', state);
+    socket.emit('state', sanitizeStatePayload(state, 'new client connection'));
   } catch (err) {
     console.log('[WS] Could not get game state for new client:', err.message);
   }
@@ -576,7 +576,7 @@ io.on('connection', async (socket) => {
         }
         await cppFetch('/api/game/start', { method: 'POST', body: '{}' });
         const state = await getGameState();
-        socket.emit('state', state);
+        socket.emit('state', sanitizeStatePayload(state, 'startGame'));
         console.log(`[WS] Game started (${socket.gameMode}) for ${socket.id}`);
         // Auto-start trainer for aivai mode
         if (socket.gameMode === 'aivai') {

@@ -5,7 +5,7 @@ import { writeFile, readFile, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG } from '../../config.js';
-import { boardFromCpp } from '../boardConvert.js';
+import { boardFromCpp, sanitizeStatePayload } from '../boardConvert.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -999,14 +999,14 @@ export class SelfPlay {
       const boardReact = boardFromCpp(newState.board);
 
       const turnColor = newState.turn;
-      this.io?.emit('state', {
+      this.io?.emit('state', sanitizeStatePayload({
         board: boardReact,
         turn: turnColor,
         legalMoves: [],
         gameOver: newState.gameOver ?? false,
         winner: newState.winner || null,
         source: 'selfPlay',
-      });
+      }, 'selfPlay state'));
 
       turn = -turn;
 

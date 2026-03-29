@@ -3,7 +3,90 @@
  *
  * C++ encoding: 0=empty, 1=white pawn, 2=white king, 3=black pawn, 4=black king
  * React format: null or { color: 'white'|'black', king: boolean }
+ *
+ * SECURITY (Issue #170): All board data from C++ is validated before sending to the client.
+ * Invalid values are replaced with null (empty cell) and logged for monitoring.
  */
+
+// Valid C++ piece values (security boundary)
+const VALID_PIECE_VALUES = new Set([0, 1, 2, 3, 4]);
+
+/**
+ * Validate a raw C++ board value is safe before boardFromCpp processing.
+ * Guards against unexpected types or values from a compromised/malformed C++ engine.
+ * @param {*} val - Raw cell value from C++
+ * @returns {boolean} true if valid (0-4)
+ */
+export function isValidPieceValue(val) {
+  return typeof val === 'number' && Number.isInteger(val) && VALID_PIECE_VALUES.has(val);
+}
+
+/**
+ * Validate an entire board array — return true only if all 64 cells are valid piece values.
+ * Used as a security gate before boardFromCpp() for server→client payloads.
+ * @param {*} board - Raw board data (flat array, 2D array, or C++ response)
+ * @returns {boolean} true if board passes validation
+ */
+export function isBoardSafe(board) {
+  if (!board || !Array.isArray(board)) return false;
+  const flat = board.flat ? board.flat() : board;
+  if (!Array.isArray(flat)) return false;
+  // Must be exactly 64 cells
+  if (flat.length !== 64) return false;
+  for (const cell of flat) {
+    if (!isValidPieceValue(cell)) return false;
+  }
+  return true;
+}
+
+/**
+ * Sanitize a raw board for sending to the client.
+ * If validation fails, logs a security warning and returns a safe empty board.
+ * This prevents a compromised C++ engine from injecting arbitrary data via board values.
+ *
+ * @param {*} rawBoard - Raw board from C++ engine
+ * @param {string} [context='board'] - Context string for log messages
+ * @returns {Array<Array<{color: string, king: boolean}|null>>} Valid 8×8 board
+ */
+export function sanitizeBoard(rawBoard, context = 'board') {
+  if (!isBoardSafe(rawBoard)) {
+    console.warn(`[SECURITY] ${context}: invalid board data received from C++ engine — rejecting, returning empty board`);
+    return Array.from({ length: 8 }, () => Array(8).fill(null));
+  }
+  return boardFromCpp(rawBoard);
+}
+
+/**
+ * Sanitize a complete game state payload before sending to the client.
+ * Applies board validation + moveHistory length limit as defense-in-depth for Issue #170.
+ *
+ * @param {Object} state - Raw state object from getGameState() or handleMove()
+ * @param {string} [context='state'] - Context string for log messages
+ * @returns {Object} Sanitized state safe to send via WebSocket
+ */
+export function sanitizeStatePayload(state, context = 'state') {
+  if (!state || typeof state !== 'object') {
+    console.warn(`[SECURITY] ${context}: invalid state object — rejecting`);
+    return {
+      board: Array.from({ length: 8 }, () => Array(8).fill(null)),
+      turn: 'white',
+      legalMoves: [],
+      gameOver: false,
+      winner: null,
+      lastMove: null,
+    };
+  }
+
+  return {
+    ...state,
+    // Sanitize board: if C++ returns malformed board, reject it entirely
+    board: sanitizeBoard(state.board, context),
+    // Clamp moveHistory to prevent unbounded growth (already handled client-side at 40, but server clamps too)
+    moveHistory: Array.isArray(state.moveHistory)
+      ? state.moveHistory.slice(-50)
+      : undefined,
+  };
+}
 
 /**
  * Convert a C++ board (flat or 2D int array) to 8×8 React piece objects.
