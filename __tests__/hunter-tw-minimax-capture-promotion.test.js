@@ -84,8 +84,8 @@ function generateLegalMoves(board, turn) {
 
     if (!isKing) {
       for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
-        if (isWhiteTurn && dr < 0) continue;
-        if (!isWhiteTurn && dr > 0) continue;
+        if (isWhiteTurn && dr > 0) continue;
+        if (!isWhiteTurn && dr < 0) continue;
         const adjR = row + dr, adjC = col + dc;
         const landR = row + dr*2, landC = col + dc*2;
         if (adjR < 0 || adjR > 7 || adjC < 0 || adjC > 7) continue;
@@ -144,8 +144,8 @@ function generateLegalMoves(board, turn) {
     const isKing = val === myKing;
     if (!isKing) {
       for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
-        if (isWhiteTurn && dr < 0) continue;
-        if (!isWhiteTurn && dr > 0) continue;
+        if (isWhiteTurn && dr > 0) continue;
+        if (!isWhiteTurn && dr < 0) continue;
         const newR = row + dr, newC = col + dc;
         if (newR < 0 || newR > 7 || newC < 0 || newC > 7) continue;
         const newIdx = newR * 8 + newC;
@@ -183,8 +183,8 @@ function _extendCapture(board, cap, turn, result) {
   let foundMore = false;
   if (!isKing) {
     for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
-      if (isWhiteTurn && dr < 0) continue;
-      if (!isWhiteTurn && dr > 0) continue;
+      if (isWhiteTurn && dr > 0) continue;
+      if (!isWhiteTurn && dr < 0) continue;
       const adjR = landR + dr, adjC = landC + dc;
       const jumpR = landR + dr*2, jumpC = landC + dc*2;
       if (adjR < 0 || adjR > 7 || adjC < 0 || adjC > 7) continue;

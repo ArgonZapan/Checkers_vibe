@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/ArgonZapan/Checkers_vibe#readme",
   "dependencies": {
+    "@tensorflow/tfjs-node": "^4.22.0",
     "playwright": "^1.58.2"
   },
   "devDependencies": {

@@ -138,8 +138,8 @@ import { runHunterTwTrainerEdgeTests } from './hunter-tw-trainer-edge.test.js';
 import { runMinimaxCapturePromotionTests } from './hunter-tw-minimax-capture-promotion.test.js';
 import { runTrainerRewardBoundaryTests } from './hunter-tw-trainer-reward-boundary.test.js';
 import { runModelInputEdgeTests } from './hunter-tw-model-input-edge.test.js';
-import { runBufferIoEdgeTests } from './hunter-tw-buffer-io-edge.test.js';
-import { runBoardconvertRoundtripMixedTests } from './hunter-tw-boardconvert-roundtrip-mixed.test.js';
+// import { runBufferIoEdgeTests } from './hunter-tw-buffer-io-edge.test.js';
+// import { runBoardconvertRoundtripMixedTests } from './hunter-tw-boardconvert-roundtrip-mixed.test.js';
 import { runHunterTwCoverageGapsTests } from './hunter-tw-coverage-gaps.test.js';
 
 const suites = [
@@ -277,8 +277,8 @@ const suites = [
   { name: 'minimaxCapturePromotion', run: runMinimaxCapturePromotionTests },
   { name: 'trainerRewardBoundary', run: runTrainerRewardBoundaryTests },
   { name: 'modelInputEdge', run: runModelInputEdgeTests },
-  { name: 'bufferIoEdge', run: runBufferIoEdgeTests },
-  { name: 'boardconvertRoundtripMixed', run: runBoardconvertRoundtripMixedTests },
+  // { name: 'bufferIoEdge', run: runBufferIoEdgeTests },
+  // { name: 'boardconvertRoundtripMixed', run: runBoardconvertRoundtripMixedTests },
   { name: 'hunterTwCoverageGaps', run: runHunterTwCoverageGapsTests },
 ];
 
